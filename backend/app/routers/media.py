@@ -11,13 +11,13 @@ Segments are AES-128 encrypted, so .ts files are useless without the key.
 import re
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from ..auth import decode_token
 from ..db import get_db
 from ..models import Activity, Attempt, PlayGrant, Segment
-from ..services import protection
+from ..services import protection, storage
 from ..settings import get_settings
 
 router = APIRouter(prefix="/api/media")
@@ -58,10 +58,10 @@ def media(grant_id: str, filename: str, request: Request, exp: int = 0, sig: str
         _deny(db, 429, "rate_limited", f"{filename}", uid, ip)
 
     seg = db.get(Segment, grant.segment_id)
-    seg_dir = s.media_dir / seg.asset_key
+    base = f"media/{seg.asset_key}"
 
     if filename == "index.m3u8":
-        playlist = (seg_dir / "index.m3u8").read_text(encoding="utf-8")
+        playlist = (storage.read(f"{base}/index.m3u8", db) or b"").decode("utf-8")
         return Response(protection.rewrite_playlist(playlist, grant.id, exp),
                         media_type="application/vnd.apple.mpegurl", headers=NO_STORE)
     if filename == "key":
@@ -69,8 +69,8 @@ def media(grant_id: str, filename: str, request: Request, exp: int = 0, sig: str
         db.commit()
         if grant.key_fetches > s.key_fetches_per_grant:
             _deny(db, 403, "key_refetch", f"Key requested {grant.key_fetches}x for one play", uid, ip)
-        return Response((seg_dir / "enc.key").read_bytes(), media_type="application/octet-stream", headers=NO_STORE)
-    path = seg_dir / filename
-    if not path.exists():
+        return Response(storage.read(f"{base}/enc.key", db), media_type="application/octet-stream", headers=NO_STORE)
+    data = storage.read(f"{base}/{filename}", db)
+    if data is None:
         raise HTTPException(404, "Not found")
-    return FileResponse(path, media_type="video/mp2t", headers=NO_STORE)
+    return Response(data, media_type="video/mp2t", headers=NO_STORE)

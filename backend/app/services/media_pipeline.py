@@ -15,6 +15,7 @@ from pathlib import Path
 import edge_tts
 import imageio_ffmpeg
 
+from . import storage
 from ..settings import ccl_config, get_settings
 
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
@@ -29,8 +30,11 @@ def _run(args: list[str]) -> None:
 
 
 def chime_path() -> Path:
-    """Two-tone chime, generated once."""
-    path = get_settings().media_dir / "chime.wav"
+    """Two-tone chime. Shipped in the bundle; generated into scratch space if missing."""
+    bundled = get_settings().media_dir / "chime.wav"
+    if bundled.exists():
+        return bundled
+    path = get_settings().scratch_dir / "chime.wav"
     if not path.exists():
         _run([
             "-f", "lavfi", "-i", "sine=frequency=880:duration=0.22",
@@ -85,19 +89,28 @@ def package_hls(src_audio: Path, out_dir: Path, append_chime: bool = True) -> fl
     return round(sum(float(x) for x in re.findall(r"#EXTINF:([\d.]+)", playlist)), 2)
 
 
-def build_segment_media(activity_id: str, order: int, text: str, voice: str) -> tuple[str, float]:
-    """Returns (asset_key, duration)."""
+def build_segment_media(activity_id: str, order: int, text: str, voice: str,
+                        to_storage: bool = True) -> tuple[str, float]:
+    """Returns (asset_key, duration).
+
+    to_storage=True  (runtime, e.g. content studio): package in scratch space, save files to storage.
+    to_storage=False (local seeding): write straight into the bundled data/media folder.
+    """
     settings = get_settings()
     asset_key = f"{activity_id}/{order:02d}"
-    out_dir = settings.media_dir / asset_key
-    tmp = settings.data_dir / "tmp" / f"{activity_id}-{order}-{secrets.token_hex(4)}.mp3"
-    tmp.parent.mkdir(parents=True, exist_ok=True)
+    work = settings.scratch_dir / f"{activity_id}-{order}-{secrets.token_hex(4)}"
+    work.mkdir(parents=True, exist_ok=True)
+    out_dir = work / "hls" if to_storage else settings.media_dir / asset_key
+    tmp = work / "tts.mp3"
     try:
         tts_to_file(text, voice, tmp)
         duration = package_hls(tmp, out_dir)
+        if to_storage:
+            types = {".m3u8": "application/vnd.apple.mpegurl", ".ts": "video/mp2t"}
+            for f in out_dir.iterdir():
+                storage.write(f"media/{asset_key}/{f.name}", f.read_bytes(), types.get(f.suffix, "application/octet-stream"))
     finally:
-        if tmp.exists():
-            os.remove(tmp)
+        shutil.rmtree(work, ignore_errors=True)
     return asset_key, duration
 
 
@@ -107,7 +120,3 @@ def synthesize_student_answer(text: str, language: str, out: Path) -> None:
     voice = cfg["student_en"] if language == "en" else cfg["student_hi"]
     out.parent.mkdir(parents=True, exist_ok=True)
     tts_to_file(text, voice, out, rate="-8%")
-
-
-def remove_activity_media(activity_id: str) -> None:
-    shutil.rmtree(get_settings().media_dir / activity_id, ignore_errors=True)

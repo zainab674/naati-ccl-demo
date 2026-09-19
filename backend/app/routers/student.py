@@ -2,15 +2,15 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..auth import CurrentUser, current_user
 from ..db import get_db
 from ..models import Activity, Attempt, IssueReport, MockTest, SegmentResponse, utcnow
-from ..services import protection
-from ..services.processing import process_response
+from ..services import protection, storage
+from ..services.processing import process_response, process_stale
 from ..services.scoring import attempt_results, dialogue_groups, repeats_used
 from ..settings import ccl_config, get_settings
 
@@ -269,10 +269,8 @@ async def upload_segment_audio(attempt_id: str, index: int, background: Backgrou
             mime = (audio.content_type or "audio/webm").split(";")[0]
             ext = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a", "audio/mpeg": "mp3",
                    "audio/wav": "wav"}.get(mime, "webm")
-            audio_key = f"{a.id}/{index:03d}.{ext}"
-            path = get_settings().uploads_dir / audio_key
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(data)
+            audio_key = f"uploads/{a.id}/{index:03d}.{ext}"
+            storage.write(audio_key, data, mime, db)
 
     resp = SegmentResponse(attempt_id=a.id, seg_index=index, segment_id=a.plan_json[index]["segment_id"],
                            audio_key=audio_key, audio_mime=mime)
@@ -342,6 +340,7 @@ def segment_feedback(attempt_id: str, index: int, cu: CurrentUser = Depends(curr
     a = _own_attempt(db, attempt_id, cu)
     if a.mode != "practice":
         raise HTTPException(403, "Feedback is shown after the mock test")
+    process_stale(db, a)
     results = attempt_results(db, a)
     for d in results["dialogues"]:
         for s in d["segments"]:
@@ -355,6 +354,9 @@ def results(attempt_id: str, cu: CurrentUser = Depends(current_user), db: Sessio
     a = _own_attempt(db, attempt_id, cu, allow_assessor=True)
     if a.status == "in_progress":
         raise HTTPException(409, "Attempt still in progress")
+    if a.status == "marking":
+        process_stale(db, a)
+        db.refresh(a)
     return attempt_results(db, a)
 
 
@@ -365,5 +367,7 @@ def response_audio(attempt_id: str, response_id: str, cu: CurrentUser = Depends(
     r = db.get(SegmentResponse, response_id)
     if not r or r.attempt_id != a.id or not r.audio_key:
         raise HTTPException(404, "No recording")
-    path = Path(get_settings().uploads_dir / r.audio_key)
-    return FileResponse(path, media_type=r.audio_mime, headers={"Cache-Control": "private, no-store"})
+    data = storage.read(r.audio_key, db)
+    if data is None:
+        raise HTTPException(404, "No recording")
+    return Response(data, media_type=r.audio_mime, headers={"Cache-Control": "private, no-store"})

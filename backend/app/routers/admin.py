@@ -10,6 +10,7 @@ from ..auth import CurrentUser, assessor_user
 from ..db import SessionLocal, get_db
 from ..models import (Activity, Attempt, IssueReport, Marking, PlayGrant, SecurityEvent, Segment,
                       SegmentResponse, User, utcnow)
+from ..services import storage
 from ..services.marking import points_for
 from ..services.media_pipeline import build_segment_media, voice_for
 from ..services.scoring import attempt_results, dialogue_groups
@@ -210,12 +211,14 @@ def protection_status(cu: CurrentUser = Depends(assessor_user), db: Session = De
     sample = db.query(Activity).filter(Activity.status == "published").order_by(Activity.number).first()
     sample_info = None
     if sample and sample.segments:
-        seg_dir = s.media_dir / sample.segments[0].asset_key
-        files = sorted(p.name for p in seg_dir.glob("*")) if seg_dir.exists() else []
-        playlist = (seg_dir / "index.m3u8").read_text(encoding="utf-8") if (seg_dir / "index.m3u8").exists() else ""
+        base = f"media/{sample.segments[0].asset_key}"
+        files = [k.rsplit("/", 1)[1] for k in storage.list_keys(base, db)]
+        playlist = (storage.read(f"{base}/index.m3u8", db) or b"").decode("utf-8")
         media_root = s.media_dir
         plain_audio = [p.name for p in media_root.rglob("*") if p.suffix.lower() in (".mp3", ".wav", ".m4a")
                        and p.name != "chime.wav"]
+        plain_audio += [k for k in storage.list_keys("media", db)
+                        if k.endswith((".mp3", ".wav", ".m4a")) and not k.endswith("chime.wav")]
         sample_info = {
             "dialogue": sample.title,
             "files": files,

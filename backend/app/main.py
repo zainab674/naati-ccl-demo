@@ -2,14 +2,14 @@ import logging
 
 from fastapi import FastAPI
 
-from .db import Base, engine
+from .seeding import ensure_seeded
 from .routers import admin, auth_routes, media, student
 from .settings import get_settings
 
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Benchmark CCL Prep API", docs_url="/api/docs", openapi_url="/api/openapi.json")
-Base.metadata.create_all(engine)
+ensure_seeded()  # creates tables; seeds demo data on first boot (bundled audio only)
 
 app.include_router(auth_routes.router)
 app.include_router(student.router)

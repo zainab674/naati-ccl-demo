@@ -51,13 +51,24 @@ API smoke test (22 checks: play limits, signed URLs, session binding, marking, r
 | STT provider | `backend/app/services/stt.py` |
 | Dialogue content | `backend/content/dialogues/*.yaml` or the Content studio |
 
-## Deploy (one URL)
+## Deploy (Vercel, free)
 
-`Dockerfile` builds a single container. Next.js serves the public port and proxies `/api` to FastAPI inside the container. It seeds itself on first start. Deploy it to Render, Railway or Fly with a persistent volume on `/app/backend/data`, and set `SECRET_KEY`, `COOKIE_SECURE=true` and the API keys as environment variables. For Postgres, set `DATABASE_URL`.
+Two Vercel projects from this repo:
+
+| Project | Root directory | Notes |
+|---|---|---|
+| `naati-ccl-api` | `backend` | FastAPI as a Vercel Python function (`backend/vercel.json`). Env: `SECRET_KEY`, `COOKIE_SECURE=true`, `DATABASE_URL` (Neon Postgres, free via Vercel Storage), optional API keys. |
+| `naati-ccl-web` | `frontend` | Next.js. Env: `API_URL` = the API project's URL. `/api/*` is proxied to it, so cookies stay first-party. |
+
+Vercel functions have no persistent disk, so:
+- The six built-in dialogues' encrypted audio and the seeded sample answers ship **inside the function bundle** (`backend/data/media`, `backend/data/seed_audio`). Re-run `python seed.py` locally and commit those folders whenever dialogue content changes.
+- Files written at runtime (student recordings, content-studio audio) are stored **in Postgres** (`stored_files` table).
+- On first boot against an empty database the API **seeds itself** (bundled audio only, no TTS).
+- Without `DATABASE_URL` it falls back to a throwaway SQLite file in `/tmp`, so it boots, but data doesn't persist.
 
 ## Known demo limits
 
 - Rate limiting is in-memory (single instance). Use Redis in production.
-- Background marking uses FastAPI background tasks. Use a job queue in production.
+- Background marking uses FastAPI background tasks, with a mark-on-read fallback for serverless. Use a job queue in production.
 - Per-user audio watermarking is explained on the protection page but not built.
 - TTS uses Microsoft Edge's free voices. Use a licensed TTS provider for production content.

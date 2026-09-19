@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/main.py": {
+      "maxDuration": 60,
+      "includeFiles": "{data/media/**,data/seed_audio/**,config/**,content/**}",
+      "excludeFiles": "{.venv/**,data/app.db,data/uploads/**,data/tmp/**,smoke_test.py,e2e_test.py}"
+    }
+  }
+}

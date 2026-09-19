@@ -1,6 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
 
+import os
+
 import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -31,11 +33,13 @@ class Settings(BaseSettings):
 
     @property
     def media_dir(self) -> Path:
+        """Bundled, pre-generated dialogue audio (read-only in production)."""
         return self.data_dir / "media"
 
     @property
-    def uploads_dir(self) -> Path:
-        return self.data_dir / "uploads"
+    def scratch_dir(self) -> Path:
+        """Writable temp space. Vercel functions can only write to /tmp."""
+        return Path("/tmp/ccl") if os.environ.get("VERCEL") else self.data_dir / "tmp"
 
     @property
     def resolved_stt(self) -> str:
@@ -57,8 +61,19 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
-    s.media_dir.mkdir(parents=True, exist_ok=True)
-    s.uploads_dir.mkdir(parents=True, exist_ok=True)
+    # Neon (via Vercel) sets DATABASE_URL; some setups only set POSTGRES_URL.
+    if "DATABASE_URL" not in os.environ and os.environ.get("POSTGRES_URL"):
+        s.database_url = os.environ["POSTGRES_URL"]
+    # Vercel's filesystem is read-only apart from /tmp. With no database configured, fall back to a
+    # throwaway SQLite file there (per instance) so the app still boots.
+    elif os.environ.get("VERCEL") and s.database_url.startswith("sqlite") and "DATABASE_URL" not in os.environ:
+        s.database_url = "sqlite:////tmp/ccl/app.db"
+        Path("/tmp/ccl").mkdir(parents=True, exist_ok=True)
+    if not s.database_url.startswith("sqlite") and s.database_url.startswith("postgres://"):
+        s.database_url = s.database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif s.database_url.startswith("postgresql://"):
+        s.database_url = s.database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    s.scratch_dir.mkdir(parents=True, exist_ok=True)
     return s
 
 
