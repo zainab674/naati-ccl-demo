@@ -1,0 +1,46 @@
+# NAATI CCL test rules. Based on public NAATI information; every value here is
+# a placeholder until confirmed against Benchmark's own marking logic.
+
+dialogue_max: 45
+total_max: 90
+pass_total: 63
+pass_min_per_dialogue: 29
+
+# Demo dialogues are ~10 segments; a real CCL dialogue is ~35. Deductions are
+# scaled by (full_length_segments / actual_segments) so demo scores land on the
+# same 45-point scale a candidate would see in the exam.
+full_length_segments: 35
+scale_deductions_to_full_length: true
+
+repeats:
+  max_per_segment: 1          # one repeat allowed per segment
+  free_per_dialogue: 1        # repeats beyond this incur a deduction
+  deduction_per_extra: 1      # points (before scaling)
+
+response_window_seconds: 30   # max recording length per segment
+low_confidence_threshold: 0.55  # STT confidence below this -> assessor review
+
+# Missing / empty response to a segment
+unanswered_deduction: 2
+
+voices:
+  en: { female: en-AU-NatashaNeural, male: en-AU-WilliamMultilingualNeural }
+  hi: { female: hi-IN-SwaraNeural, male: hi-IN-MadhurNeural }
+  # Used only to synthesise seeded "student" answers
+  student_en: en-IN-PrabhatNeural
+  student_hi: hi-IN-MadhurNeural
+
+# CCL test languages (LOTE). The student picks one; every dialogue is that
+# language <-> English. stt_locale is used by browser speech recognition.
+english_stt_locale: en-IN   # most candidates speak Indian English
+languages:
+  - { code: hi, name: Hindi, native: हिन्दी, stt_locale: hi-IN, available: true }
+  - { code: pa, name: Punjabi, native: ਪੰਜਾਬੀ, stt_locale: pa-IN, available: false }
+  - { code: ur, name: Urdu, native: اردو, stt_locale: ur-PK, available: false }
+  - { code: ne, name: Nepali, native: नेपाली, stt_locale: ne-NP, available: false }
+  - { code: bn, name: Bengali, native: বাংলা, stt_locale: bn-IN, available: false }
+  - { code: ta, name: Tamil, native: தமிழ், stt_locale: ta-IN, available: false }
+  - { code: gu, name: Gujarati, native: ગુજરાતી, stt_locale: gu-IN, available: false }
+  - { code: zh, name: Mandarin, native: 普通话, stt_locale: zh-CN, available: false }
+  - { code: ar, name: Arabic, native: العربية, stt_locale: ar-SA, available: false }
+  - { code: vi, name: Vietnamese, native: Tiếng Việt, stt_locale: vi-VN, available: false }

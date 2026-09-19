@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter), var(--font-deva), ui-sans-serif, system-ui, sans-serif;
+  --font-deva: var(--font-deva);
+}
+
+@theme {
+  --color-brand-50: #eef7f8;
+  --color-brand-100: #d5ecef;
+  --color-brand-200: #aed9df;
+  --color-brand-300: #7cbfc9;
+  --color-brand-400: #479daa;
+  --color-brand-500: #2b808f;
+  --color-brand-600: #1f6778;
+  --color-brand-700: #1c5563;
+  --color-brand-800: #1c4652;
+  --color-brand-900: #1a3b45;
+  --color-brand-950: #0c262e;
+  --color-ink: #0f1c22;
+}
+
+:root {
+  --background: #f6f8f9;
+}
+
+body {
+  background: var(--background);
+  color: var(--color-ink);
+}
+
+.hindi,
+:lang(hi) {
+  font-family: var(--font-deva), var(--font-inter), sans-serif;
+  line-height: 1.75;
+}
+
+@keyframes bar {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+.speaking-bar {
+  animation: bar 0.9s ease-in-out infinite;
+  transform-origin: bottom;
+}

@@ -1,0 +1,67 @@
+# Placeholder CCL marking rubric. Replace with Benchmark's own marking logic.
+# The model only identifies issues and classifies them; points come from
+# severity_points below, never from the model.
+
+categories:
+  - id: accuracy
+    name: Accuracy
+    description: The interpretation conveys the full meaning of the source segment.
+    checks:
+      - id: distortion
+        description: Meaning changed, e.g. wrong number, date, amount, negation or relationship.
+      - id: omission
+        description: A meaningful piece of information from the source is missing.
+      - id: insertion
+        description: Information added that was not in the source.
+      - id: wrong_language
+        description: Interpreted into the wrong language (e.g. answered in English when Hindi was required).
+  - id: language_quality
+    name: Language quality
+    description: Target-language output is grammatical and idiomatic.
+    checks:
+      - id: grammar
+        description: Grammatical errors that affect clarity.
+      - id: word_choice
+        description: Inappropriate or unnatural word choice, literal translation.
+  - id: register
+    name: Register
+    description: Level of formality matches the source speaker.
+    checks:
+      - id: formality_mismatch
+        description: Too casual or too formal compared with the source.
+  - id: delivery
+    name: Delivery
+    description: Fluent, confident, complete delivery.
+    checks:
+      - id: hesitation
+        description: Filler words or long pauses.
+      - id: self_correction
+        description: Candidate corrects themselves mid-utterance.
+      - id: incomplete
+        description: Utterance trails off or is left unfinished.
+
+severity_points:
+  minor: 0.5
+  major: 1
+  critical: 2
+
+# Delivery signals computed from STT word timestamps (static code, no AI)
+delivery:
+  long_pause_seconds: 2.0
+  fillers:
+    en: [um, uh, er, ah, erm, hmm]
+    hi: [उह, अं, हम्म, मतलब, ऊं]
+  self_correction_markers:
+    en: [sorry, "i mean", "no,", "rather"]
+    hi: [माफ़, सॉरी, "नहीं नहीं", "मेरा मतलब"]
+
+# Wrong-language detection (static). Browser speech recognition listens for one
+# language only, so an English answer to a Hindi segment comes back as English
+# written phonetically in Devanagari. These function words give it away.
+wrong_language:
+  min_hits: 2
+  min_ratio: 0.2
+  # Accepted Whisper language codes per target (Whisper often labels Hindi as Urdu)
+  accepted: { hi: [hi, ur], en: [en] }
+  english_in_devanagari: [आई, हैव, द, एंड, इज़, इज, यू, वी, ऑफ, ऑफ़, टू, दिस, दैट, इट, वॉट, व्हाट, हाउ, कैन, विल, आर, वाज़, वॉज़, विथ, फॉर, फ़ॉर, माय, योर, ठे, डू, डिड, नॉट, बट, हैज़, बिकॉज़, प्लीज़, थैंक, एम, हेलो, गुड, ओके, यस, वेल, शी, वन, हियर, देयर, विच]
+  hindi_in_latin: [hai, hain, mein, main, aap, aapka, aapke, kya, nahi, nahin, ka, ki, ke, ko, se, tha, thi, bhi, yeh, woh, kar, raha, rahe, hum, humein, mujhe, liye]
