@@ -51,7 +51,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 ## M4. AI scoring, results, review
 - [x] 4.1 STT provider interface; Groq Whisper Large V3 Turbo impl with word timestamps, language hint `tl`;
       fallback model via env. Store transcript + words.
-- [ ] 4.2 Audio timing analysis (code): speech start vs recording start (> 5 s), internal pauses (> 3 s), filler
+- [x] 4.2 Audio timing analysis (code): speech start vs recording start (> 5 s), internal pauses (> 3 s), filler
       detection candidates from LanguageScoringConfig.hesitation_markers.
 - [ ] 4.3 LLM evaluator interface; Gemini Flash-Lite impl with JSON schema output; Pydantic validation; prompt
       versioned in `backend/app/prompts/`; Filipino guidance from LanguageScoringConfig; evaluates per MU and
@@ -120,3 +120,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 3.4: recordings uploaded in 3 s parts while speaking (idempotent part PUTs, retries/backoff, retry-saving button), joined server-side into storage, linked to the SegmentAttempt; owner/admin-only playback endpoint. Verified the joined WebM decodes (12.2 s).
 - 2026-10-19 3.5: courses API (published courses/lessons, free = course or lesson flag, 402 on paid lessons, idempotent completion) + course list with progress, course outline, lesson page (embed/mp4 video, sanitised HTML, mark complete, previous/next with lock).
 - 2026-10-19 4.1: STT interface; Groq whisper-large-v3-turbo (verbose_json, word+segment timestamps, language hint from Language.stt_code, e.g. tl) with STT_FALLBACK_MODEL retry; recordings normalised to 16 kHz FLAC; transcript, words, provider/model and an AIScoringRun(kind=stt) stored per segment; labelled mock provider for keyless dev.
+- 2026-10-19 4.2: timing.py: energy VAD (adaptive noise floor, hangover) on decoded 16 kHz PCM, speech start incl. chime->recorder gap, StartDelay > 5 s and Pause > 3 s from scoring.yaml, Whisper word timings as fallback, filler candidates from LanguageScoringConfig markers (multi-word too). Tested on synthesised audio.
