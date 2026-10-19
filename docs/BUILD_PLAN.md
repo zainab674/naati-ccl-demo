@@ -17,7 +17,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 ## M1. Accounts, payments, public site
 - [x] 1.1 Auth: sign up, login, logout, password reset (token email), roles, httpOnly cookie sessions (reuse demo JWT).
 - [x] 1.2 Access control helper: `requires_active_plan`, free-content flags respected.
-- [ ] 1.3 Stripe: Plan table, Checkout session endpoint, webhook (signature verified, idempotent),
+- [x] 1.3 Stripe: Plan table, Checkout session endpoint, webhook (signature verified, idempotent),
       subscription_status updates, customer portal link. Test with Stripe test mode + CLI.
 - [ ] 1.4 Email service (provider interface + SMTP/Resend impl + console impl for dev). Templates: welcome, receipt,
       password reset, results ready. EmailLog.
@@ -82,6 +82,12 @@ Milestones map to client payments. Keep the app runnable after every task.
 - Landing page content editable in admin, or file-based for MVP (spec: SiteContent records, simple admin form if time).
 - Dialogue count at launch (36 ready, 50 planned): import handles any number.
 
+- Stripe test keys + price IDs (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_SELF_STUDY): needed to run
+  checkout end-to-end with `stripe listen`. Webhook handling is verified with locally signed test events.
+- Plan model: monthly subscription or one-off payment for a fixed period? Both are supported
+  (STRIPE_CHECKOUT_MODE=subscription|payment); one-off currently unlocks until an admin/expiry changes it.
+- Plan prices: shown from the Stripe Price (or an admin-set display text); no prices are hard-coded.
+
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
 - 2026-10-19 0.2: docker-compose.yml (postgres:17, minio, backend, worker, frontend) + root .env.example. Validated with `docker compose config`; could not run the stack here (Docker Desktop's WSL VM would not start), dev/tests used a local Postgres on :5433 instead.
@@ -91,3 +97,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 0.6: pytest on a real Postgres test DB (migrated once, truncated + seeded per test), ruff, `make check` / scripts/check.sh (backend lint+tests, frontend lint+build).
 - 2026-10-19 1.1: signup/login/logout/forgot/reset (1 h single-use hashed tokens, session_version invalidates old cookies), /me, rate-limited; login/signup/forgot/reset pages; demo pages removed pending M3 rebuild.
 - 2026-10-19 1.2: deps.requires_active_plan / ensure_access(is_free) / is_locked (Active+Trial unlock, admins always), 402 for locked content; unit tests.
+- 2026-10-19 1.3: Plan/Subscription/Payment/StripeEvent; /api/public/plans, /billing/checkout, /billing/portal, /billing/status, signed + idempotent /stripe/webhook (checkout, subscription created/updated/deleted, invoice paid/failed); receipt email; account + billing success pages. Not run against live Stripe test mode (no keys yet, see Open questions).

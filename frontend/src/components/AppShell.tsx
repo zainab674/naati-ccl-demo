@@ -79,7 +79,8 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
       <div className="border-t border-white/10 px-2 pt-4">
         <div className="truncate text-sm font-medium text-white">{user.name}</div>
         <div className="truncate text-xs text-brand-200/70">{user.email}</div>
-        <button onClick={logout} className="mt-3 flex items-center gap-2 text-xs text-brand-200 hover:text-white">
+        <Link href="/account" className="mt-3 block text-xs text-brand-200 hover:text-white">Account and billing</Link>
+        <button onClick={logout} className="mt-2 flex items-center gap-2 text-xs text-brand-200 hover:text-white">
           <LogOut className="size-3.5" /> Sign out
         </button>
       </div>
