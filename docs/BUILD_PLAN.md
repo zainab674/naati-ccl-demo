@@ -53,7 +53,7 @@ Milestones map to client payments. Keep the app runnable after every task.
       fallback model via env. Store transcript + words.
 - [x] 4.2 Audio timing analysis (code): speech start vs recording start (> 5 s), internal pauses (> 3 s), filler
       detection candidates from LanguageScoringConfig.hesitation_markers.
-- [ ] 4.3 LLM evaluator interface; Gemini Flash-Lite impl with JSON schema output; Pydantic validation; prompt
+- [x] 4.3 LLM evaluator interface; Gemini Flash-Lite impl with JSON schema output; Pydantic validation; prompt
       versioned in `backend/app/prompts/`; Filipino guidance from LanguageScoringConfig; evaluates per MU and
       occurrence-based errors; returns explanations + suggested versions; never returns scores.
 - [ ] 4.4 Deduction engine (pure functions, unit-tested): apply config penalties, merge AI + programmatic events,
@@ -95,6 +95,8 @@ Milestones map to client payments. Keep the app runnable after every task.
 - Player "attempt counter": implemented as plays used (max 2 = one repeat, each repeat logged) and recordings used
   (max 1) per segment, both in config/ccl.yaml. Confirm against the NAATI practice test Benchmark uses.
 - Repeat penalty: SCORING_BRIEF.md sets none, so repeats are tracked but cost 0 (scoring.yaml penalties.repeat).
+- AI keys: GROQ_API_KEY and GEMINI_API_KEY are needed to run real STT/evaluation. Providers are tested with stubs;
+  the 10-sample teacher comparison (4.8) is the real accuracy check. Gemini model name is GEMINI_MODEL.
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
@@ -121,3 +123,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 3.5: courses API (published courses/lessons, free = course or lesson flag, 402 on paid lessons, idempotent completion) + course list with progress, course outline, lesson page (embed/mp4 video, sanitised HTML, mark complete, previous/next with lock).
 - 2026-10-19 4.1: STT interface; Groq whisper-large-v3-turbo (verbose_json, word+segment timestamps, language hint from Language.stt_code, e.g. tl) with STT_FALLBACK_MODEL retry; recordings normalised to 16 kHz FLAC; transcript, words, provider/model and an AIScoringRun(kind=stt) stored per segment; labelled mock provider for keyless dev.
 - 2026-10-19 4.2: timing.py: energy VAD (adaptive noise floor, hangover) on decoded 16 kHz PCM, speech start incl. chime->recorder gap, StartDelay > 5 s and Pause > 3 s from scoring.yaml, Whisper word timings as fallback, filler candidates from LanguageScoringConfig markers (multi-word too). Tested on synthesised audio.
+- 2026-10-19 4.3: evaluator with versioned prompt app/prompts/evaluate_segment_v1.md (brief's MU / insertion / LQ / fluency rules, meaning not wording, pauses left to code), Filipino guidance from LanguageScoringConfig, Pydantic schema with no score fields, every MU exactly once (corrective retry), quotes checked against the transcript, explanation + suggested version per item; Gemini via get_llm (Anthropic/OpenAI optional), mock text-match evaluator for dev.

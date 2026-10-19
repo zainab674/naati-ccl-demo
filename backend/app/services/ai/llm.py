@@ -30,6 +30,10 @@ class LLMResult:
     raw: dict = field(default_factory=dict)
 
 
+DROP_KEYS = {"title", "default", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "minLength",
+             "maxLength", "minItems", "maxItems"}
+
+
 def strict_schema(schema: dict) -> dict:
     """Inline $defs and require additionalProperties: false on every object (needed for strict JSON modes)."""
     schema = copy.deepcopy(schema)
@@ -39,7 +43,8 @@ def strict_schema(schema: dict) -> dict:
         if isinstance(node, dict):
             if "$ref" in node:
                 return walk(copy.deepcopy(defs[node["$ref"].rsplit("/", 1)[-1]]))
-            node = {k: walk(v) for k, v in node.items() if k not in ("title", "default")}
+            # Range/length keywords are not accepted by every provider's strict mode; Pydantic enforces them after.
+            node = {k: walk(v) for k, v in node.items() if k not in DROP_KEYS}
             if node.get("type") == "object":
                 node["additionalProperties"] = False
                 node["required"] = list(node.get("properties", {}))
