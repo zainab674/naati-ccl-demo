@@ -1,7 +1,0 @@
-.venv
-.env
-__pycache__
-data/app.db
-data/uploads
-data/tmp
-data/*.log

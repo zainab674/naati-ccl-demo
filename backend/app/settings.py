@@ -1,87 +1,132 @@
+"""Environment settings (secrets, endpoints, model names) and YAML rule config (scoring, test flow).
+
+Rule values that the client may change (penalties, thresholds, pass marks) live in config/*.yaml, never in code.
+"""
 from functools import lru_cache
 from pathlib import Path
-
-import os
 
 import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
+REPO_DIR = BASE_DIR.parent
+CONFIG_DIR = BASE_DIR / "config"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
+    # Repo-root .env first, backend/.env may override (both optional).
+    model_config = SettingsConfigDict(env_file=(REPO_DIR / ".env", BASE_DIR / ".env"), extra="ignore")
 
-    database_url: str = f"sqlite:///{(BASE_DIR / 'data' / 'app.db').as_posix()}"
+    environment: str = "development"  # development | test | production
+    app_url: str = "http://localhost:3000"
     secret_key: str = "dev-secret-change-me"
-    data_dir: Path = BASE_DIR / "data"
     cookie_secure: bool = False
+    session_hours: int = 12
+    cors_origins: str = ""
 
-    # Providers. "auto" picks the real provider when a key is present, else the fallback.
-    stt_provider: str = "auto"          # openai | groq | mock | auto
-    marker_provider: str = "auto"       # claude | heuristic | auto
-    anthropic_api_key: str | None = None
-    anthropic_base_url: str = "https://api.anthropic.com"
-    claude_model: str = "claude-opus-5"
-    openai_api_key: str | None = None
-    groq_api_key: str | None = None
+    admin_email: str = ""
+    admin_password: str = ""
+    admin_first_name: str = "Admin"
+    admin_last_name: str = "User"
+
+    database_url: str = "postgresql+psycopg://ccl:ccl@localhost:5433/ccl"
+    test_database_url: str = "postgresql+psycopg://ccl:ccl@localhost:5433/ccl_test"
+
+    storage_backend: str = "s3"  # s3 | local
+    local_storage_dir: Path = BASE_DIR / "data" / "storage"
+    s3_endpoint_url: str = ""
+    s3_region: str = "ap-southeast-2"
+    s3_bucket: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    media_download_max_mb: int = 50
+    scratch_dir: Path = BASE_DIR / "data" / "tmp"
+
+    stt_provider: str = "auto"  # groq | mock | auto
+    groq_api_key: str = ""
+    stt_model: str = "whisper-large-v3-turbo"
+    stt_fallback_model: str = "whisper-large-v3"
+
+    evaluator_provider: str = "auto"  # gemini | anthropic | openai | mock | auto
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash-lite"
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-5-5"
+    openai_api_key: str = ""
+    openai_model: str = "gpt-5-mini"
+
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_self_study: str = ""
+    stripe_price_coaching: str = ""
+    stripe_checkout_mode: str = "subscription"  # subscription | payment
+
+    email_provider: str = "console"  # console | smtp | resend
+    email_from: str = "Benchmark Education <no-reply@example.com>"
+    email_reply_to: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = True
+    resend_api_key: str = ""
 
     # Content protection
     signed_url_ttl_seconds: int = 300
-    media_requests_per_minute: int = 60
+    media_requests_per_minute: int = 120
     key_fetches_per_grant: int = 3
 
     @property
-    def media_dir(self) -> Path:
-        """Bundled, pre-generated dialogue audio (read-only in production)."""
-        return self.data_dir / "media"
-
-    @property
-    def scratch_dir(self) -> Path:
-        """Writable temp space. Vercel functions can only write to /tmp."""
-        return Path("/tmp/ccl") if os.environ.get("VERCEL") else self.data_dir / "tmp"
+    def is_production(self) -> bool:
+        return self.environment == "production"
 
     @property
     def resolved_stt(self) -> str:
         if self.stt_provider != "auto":
             return self.stt_provider
-        if self.groq_api_key:
-            return "groq"
+        return "groq" if self.groq_api_key else "mock"
+
+    @property
+    def resolved_evaluator(self) -> str:
+        if self.evaluator_provider != "auto":
+            return self.evaluator_provider
+        if self.gemini_api_key:
+            return "gemini"
+        if self.anthropic_api_key:
+            return "anthropic"
         if self.openai_api_key:
             return "openai"
         return "mock"
 
-    @property
-    def resolved_marker(self) -> str:
-        if self.marker_provider != "auto":
-            return self.marker_provider
-        return "claude" if self.anthropic_api_key else "heuristic"
+
+def _normalise_db_url(url: str) -> str:
+    for prefix in ("postgres://", "postgresql://", "postgresql+psycopg2://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
 
 
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
-    # Neon (via Vercel) sets DATABASE_URL; some setups only set POSTGRES_URL.
-    if "DATABASE_URL" not in os.environ and os.environ.get("POSTGRES_URL"):
-        s.database_url = os.environ["POSTGRES_URL"]
-    # Vercel's filesystem is read-only apart from /tmp. With no database configured, fall back to a
-    # throwaway SQLite file there (per instance) so the app still boots.
-    elif os.environ.get("VERCEL") and s.database_url.startswith("sqlite") and "DATABASE_URL" not in os.environ:
-        s.database_url = "sqlite:////tmp/ccl/app.db"
-        Path("/tmp/ccl").mkdir(parents=True, exist_ok=True)
-    if not s.database_url.startswith("sqlite") and s.database_url.startswith("postgres://"):
-        s.database_url = s.database_url.replace("postgres://", "postgresql+psycopg2://", 1)
-    elif s.database_url.startswith("postgresql://"):
-        s.database_url = s.database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
-    s.scratch_dir.mkdir(parents=True, exist_ok=True)
+    s.database_url = _normalise_db_url(s.database_url)
+    s.test_database_url = _normalise_db_url(s.test_database_url)
+    if s.is_production and s.secret_key == "dev-secret-change-me":
+        raise RuntimeError("SECRET_KEY must be set in production")
     return s
+
+
+def _load_yaml(name: str) -> dict:
+    return yaml.safe_load((CONFIG_DIR / name).read_text(encoding="utf-8"))
 
 
 @lru_cache
 def ccl_config() -> dict:
-    return yaml.safe_load((BASE_DIR / "config" / "ccl.yaml").read_text(encoding="utf-8"))
+    """Test flow rules: segment timing, recording window, repeats, mock test shape."""
+    return _load_yaml("ccl.yaml")
 
 
 @lru_cache
-def rubric_config() -> dict:
-    return yaml.safe_load((BASE_DIR / "config" / "rubric.yaml").read_text(encoding="utf-8"))
+def scoring_config() -> dict:
+    """Scoring rules from docs/SCORING_BRIEF.md: penalties, thresholds, pass marks."""
+    return _load_yaml("scoring.yaml")
