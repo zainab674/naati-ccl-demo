@@ -13,11 +13,15 @@ recording:
   max_upload_mb: 15
   allowed_mime_types: ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"]
 
-# Shown on the Information 1 page of the player.
-information_1: |
+# Shown on the Information pages of the player (folded: line breaks become spaces).
+information_1: >
   This test has two dialogues. Each dialogue is a conversation between an English speaker and a speaker of your
-  test language. Each dialogue is divided into segments. After each segment you will hear a chime. Interpret the
-  segment into the other language after the chime. Your interpretation is recorded.
-information_2: |
+  test language, divided into segments. After each segment you will hear a chime. Interpret the segment into the
+  other language after the chime. Your interpretation is recorded.
+information_1_practice: >
+  This practice dialogue is a conversation between an English speaker and a speaker of your test language, divided
+  into segments. After each segment you will hear a chime. Interpret the segment into the other language after the
+  chime. Your interpretation is recorded and scored like a dialogue in the test.
+information_2: >
   Before you start, check your audio. Play the test sound and make sure you can hear it clearly. Then record a
   short sample with your microphone and play it back.

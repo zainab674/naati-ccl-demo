@@ -282,6 +282,15 @@ def recording(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID, cu: CurrentU
                     headers={"Cache-Control": "private, no-store", "Content-Disposition": "inline"})
 
 
+@router.post("/attempts/{attempt_id}/segments/{segment_attempt_id}/skip")
+def skip_segment(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID, cu: CurrentUser = Depends(current_user),
+                 db: Session = Depends(get_db)):
+    ref = svc.resolve(db, attempt_id, cu.user)
+    svc.skip(ref, svc.segment_attempt(ref, segment_attempt_id))
+    db.commit()
+    return {"ok": True}
+
+
 class IntegrityIn(BaseModel):
     type: str
     detail: str = ""

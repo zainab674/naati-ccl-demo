@@ -151,7 +151,8 @@ def state(ref: AttemptRef) -> dict:
         "current": current,
         "config": {"max_plays": seg_cfg["max_plays"], "max_record_attempts": seg_cfg["max_record_attempts"],
                    "response_window_seconds": seg_cfg["response_window_seconds"],
-                   "information_1": cfg["information_1"], "information_2": cfg["information_2"],
+                   "information_1": cfg["information_1"].strip(), "information_2": cfg["information_2"].strip(),
+                   "information_1_practice": cfg.get("information_1_practice", cfg["information_1"]).strip(),
                    "max_upload_mb": cfg["recording"]["max_upload_mb"]},
         "dialogues": [{
             "dialogue_attempt_id": str(da.id), "position": da.position, "title": da.dialogue.title,
@@ -176,6 +177,8 @@ def register_play(db: Session, ref: AttemptRef, sa: SegmentAttempt) -> bool:
     max_plays = ccl_config()["segment"]["max_plays"]
     if sa.audio_user:
         raise HTTPException(409, "This segment has already been answered")
+    if sa.skipped:
+        raise HTTPException(409, "This segment was skipped")
     if sa.play_count >= max_plays:
         raise HTTPException(409, "No plays left for this segment")
     sa.play_count += 1
@@ -203,7 +206,18 @@ def save_part(ref: AttemptRef, sa: SegmentAttempt, index: int, data: bytes) -> N
     get_storage().put(f"{_parts_prefix(sa)}/{index:04d}", data, "application/octet-stream")
 
 
+def skip(ref: AttemptRef, sa: SegmentAttempt) -> None:
+    """Move on without answering. Like the real test, a skipped segment cannot be reopened."""
+    require_in_progress(ref)
+    if sa.audio_user:
+        raise HTTPException(409, "This segment has already been answered")
+    sa.skipped, sa.submitted_at = True, utcnow()
+    sa.dialogue_attempt.current_segment_number = sa.segment_number + 1
+
+
 def _check_can_record(sa: SegmentAttempt) -> None:
+    if sa.skipped:
+        raise HTTPException(409, "This segment was skipped")
     if sa.play_count < 1:
         raise HTTPException(409, "Play the segment before recording")
     if sa.record_count >= ccl_config()["segment"]["max_record_attempts"]:

@@ -152,3 +152,14 @@ def test_dashboard(student_client, db):
     aid = student_client.post("/api/attempts", json={"dialogue_id": dash["quick_start"]["id"]}).json()["id"]
     dash = student_client.get("/api/dashboard").json()
     assert dash["unfinished"][0]["id"] == aid
+
+
+def test_skip_is_final(student_client, db):
+    d = make_dialogue(db, is_free=True, segments=2)
+    aid = student_client.post("/api/attempts", json={"dialogue_id": str(d.id)}).json()["id"]
+    sid = first_segment(student_client.get(f"/api/attempts/{aid}/state").json())
+    assert student_client.post(f"/api/attempts/{aid}/segments/{sid}/skip").status_code == 200
+    assert student_client.post(f"/api/attempts/{aid}/segments/{sid}/play").status_code == 409
+    st = student_client.get(f"/api/attempts/{aid}/state").json()
+    assert st["dialogues"][0]["segments"][0]["skipped"] is True
+    assert st["current"]["segment_attempt_id"] == st["dialogues"][0]["segments"][1]["segment_attempt_id"]

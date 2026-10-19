@@ -41,11 +41,11 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 3.1 Student dashboard: average score, available dialogues/mock tests, recent attempts, continue unfinished,
       quick start.
 - [x] 3.2 Dialogue library: filters by topic/difficulty, status + best score per dialogue.
-- [ ] 3.3 Mock test player matching the NAATI practice test flow: Info 1, Info 2 (equipment check: test sound,
+- [x] 3.3 Mock test player matching the NAATI practice test flow: Info 1, Info 2 (equipment check: test sound,
       mic record/playback), one page per segment (instructions left; waveform, source audio, record answer, attempt
       counter, Start, Finish Attempt right), chime then recording, precise timestamps captured, repeat tracking,
       autosave + resume, final summary of answered/skipped, Submit. Mock test = 2 dialogues.
-- [ ] 3.4 Recording upload: chunk-safe upload to S3, linked to SegmentAttempt; protected playback for student/admin.
+- [x] 3.4 Recording upload: chunk-safe upload to S3, linked to SegmentAttempt; protected playback for student/admin.
 - [ ] 3.5 Courses: course list, lesson page (video + HTML), completion tracking, free/paid gating.
 
 ## M4. AI scoring, results, review
@@ -92,6 +92,9 @@ Milestones map to client payments. Keep the app runnable after every task.
   (SiteContent "coaching".contact_email).
 - S3: the boto3 backend (configurable endpoint for AWS/Hetzner/MinIO) is written but has only been exercised
   through the local storage backend here; verify against the real bucket once credentials exist.
+- Player "attempt counter": implemented as plays used (max 2 = one repeat, each repeat logged) and recordings used
+  (max 1) per segment, both in config/ccl.yaml. Confirm against the NAATI practice test Benchmark uses.
+- Repeat penalty: SCORING_BRIEF.md sets none, so repeats are tracked but cost 0 (scoring.yaml penalties.repeat).
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
@@ -113,3 +116,5 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 2.6: LLM provider layer (Gemini default, Anthropic Opus 5.5 / OpenAI optional, mock; strict JSON schema output, typed retryable errors); 'Suggest with AI' per segment fills the MU editor for the admin to edit and save (never auto-saved); prompt in app/prompts/suggest_meaning_units_v1.md.
 - 2026-10-19 3.1: student API (dashboard, library, mock tests, attempts with resume, server-counted plays + RepeatEvents, session-bound HLS media ported from the demo, chunked recording upload, submit) with 8 player tests; dashboard page (averages, availability, continue unfinished, quick start, recent attempts, free-plan banner; webinars slot left empty) + My attempts page.
 - 2026-10-19 3.2: dialogue library with topic/difficulty filters, status (not started / in progress / completed), best score, free/locked badges, start/continue; mock tests list page.
+- 2026-10-19 3.3: player /attempt/[id]: Information 1, Information 2 (test tone + mic record/playback), one page per segment (instructions left; protected waveform, no-seek source audio, answer area, plays/recording counters, Start, Finish Attempt, Repeat, Skip) with chime -> auto-record, client timestamps (chime end, record start/stop, first speech), server-side autosave/resume, summary of answered/skipped, Submit. Walked through in the browser with real encrypted HLS (mic stubbed: the browser pane blocks capture).
+- 2026-10-19 3.4: recordings uploaded in 3 s parts while speaking (idempotent part PUTs, retries/backoff, retry-saving button), joined server-side into storage, linked to the SegmentAttempt; owner/admin-only playback endpoint. Verified the joined WebM decodes (12.2 s).
