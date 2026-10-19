@@ -1,13 +1,12 @@
+.env
 backend/.venv/
 backend/.env
-backend/data/app.db
-backend/data/uploads/
-backend/data/tmp/
-backend/data/*.log
+backend/data/
+backend/.pytest_cache/
 __pycache__/
 *.pyc
 frontend/node_modules/
 frontend/.next/
 frontend/.next-build/
+frontend/tsconfig.tsbuildinfo
 .env*.local
-.vercel

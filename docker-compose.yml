@@ -1,0 +1,87 @@
+# Local development stack.
+#   cp .env.example .env    (fill in keys you have; everything else has dev defaults)
+#   docker compose up --build
+# Frontend http://localhost:3000, API http://localhost:8000/api/docs, MinIO console http://localhost:9001
+name: ccl
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ccl
+      POSTGRES_PASSWORD: ccl
+      POSTGRES_DB: ccl
+    ports: ["5433:5432"]           # 5433 on the host so a local Postgres on 5432 doesn't clash
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/docker/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ccl -d ccl"]
+      interval: 3s
+      retries: 20
+
+  # S3-compatible object storage for dev (production: AWS S3 or Hetzner Object Storage).
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ccl-dev
+      MINIO_ROOT_PASSWORD: ccl-dev-secret
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on: { minio: { condition: service_healthy } }
+    entrypoint: >
+      sh -c "mc alias set local http://minio:9000 ccl-dev ccl-dev-secret &&
+             mc mb --ignore-existing local/ccl-dev"
+    restart: "no"
+
+  backend:
+    build: ./backend
+    env_file: [{ path: .env, required: false }]
+    environment: &backend-env
+      DATABASE_URL: postgresql+psycopg://ccl:ccl@postgres:5432/ccl
+      TEST_DATABASE_URL: postgresql+psycopg://ccl:ccl@postgres:5432/ccl_test
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_BUCKET: ccl-dev
+      S3_ACCESS_KEY_ID: ccl-dev
+      S3_SECRET_ACCESS_KEY: ccl-dev-secret
+      APP_URL: http://localhost:3000
+    command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports: ["8000:8000"]
+    volumes: ["./backend:/app"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+
+  worker:
+    build: ./backend
+    env_file: [{ path: .env, required: false }]
+    environment: *backend-env
+    command: python -m app.worker
+    volumes: ["./backend:/app"]
+    depends_on:
+      backend: { condition: service_started }
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- -H 0.0.0.0"
+    environment:
+      API_URL: http://backend:8000
+    ports: ["3000:3000"]
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on: [backend]
+
+volumes:
+  pgdata:
+  miniodata:
