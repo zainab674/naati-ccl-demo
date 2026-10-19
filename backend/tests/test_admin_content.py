@@ -95,3 +95,24 @@ def test_waveform_preview(admin_client, db):
     d = make_dialogue(db, segments=1)
     r = admin_client.get(f"/api/admin/segments/{d.segments[0].id}/waveform")
     assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+
+
+def test_suggest_meaning_units_mock(admin_client, db):
+    d = make_dialogue(db, segments=1)
+    d.segments[0].transcript = "Your appointment is on Tuesday at 10:30 in the morning."
+    db.commit()
+    before = db.query(MeaningUnit).count()
+    r = admin_client.post(f"/api/admin/segments/{d.segments[0].id}/suggest-meaning-units")
+    assert r.status_code == 200, r.text
+    mus = r.json()["meaning_units"]
+    assert r.json()["provider"] == "mock" and len(mus) >= 3 and mus[0]["meaning_unit_number"] == 1
+    assert db.query(MeaningUnit).count() == before  # suggestions are not saved
+
+
+def test_strict_schema_inlines_refs():
+    from app.services.ai.llm import strict_schema
+    from app.services.ai.meaning_units import Suggestion
+
+    s = strict_schema(Suggestion.model_json_schema())
+    item = s["properties"]["meaning_units"]["items"]
+    assert "$defs" not in s and item["additionalProperties"] is False and item["required"] == ["meaning", "reference_interpretation"]

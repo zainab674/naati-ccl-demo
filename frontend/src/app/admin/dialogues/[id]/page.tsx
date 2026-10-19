@@ -172,7 +172,12 @@ function SegmentEditor({ seg, onSaved, onError }: { seg: Seg; onSaved: (d: Detai
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex justify-between">
+            <div className="mt-3 flex flex-wrap justify-between gap-2">
+              <Button size="sm" variant="ghost" loading={busy === "suggest"} onClick={() => run("suggest", async () => {
+                const r = await api<{ meaning_units: MU[]; model: string }>(`/admin/segments/${seg.id}/suggest-meaning-units`, { method: "POST" });
+                if (mus.length && !confirm("Replace the meaning units below with the AI suggestion? Nothing is saved until you press Save.")) return;
+                setMus(r.meaning_units.map((m) => ({ ...m, weight: 1, active: true })));
+              })}>Suggest with AI</Button>
               <Button size="sm" variant="ghost" onClick={() => setMus([...mus, { meaning_unit_number: Math.max(0, ...mus.map((m) => m.meaning_unit_number)) + 1, meaning: "", reference_interpretation: "", weight: 1, active: true }])}>
                 <Plus className="size-4" /> Add meaning unit
               </Button>

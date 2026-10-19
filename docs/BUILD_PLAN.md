@@ -35,7 +35,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 2.4 Course CSV import (course_key, lesson rows) with the same dry-run/commit flow.
 - [x] 2.5 Admin content screens: list/edit/publish/hide dialogues (segments, MUs editable), courses and lessons with a
       sanitised HTML editor.
-- [ ] 2.6 Optional helper: "Suggest Meaning Units" button per segment (AI suggests, admin edits/approves).
+- [x] 2.6 Optional helper: "Suggest Meaning Units" button per segment (AI suggests, admin edits/approves).
 
 ## M3. Student experience
 - [ ] 3.1 Student dashboard: average score, available dialogues/mock tests, recent attempts, continue unfinished,
@@ -110,3 +110,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 2.3: Postgres job queue (SKIP LOCKED, retries with backoff, failure hooks) + `python -m app.worker`; per-segment ingest job: download (size-capped) -> chime -> AES-128 HLS (demo pipeline) -> storage; waveform from CSV URL or drawn by ffmpeg; unchanged audio skipped by hash; ImportJob progress/failures. Tested with real ffmpeg.
 - 2026-10-19 2.4: courses.csv import with the same dry-run/commit flow (ImportJob), lesson HTML sanitised with nh3 allow-list (warns when content was stripped), idempotent by course_key/lesson_no, missing lessons archived.
 - 2026-10-19 2.5: admin dialogue list/editor (details, publish/hide with readiness checks, segment transcript, MU table add/remove/renumber, re-process audio, waveform preview), mock test definitions (2 dialogues, same pair), course + lesson editor with sanitised HTML and live server-side preview. Checked in the browser.
+- 2026-10-19 2.6: LLM provider layer (Gemini default, Anthropic Opus 5.5 / OpenAI optional, mock; strict JSON schema output, typed retryable errors); 'Suggest with AI' per segment fills the MU editor for the admin to edit and save (never auto-saved); prompt in app/prompts/suggest_meaning_units_v1.md.

@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash-lite"
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-5-5"
+    anthropic_model: str = "claude-opus-5-5"
     openai_api_key: str = ""
     openai_model: str = "gpt-5-mini"
 

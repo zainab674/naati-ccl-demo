@@ -380,3 +380,18 @@ class HtmlIn(BaseModel):
 def sanitize_preview(body: HtmlIn):
     """Editor preview: exactly what will be stored and shown to students."""
     return {"html": sanitize(body.html)}
+
+
+@router.post("/segments/{segment_id}/suggest-meaning-units")
+def suggest_meaning_units(segment_id: uuid.UUID, db: Session = Depends(get_db)):
+    """AI suggestion only: the admin reviews, edits and saves. Nothing is stored here."""
+    from ..services.ai import meaning_units
+    from ..services.ai.llm import LLMError
+
+    s = _get(db, Segment, segment_id)
+    if not s.transcript.strip():
+        raise HTTPException(400, "The segment has no transcript")
+    try:
+        return meaning_units.suggest(s)
+    except LLMError as e:
+        raise HTTPException(502, f"Suggestion failed: {e}") from e
