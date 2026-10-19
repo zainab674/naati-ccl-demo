@@ -136,9 +136,9 @@ def mock_evaluation(request: dict) -> dict:
         items.append({"meaning_unit": m["meaning_unit"], "result": "correct" if ok else "omission",
                       "student_interpretation": m["reference_rendering"] if ok else "",
                       "explanation": "" if ok else f'"{m["meaning"]}" was not found in your interpretation.',
-                      "suggested_version": m["reference_rendering"], "confidence": 0.5})
+                      "suggested_version": m["reference_rendering"], "confidence": 0.8})
     return {"meaning_units": items, "insertions": [], "language_quality": [], "fluency": [],
-            "transcript_quality": "uncertain", "confidence": 0.5,
+            "transcript_quality": "uncertain", "confidence": 0.8,
             "overall_feedback": "Development mode: this feedback comes from a simple text match, not the AI evaluator."}
 
 

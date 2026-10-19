@@ -25,3 +25,7 @@ information_1_practice: >
 information_2: >
   Before you start, check your audio. Play the test sound and make sure you can hear it clearly. Then record a
   short sample with your microphone and play it back.
+
+results:
+  # After submission (never during an attempt): show the source segment text next to the feedback.
+  show_source_transcript: true

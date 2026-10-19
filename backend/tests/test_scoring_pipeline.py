@@ -155,3 +155,27 @@ def test_low_confidence_flags_review(student_client, db, answer_audio):
     db.expire_all()
     sa = db.scalar(select(SegmentAttempt))
     assert sa.scoring_status == ScoringStatus.COMPLETED and sa.needs_review and "low AI confidence" in sa.scoring_error
+
+
+def test_results_payload(student_client, db, answer_audio):
+    d = make_dialogue(db, is_free=True, segments=2, mus_per_segment=2)
+    aid = student_client.post("/api/attempts", json={"dialogue_id": str(d.id)}).json()["id"]
+    s1, _ = segment_ids(student_client, aid)
+    assert student_client.get(f"/api/attempts/{aid}/results").status_code == 409
+    record(student_client, aid, s1, answer_audio)
+    MockSTT.override = "Reference 1.1"
+    student_client.post(f"/api/attempts/{aid}/submit")
+    pending = student_client.get(f"/api/attempts/{aid}/results").json()
+    assert pending["scoring_status"] == "Pending" and pending["pending_segments"] == 2
+    jobs.run_until_empty()
+    r = student_client.get(f"/api/attempts/{aid}/results").json()
+    assert r["scoring_status"] == "Completed" and r["total_score"] == 41.5 and r["result"] == "Pass"
+    assert r["deductions"] == {"accuracy": 3, "language": 0, "fluency": 0.5, "total": 3.5}
+    assert r["demo_scoring"] is True
+    seg = r["dialogues"][0]["segments"][0]
+    assert seg["transcript"] == "Reference 1.1" and seg["source_transcript"] == "Source transcript 1"
+    assert [a["result"] for a in seg["accuracy"]] == ["Correct", "Omission"] and seg["accuracy"][1]["deduction"] == 1
+    assert seg["accuracy"][1]["suggested_version"] == "Reference 1.2"
+    assert seg["fluency"][0]["type"] == "Pause" and seg["has_recording"]
+    assert "stt_words" not in seg  # admin-only detail
+    assert r["history"][0]["id"] == aid

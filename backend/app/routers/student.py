@@ -309,6 +309,16 @@ def integrity(attempt_id: uuid.UUID, body: IntegrityIn, cu: CurrentUser = Depend
     return {"ok": True}
 
 
+@router.get("/attempts/{attempt_id}/results")
+def results(attempt_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+    from ..services.results import attempt_results
+
+    ref = svc.resolve(db, attempt_id, cu.user, allow_admin=True)
+    if ref.status == AttemptStatus.IN_PROGRESS:
+        raise HTTPException(409, "This attempt has not been submitted yet")
+    return attempt_results(db, ref)
+
+
 @router.post("/attempts/{attempt_id}/submit")
 def submit(attempt_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
     ref = svc.resolve(db, attempt_id, cu.user)
