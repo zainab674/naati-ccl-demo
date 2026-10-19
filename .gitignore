@@ -11,3 +11,4 @@ frontend/.next-build/
 frontend/tsconfig.tsbuildinfo
 .env*.local
 backups/
+backend/.coverage
