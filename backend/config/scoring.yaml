@@ -1,0 +1,50 @@
+# Scoring rules: docs/SCORING_BRIEF.md (Benchmark Education). The AI only identifies and classifies errors;
+# code applies these numbers. Changing a value here changes scoring without touching the AI prompt.
+version: 1
+
+# ---------------------------------------------------------------- totals and pass rules
+dialogue_max: 45              # default Dialogue.maximum_score
+total_max: 90                 # mock test of 2 dialogues
+pass_total: 63                # default MockTestAttempt.passing_score
+pass_min_per_dialogue: 29     # default Dialogue.passing_score
+floor_at_zero: true           # scores never go below 0
+
+# ---------------------------------------------------------------- penalties
+penalties:
+  accuracy_completeness:
+    omission: 1.0             # per affected Meaning Unit
+    distortion: 1.0           # per affected Meaning Unit
+    insertion: 1.0            # per inserted piece of information
+    use_meaning_unit_weight: true   # penalty x MeaningUnit.weight (CSV default 1, i.e. exactly -1 per MU)
+  language_quality:           # per occurrence
+    grammar: 0.5
+    unidiomatic_usage: 0.5
+    register: 0.5
+    sentence_structure: 0.5
+    pronunciation: 0.5
+  fluency:                    # per occurrence
+    pause: 0.5
+    start_delay: 0.5
+    hesitation: 0.5
+    self_correction: 0.5
+  repeat: 0.0                 # repeats are tracked (RepeatEvent) but the brief sets no penalty
+
+# Pronunciation is judged from audio, not the transcript. MVP: flag for admin review, do not deduct.
+pronunciation_auto_deduct: false
+
+# Segment not answered (skipped, empty or silent recording): every Meaning Unit counts as an omission.
+unanswered_counts_all_meaning_units_omitted: true
+
+# ---------------------------------------------------------------- fluency timing (measured by code from audio)
+timing:
+  start_delay_seconds: 5.0    # speech starts more than this after recording starts -> StartDelay
+  long_pause_seconds: 3.0     # silence between words longer than this -> Pause
+  max_pause_events_per_segment: null   # null = no cap
+  # Filler words come from LanguageScoringConfig.hesitation_markers (per language) plus these English ones.
+  english_hesitation_markers: ["uh", "um", "umm", "uhm", "ah", "ahh", "er", "erm", "hmm"]
+  hesitation_min_repeats: 2   # fillers must repeat (>= this many in a segment) to count as hesitation
+
+# ---------------------------------------------------------------- review flags
+review:
+  low_confidence_threshold: 0.6       # AI confidence below this -> segment needs admin review
+  stt_low_confidence_threshold: 0.45  # STT confidence below this -> needs admin review
