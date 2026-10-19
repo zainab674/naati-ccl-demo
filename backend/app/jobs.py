@@ -113,4 +113,5 @@ def _register_handlers() -> None:
     global _registered
     if not _registered:
         from .services import media_ingest  # noqa: F401
+        from .services.scoring import pipeline  # noqa: F401
         _registered = True

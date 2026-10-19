@@ -9,7 +9,7 @@ from app.settings import get_settings
 
 config = context.config
 if config.config_file_name:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 # A caller (tests) may pass a URL explicitly; otherwise use DATABASE_URL.
 if not config.get_main_option("sqlalchemy.url"):
     config.set_main_option("sqlalchemy.url", get_settings().database_url)
