@@ -64,7 +64,7 @@ Milestones map to client payments. Keep the app runnable after every task.
       explanations and suggested versions, recording playback, attempt history.
 - [x] 4.7 Admin students list + attempt review: recordings, transcript, AI output, every deduction, override with
       note (AdminReview) and recalculation; subscription status visible.
-- [ ] 4.8 Accuracy check script: `scripts/eval_against_teacher.py` that runs N teacher-marked answers through the
+- [x] 4.8 Accuracy check script: `scripts/eval_against_teacher.py` that runs N teacher-marked answers through the
       pipeline and prints AI vs teacher deductions per criterion (for the 10-sample test with the client).
 
 ## M5. Launch
@@ -128,3 +128,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 4.5: score_segment worker job: STT -> VAD timing -> evaluator -> error records -> engine; retryable provider errors retried (4 tries, backoff), final failure marks the segment Failed + needs review; every STT/evaluation call logged in AIScoringRun; skipped or silent answers = all MUs omitted (silent flagged for review); low AI/STT confidence, poor transcript or unmatched quotes -> needs review; dialogue/mock finalised under row locks once all segments are done; results-ready email once. Fixed: alembic fileConfig was disabling app loggers.
 - 2026-10-19 4.6: results API + page: estimated total /90 (or /45), Pass/Fail with reasons, criterion breakdown per attempt and dialogue, per segment: source (config switch), what we heard, recording playback, feedback, every MU/insertion/LQ/fluency item with explanation, suggested version and deduction, review badges; live polling while scoring; attempt history; dev-mode banner when providers are mocked. Checked in the browser.
 - 2026-10-19 4.7: admin students list (search, subscription filter, attempts, average) and detail (subscriptions, payments, lessons, attempts); review queue (needs review / failed); attempt review with recordings, transcripts, word timings, every deduction, raw AI runs (request/raw/processed), per-item override with required note -> AdminReview -> segment/dialogue/mock recalculation, teacher-added errors, mark reviewed (also completes a failed segment scored by hand), re-score.
+- 2026-10-19 4.8: scripts/eval_against_teacher.py (+ teacher_samples_template.csv): runs teacher-marked answers (audio or transcript) through STT -> timing -> evaluator -> engine without DB writes, prints AI vs teacher per criterion, mean |diff|, bias, exact/within-0.5 counts, optional per-sample CSV with the AI's errors. Needs real keys for a meaningful run.

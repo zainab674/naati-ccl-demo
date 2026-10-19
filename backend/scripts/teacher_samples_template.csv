@@ -1,0 +1,3 @@
+sample_id,dialogue_key,segment_no,audio_path,teacher_accuracy,teacher_language,teacher_fluency,transcript,notes
+S01,your-dialogue-key,1,answers/S01.webm,1,0.5,0,,optional teacher notes
+S02,your-dialogue-key,2,answers/S02.webm,0,0,0.5,,
