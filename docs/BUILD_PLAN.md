@@ -70,7 +70,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 ## M5. Launch
 - [x] 5.1 Production Dockerfiles, `docker-compose.prod.yml`, Caddy/Nginx HTTPS, health checks, logging.
 - [x] 5.2 `docs/DEPLOY_HETZNER.md`: server setup, Postgres, backups, env, Stripe webhook URL, DNS.
-- [ ] 5.3 Security pass: rate limits, CSRF/cookie flags, upload limits, HTML sanitisation, secrets audit,
+- [x] 5.3 Security pass: rate limits, CSRF/cookie flags, upload limits, HTML sanitisation, secrets audit,
       admin-only routes, signed media URLs.
 - [ ] 5.4 End-to-end test: sign up -> pay (test mode) -> course lesson -> full mock test -> scoring -> results ->
       admin override -> emails logged.
@@ -131,3 +131,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 4.8: scripts/eval_against_teacher.py (+ teacher_samples_template.csv): runs teacher-marked answers (audio or transcript) through STT -> timing -> evaluator -> engine without DB writes, prints AI vs teacher per criterion, mean |diff|, bias, exact/within-0.5 counts, optional per-sample CSV with the AI's errors. Needs real keys for a meaningful run.
 - 2026-10-19 5.1: docker-compose.prod.yml (postgres, backend x2 uvicorn workers with migrations+seed on start, worker with graceful stop, Next.js standalone frontend, Caddy auto-HTTPS), deploy/Caddyfile (/api -> FastAPI, HSTS, 25 MB body cap, JSON logs), healthchecks on every service, rotated json-file logs, frontend multi-stage Dockerfile. Validated with docker compose config and a local standalone build; images not built here (Docker daemon unavailable on this machine).
 - 2026-10-19 5.2: docs/DEPLOY_HETZNER.md (server + firewall, Docker, DNS, Hetzner/AWS object storage, .env table, start + first admin steps, Stripe live webhook URL/events/portal, backups with deploy/backup.sh + restore, updates, operations).
+- 2026-10-19 5.3: security pass (docs/SECURITY.md): Origin check middleware for unsafe /api requests, security headers + no-store, API docs off in production, Secure cookies forced and long SECRET_KEY required in production, play and AI-suggestion rate limits, route-by-route admin authorisation test (33 routes), secrets scan test; existing upload limits, sanitisation, signed session-bound media reviewed.

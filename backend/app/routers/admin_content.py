@@ -388,6 +388,9 @@ def suggest_meaning_units(segment_id: uuid.UUID, db: Session = Depends(get_db)):
     from ..services.ai import meaning_units
     from ..services.ai.llm import LLMError
 
+    from ..services import ratelimit
+
+    ratelimit.enforce("suggest-mus", 30)  # each call is a paid model request
     s = _get(db, Segment, segment_id)
     if not s.transcript.strip():
         raise HTTPException(400, "The segment has no transcript")

@@ -194,6 +194,7 @@ def save_step(attempt_id: uuid.UUID, body: StepIn, cu: CurrentUser = Depends(cur
 @router.post("/attempts/{attempt_id}/segments/{segment_attempt_id}/play")
 def play(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID, cu: CurrentUser = Depends(current_user),
          db: Session = Depends(get_db)):
+    ratelimit.enforce(f"play:{cu.id}", 30)
     ref = svc.resolve(db, attempt_id, cu.user)
     sa = svc.segment_attempt(ref, segment_attempt_id)
     is_repeat = svc.register_play(db, ref, sa)

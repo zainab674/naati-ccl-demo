@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     session_hours: int = 12
     password_hash_iterations: int = 310_000
-    cors_origins: str = ""
+    cors_origins: str = ""  # extra origins allowed to POST (comma-separated); APP_URL is always allowed
 
     admin_email: str = ""
     admin_password: str = ""
@@ -112,8 +112,10 @@ def get_settings() -> Settings:
     s = Settings()
     s.database_url = _normalise_db_url(s.database_url)
     s.test_database_url = _normalise_db_url(s.test_database_url)
-    if s.is_production and s.secret_key == "dev-secret-change-me":
-        raise RuntimeError("SECRET_KEY must be set in production")
+    if s.is_production:
+        if s.secret_key == "dev-secret-change-me" or len(s.secret_key) < 32:
+            raise RuntimeError("SECRET_KEY must be set to a long random value in production")
+        s.cookie_secure = True  # session cookies only over HTTPS
     return s
 
 

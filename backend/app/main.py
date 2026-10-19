@@ -4,12 +4,17 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from .db import SessionLocal
+from .middleware import SecurityMiddleware
 from .routers import admin, admin_content, admin_imports, admin_students, auth, billing, courses, media, public, student
 from .settings import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-app = FastAPI(title="CCL Platform API", docs_url="/api/docs", openapi_url="/api/openapi.json")
+_prod = get_settings().is_production
+# Interactive API docs are for development only.
+app = FastAPI(title="CCL Platform API", docs_url=None if _prod else "/api/docs", redoc_url=None,
+              openapi_url=None if _prod else "/api/openapi.json")
+app.add_middleware(SecurityMiddleware)
 app.include_router(auth.router)
 app.include_router(billing.router)
 app.include_router(public.router)
