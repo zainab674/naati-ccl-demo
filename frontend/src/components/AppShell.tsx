@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BookOpen, ClipboardCheck, GraduationCap, History, LayoutDashboard, LogOut, Menu, Upload, Users, X,
+  BookOpen, ClipboardCheck, Flag, GraduationCap, History, LayoutDashboard, LogOut, Menu, Upload, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,6 +29,7 @@ const STUDENT_NAV: NavItem[] = [
 const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/students", label: "Students", icon: Users },
+  { href: "/admin/review", label: "Review queue", icon: Flag },
   { href: "/admin/dialogues", label: "Dialogues", icon: BookOpen },
   { href: "/admin/mock-tests", label: "Mock tests", icon: ClipboardCheck },
   { href: "/admin/courses", label: "Courses", icon: GraduationCap },
