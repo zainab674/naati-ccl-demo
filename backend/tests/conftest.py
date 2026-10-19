@@ -7,6 +7,7 @@ os.environ["SECRET_KEY"] = "test-secret-key-that-is-long-enough-for-hs256"
 os.environ.setdefault("TEST_DATABASE_URL", "postgresql+psycopg://ccl:ccl@localhost:5433/ccl_test")
 os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 os.environ["STORAGE_BACKEND"] = "local"
+os.environ["PASSWORD_HASH_ITERATIONS"] = "1000"
 os.environ["STT_PROVIDER"] = "mock"
 os.environ["EVALUATOR_PROVIDER"] = "mock"
 os.environ["EMAIL_PROVIDER"] = "console"
@@ -47,9 +48,10 @@ def clean_db(migrated_db):
     ratelimit.reset()
     ConsoleProvider.outbox.clear()
 
-    tables = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+    # DELETE (child tables first) is far cheaper than TRUNCATE for a handful of rows per test.
     with engine.begin() as conn:
-        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+        for table in reversed(Base.metadata.sorted_tables):
+            conn.execute(table.delete())
     with SessionLocal() as db:
         seed(db)
     yield

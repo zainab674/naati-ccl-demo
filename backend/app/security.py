@@ -9,13 +9,13 @@ import jwt
 from .settings import get_settings
 
 COOKIE_NAME = "ccl_session"
-_ITERATIONS = 310_000
 
 
 def hash_password(password: str) -> str:
+    iterations = get_settings().password_hash_iterations
     salt = secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), _ITERATIONS).hex()
-    return f"pbkdf2${_ITERATIONS}${salt}${digest}"
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), iterations).hex()
+    return f"pbkdf2${iterations}${salt}${digest}"
 
 
 def verify_password(password: str, stored: str) -> bool:

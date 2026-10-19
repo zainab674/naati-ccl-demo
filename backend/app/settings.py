@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-change-me"
     cookie_secure: bool = False
     session_hours: int = 12
+    password_hash_iterations: int = 310_000
     cors_origins: str = ""
 
     admin_email: str = ""
