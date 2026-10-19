@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import CurrentUser, current_user
-from ..models import Payment, Plan, Subscription
+from ..models import Payment, Plan, Subscription, SubscriptionStatus
 from ..services import billing
 
 router = APIRouter(prefix="/api", tags=["billing"])
@@ -37,6 +37,9 @@ def checkout(body: CheckoutIn, cu: CurrentUser = Depends(current_user), db: Sess
         raise HTTPException(404, "Plan not found")
     if plan.contact_only or not plan.stripe_price_id:
         raise HTTPException(400, "This plan is not available for online purchase. Please contact us.")
+    if cu.user.subscription_status in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL):
+        # Prevents a second, parallel subscription (double billing). Plan changes go through the billing portal.
+        raise HTTPException(409, "You already have an active plan. Manage it from your account page.")
     try:
         return {"url": billing.create_checkout(db, cu.user, plan)}
     except billing.BillingNotConfigured as e:
