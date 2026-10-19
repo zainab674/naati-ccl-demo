@@ -3,13 +3,14 @@ truncated between tests. Point DATABASE_URL at it before the app is imported."""
 import os
 
 os.environ["ENVIRONMENT"] = "test"
+os.environ["SECRET_KEY"] = "test-secret-key-that-is-long-enough-for-hs256"
 os.environ.setdefault("TEST_DATABASE_URL", "postgresql+psycopg://ccl:ccl@localhost:5433/ccl_test")
 os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 os.environ["STORAGE_BACKEND"] = "local"
 os.environ["STT_PROVIDER"] = "mock"
 os.environ["EVALUATOR_PROVIDER"] = "mock"
 os.environ["EMAIL_PROVIDER"] = "console"
-os.environ["ADMIN_EMAIL"] = "admin@test.local"
+os.environ["ADMIN_EMAIL"] = "admin@example.com"
 os.environ["ADMIN_PASSWORD"] = "admin-pass-123"
 for key in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "GROQ_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY",
             "OPENAI_API_KEY"):
@@ -40,6 +41,11 @@ def migrated_db(tmp_path_factory):
 @pytest.fixture(autouse=True)
 def clean_db(migrated_db):
     from app.seed import seed
+    from app.services import ratelimit
+    from app.services.email import ConsoleProvider
+
+    ratelimit.reset()
+    ConsoleProvider.outbox.clear()
 
     tables = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
     with engine.begin() as conn:
@@ -63,3 +69,29 @@ def client():
 
     with TestClient(app) as c:
         yield c
+
+
+def signup(client, email="student@example.com", password="student-pass-1", **extra):
+    body = {"first_name": "Sam", "last_name": "Student", "email": email, "password": password,
+            "accept_terms": True, **extra}
+    r = client.post("/api/auth/signup", json=body)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def login(client, email, password):
+    r = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+@pytest.fixture
+def student_client(client):
+    signup(client)
+    return client
+
+
+@pytest.fixture
+def admin_client(client):
+    login(client, "admin@example.com", "admin-pass-123")
+    return client

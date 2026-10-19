@@ -4,6 +4,21 @@ export class ApiError extends Error {
   }
 }
 
+type FieldError = { loc?: (string | number)[]; msg?: string };
+
+function errorMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    // FastAPI validation errors: "email: value is not a valid email address"
+    return detail.map((d: FieldError) => {
+      const field = d.loc?.filter((p) => p !== "body").join(".");
+      return field ? `${field}: ${d.msg}` : d.msg;
+    }).join("; ");
+  }
+  return fallback;
+}
+
+/** Same-origin call to the FastAPI backend (Next rewrites /api/* to it), so the httpOnly session cookie is sent. */
 export async function api<T = unknown>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { json, headers, ...rest } = init;
   const res = await fetch(`/api${path}`, {
@@ -17,10 +32,13 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
     let msg = res.statusText;
     try {
       const data = await res.json();
-      msg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail ?? data);
+      msg = errorMessage(data.detail, msg);
     } catch {}
-    if (res.status === 401 && typeof window !== "undefined" && !path.startsWith("/auth")) {
-      window.location.assign(`${window.location.origin}/login`);
+    if (res.status === 401 && typeof window !== "undefined" && !path.startsWith("/auth") && !path.startsWith("/public")) {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      // Outside React (plain fetch helper), so no router is available here.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = `${window.location.origin}/login?next=${next}`;
     }
     throw new ApiError(res.status, msg);
   }
@@ -30,58 +48,12 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
 // ---------- types
 
 export type User = {
-  id: string; email: string; name: string; role: "student" | "assessor"; exam_date: string | null; flagged: boolean;
-  test_language: string | null;
-};
-
-export type Language = { code: string; name: string; native: string; stt_locale: string; available: boolean };
-
-export type Activity = {
-  id: string; number: number; title: string; scenario: string; domain: string; difficulty: string;
-  language_pair: string; segment_count: number; duration_seconds: number; status: string; practiced?: boolean;
-  speakers: Record<string, { role: string; gender: string }>;
-};
-
-export type AttemptSummary = {
-  id: string; mode: "practice" | "mock"; status: string; titles: string[]; started_at: string;
-  total: number | null; total_max: number | null; passed: boolean | null;
-};
-
-export type Issue = {
-  category: string; check: string; severity: "minor" | "major" | "critical"; quote: string; explanation: string;
-  possibly_transcription_error?: boolean;
-};
-
-export type MarkingT = {
-  id: string; source: "ai" | "assessor"; marker: string; issues: Issue[]; points_deducted: number;
-  summary: string; note: string; created_at: string; raw?: Record<string, unknown>;
-};
-
-export type SegmentResult = {
-  index: number; number: number; speaker: string; source_text: string; reference_text: string; plays: number;
-  response: null | {
-    id: string; transcript: string; stt_provider: string; stt_confidence: number | null; needs_review: boolean;
-    status: string; error: string; has_audio: boolean;
-    delivery: { fillers?: string[]; long_pauses?: { after: string; seconds: number }[]; response_latency?: number | null };
-    marking: MarkingT | null; ai_marking: MarkingT | null;
-  };
-};
-
-export type DialogueResult = {
-  activity_id: string; title: string; domain: string; difficulty: string; score: number; max: number;
-  meets_minimum: boolean; repeats_used: number; repeat_deduction: number; scale: number;
-  by_category: { id: string; name: string; points: number }[]; segments: SegmentResult[];
-};
-
-export type Results = {
-  attempt_id: string; mode: "practice" | "mock"; status: string; pending_segments: number; total: number;
-  total_max: number; passed: boolean; pass_rules: { pass_total: number; pass_min_per_dialogue: number };
-  reviewed_by_assessor: boolean; started_at: string; submitted_at: string | null; dialogues: DialogueResult[];
+  id: string; email: string; first_name: string; last_name: string; name: string; role: "student" | "admin";
+  subscription_status: "Active" | "Trial" | "Expired" | "Inactive"; has_active_plan: boolean;
+  target_exam_date: string | null;
 };
 
 // ---------- formatting
-
-export const LANG = { en: "English", hi: "Hindi" } as const;
 
 export function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
@@ -91,6 +63,7 @@ export function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 }
 
-export function isHindi(text: string) {
-  return /[ऀ-ॿ]/.test(text);
+/** Only allow same-site relative redirects after login (no open redirect). */
+export function safeNext(next: string | null, fallback: string) {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
 }

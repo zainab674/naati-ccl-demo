@@ -20,7 +20,7 @@ def test_seed_is_idempotent(db):
     assert db.query(LanguagePair).count() == 1
     assert db.query(Topic).count() >= 5
     assert db.query(Plan).count() == 2
-    admin = db.scalar(select(User).where(User.email == "admin@test.local"))
+    admin = db.scalar(select(User).where(User.email == "admin@example.com"))
     assert admin.role == UserRole.ADMIN
     fil = db.scalar(select(Language).where(Language.code == "fil"))
     assert fil.stt_code == "tl"

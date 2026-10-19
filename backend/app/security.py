@@ -27,11 +27,12 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(check, digest)
 
 
-def issue_session_token(user_id: str, role: str) -> str:
+def issue_session_token(user_id: str, role: str, version: int = 0) -> str:
     s = get_settings()
     payload = {
         "sub": str(user_id),
         "role": role,
+        "ver": version,
         "sid": secrets.token_hex(12),  # login session id; media grants are bound to it
         "exp": datetime.now(UTC) + timedelta(hours=s.session_hours),
     }

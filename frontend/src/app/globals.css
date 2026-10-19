@@ -1,8 +1,7 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-inter), var(--font-deva), ui-sans-serif, system-ui, sans-serif;
-  --font-deva: var(--font-deva);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme {
@@ -29,11 +28,6 @@ body {
   color: var(--color-ink);
 }
 
-.hindi,
-:lang(hi) {
-  font-family: var(--font-deva), var(--font-inter), sans-serif;
-  line-height: 1.75;
-}
 
 @keyframes bar {
   0%, 100% { transform: scaleY(0.35); }

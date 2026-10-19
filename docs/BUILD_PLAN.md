@@ -15,7 +15,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 0.6 Test setup: pytest with a Postgres test DB; frontend `npm run build` + lint pass. Add a CI-style `make check`.
 
 ## M1. Accounts, payments, public site
-- [ ] 1.1 Auth: sign up, login, logout, password reset (token email), roles, httpOnly cookie sessions (reuse demo JWT).
+- [x] 1.1 Auth: sign up, login, logout, password reset (token email), roles, httpOnly cookie sessions (reuse demo JWT).
 - [ ] 1.2 Access control helper: `requires_active_plan`, free-content flags respected.
 - [ ] 1.3 Stripe: Plan table, Checkout session endpoint, webhook (signature verified, idempotent),
       subscription_status updates, customer portal link. Test with Stripe test mode + CLI.
@@ -89,3 +89,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 0.4: all DATA_MODEL.md tables + MockTest, Job queue, StripeEvent, PasswordResetToken; initial migration; idempotent `python -m app.seed`.
 - 2026-10-19 0.5: config/scoring.yaml (penalties, 3 s pause, 5 s delay, 63/29/45/90, pronunciation review-only) and config/ccl.yaml (test flow).
 - 2026-10-19 0.6: pytest on a real Postgres test DB (migrated once, truncated + seeded per test), ruff, `make check` / scripts/check.sh (backend lint+tests, frontend lint+build).
+- 2026-10-19 1.1: signup/login/logout/forgot/reset (1 h single-use hashed tokens, session_version invalidates old cookies), /me, rate-limited; login/signup/forgot/reset pages; demo pages removed pending M3 rebuild.

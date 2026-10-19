@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Devanagari } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const deva = Noto_Sans_Devanagari({ variable: "--font-deva", subsets: ["devanagari"], weight: ["400", "500", "600"] });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin", "latin-ext"] });
 
 export const metadata: Metadata = {
-  title: "Benchmark CCL Prep",
-  description: "NAATI CCL practice dialogues, mock tests and AI feedback",
+  title: { default: "Benchmark Education | NAATI CCL Practice", template: "%s | Benchmark Education" },
+  description:
+    "NAATI CCL practice dialogues and mock tests for English and Filipino, with detailed feedback on every deduction.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${deva.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full font-sans">{children}</body>
     </html>
   );

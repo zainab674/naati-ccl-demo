@@ -23,6 +23,7 @@ class User(IdMixin, Base):
     last_login_at: Mapped[datetime | None] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
     flagged: Mapped[bool] = mapped_column(default=False)  # content-protection anomaly flag (from the demo)
+    session_version: Mapped[int] = mapped_column(default=0)  # bump to sign out every session (password reset)
 
     preferred_language = relationship("Language")
 

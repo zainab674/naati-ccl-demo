@@ -2,11 +2,11 @@
 
 import { Loader2, X } from "lucide-react";
 import Link from "next/link";
-import { type ButtonHTMLAttributes, type ReactNode, useEffect } from "react";
+import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, useEffect } from "react";
 
-export function cx(...c: (string | false | null | undefined)[]) {
-  return c.filter(Boolean).join(" ");
-}
+import { cx } from "./cx";
+
+export { cx };
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 const variants: Record<Variant, string> = {
@@ -61,7 +61,7 @@ export function Badge({ tone = "slate", children, className }:
 }
 
 export function DifficultyBadge({ level }: { level: string }) {
-  const tone = level === "Easy" ? "green" : level === "Hard" ? "red" : "amber";
+  const tone = level === "Easy" ? "green" : level === "Difficult" ? "red" : "amber";
   return <Badge tone={tone}>{level}</Badge>;
 }
 
@@ -132,4 +132,21 @@ export function ScoreRing({ score, max, passed, size = 132 }: { score: number; m
       </div>
     </div>
   );
+}
+
+export const inputClass =
+  "mt-1 block h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20";
+
+export function Field({ label, hint, className, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: ReactNode }) {
+  return (
+    <label className={cx("block", className)}>
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <input {...props} className={inputClass} />
+      {hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
+    </label>
+  );
+}
+
+export function SuccessNote({ children }: { children: ReactNode }) {
+  return <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-200">{children}</div>;
 }

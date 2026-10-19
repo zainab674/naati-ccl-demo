@@ -1,0 +1,95 @@
+"""Transactional email templates: (subject, html, text). Context values are HTML-escaped."""
+from html import escape
+
+BRAND = "Benchmark Education"
+
+
+def _layout(title: str, body_html: str, cta: tuple[str, str] | None = None) -> str:
+    button = ""
+    if cta:
+        label, url = cta
+        button = (f'<p style="margin:28px 0"><a href="{escape(url)}" style="background:#1f6778;color:#ffffff;'
+                  f'padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">'
+                  f'{escape(label)}</a></p>')
+    return f"""<!doctype html>
+<html><body style="margin:0;background:#f6f8f9;font-family:Arial,Helvetica,sans-serif;color:#0f1c22">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;padding:32px">
+<tr><td>
+<div style="font-weight:700;color:#1f6778;font-size:14px;letter-spacing:.04em">{BRAND.upper()} · NAATI CCL</div>
+<h1 style="font-size:22px;margin:16px 0 12px">{escape(title)}</h1>
+<div style="font-size:15px;line-height:1.6">{body_html}</div>
+{button}
+<p style="font-size:12px;color:#64748b;margin-top:32px">You are receiving this email because you have an account with {BRAND}.</p>
+</td></tr></table>
+</td></tr></table>
+</body></html>"""
+
+
+def _welcome(c: dict) -> tuple[str, str, str]:
+    name = escape(c.get("first_name", ""))
+    subject = f"Welcome to {BRAND}"
+    html = _layout(f"Welcome, {name}", (
+        "<p>Your account is ready. Start with the free introduction course and the free practice dialogue, "
+        "then choose a plan when you are ready for full mock tests.</p>"), ("Go to your dashboard", c["dashboard_url"]))
+    text = (f"Welcome, {c.get('first_name', '')}\n\nYour account is ready. Start with the free introduction course "
+            f"and the free practice dialogue.\n\nDashboard: {c['dashboard_url']}\n")
+    return subject, html, text
+
+
+def _password_reset(c: dict) -> tuple[str, str, str]:
+    mins = int(c.get("expires_minutes", 60))
+    subject = "Reset your password"
+    html = _layout("Reset your password", (
+        f"<p>Hi {escape(c.get('first_name', ''))},</p><p>We received a request to reset your password. "
+        f"This link works once and expires in {mins} minutes.</p>"
+        "<p>If you did not ask for this, you can ignore this email; your password will not change.</p>"),
+        ("Choose a new password", c["reset_url"]))
+    text = (f"Hi {c.get('first_name', '')},\n\nReset your password (link expires in {mins} minutes):\n"
+            f"{c['reset_url']}\n\nIf you did not ask for this, ignore this email.\n")
+    return subject, html, text
+
+
+def _receipt(c: dict) -> tuple[str, str, str]:
+    subject = f"Payment receipt: {c.get('plan_name', 'your plan')}"
+    rows = [("Plan", c.get("plan_name", "")), ("Amount", c.get("amount_display", "")), ("Date", c.get("date", ""))]
+    table = "".join(f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">{escape(k)}</td>'
+                    f'<td style="padding:4px 0"><b>{escape(str(v))}</b></td></tr>' for k, v in rows if v)
+    cta = ("View receipt", c["receipt_url"]) if c.get("receipt_url") else ("Go to your dashboard", c["dashboard_url"])
+    html = _layout("Thank you for your payment", (
+        f"<p>Hi {escape(c.get('first_name', ''))}, your payment was successful and your access is active.</p>"
+        f"<table>{table}</table>"), cta)
+    text = (f"Hi {c.get('first_name', '')}, your payment was successful.\n\n"
+            + "".join(f"{k}: {v}\n" for k, v in rows if v)
+            + (f"\nReceipt: {c['receipt_url']}\n" if c.get("receipt_url") else ""))
+    return subject, html, text
+
+
+def _results_ready(c: dict) -> tuple[str, str, str]:
+    subject = f"Your results are ready: {c.get('title', 'mock test')}"
+    score = f"{c['total']:g} / {c['max']:g}" if c.get("total") is not None else ""
+    html = _layout("Your results are ready", (
+        f"<p>Hi {escape(c.get('first_name', ''))}, we have finished scoring <b>{escape(c.get('title', ''))}</b>.</p>"
+        + (f"<p style='font-size:18px'>Estimated score: <b>{escape(score)}</b> ({escape(c.get('result', ''))})</p>"
+           if score else "")
+        + "<p>Open your results to see every deduction, what we heard, and suggested versions.</p>"),
+        ("View results", c["results_url"]))
+    text = (f"Hi {c.get('first_name', '')}, your results for {c.get('title', '')} are ready.\n"
+            + (f"Estimated score: {score} ({c.get('result', '')})\n" if score else "")
+            + f"\n{c['results_url']}\n")
+    return subject, html, text
+
+
+TEMPLATES = {
+    "welcome": _welcome,
+    "password_reset": _password_reset,
+    "receipt": _receipt,
+    "results_ready": _results_ready,
+}
+
+
+def render(name: str, context: dict) -> tuple[str, str, str]:
+    if name not in TEMPLATES:
+        raise KeyError(f"Unknown email template {name}")
+    return TEMPLATES[name](context)
