@@ -28,9 +28,8 @@ def _layout(title: str, body_html: str, cta: tuple[str, str] | None = None) -> s
 
 
 def _welcome(c: dict) -> tuple[str, str, str]:
-    name = escape(c.get("first_name", ""))
     subject = f"Welcome to {BRAND}"
-    html = _layout(f"Welcome, {name}", (
+    html = _layout(f"Welcome, {c.get('first_name', '')}", (
         "<p>Your account is ready. Start with the free introduction course and the free practice dialogue, "
         "then choose a plan when you are ready for full mock tests.</p>"), ("Go to your dashboard", c["dashboard_url"]))
     text = (f"Welcome, {c.get('first_name', '')}\n\nYour account is ready. Start with the free introduction course "

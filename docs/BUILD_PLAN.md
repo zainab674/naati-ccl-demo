@@ -19,7 +19,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 1.2 Access control helper: `requires_active_plan`, free-content flags respected.
 - [x] 1.3 Stripe: Plan table, Checkout session endpoint, webhook (signature verified, idempotent),
       subscription_status updates, customer portal link. Test with Stripe test mode + CLI.
-- [ ] 1.4 Email service (provider interface + SMTP/Resend impl + console impl for dev). Templates: welcome, receipt,
+- [x] 1.4 Email service (provider interface + SMTP/Resend impl + console impl for dev). Templates: welcome, receipt,
       password reset, results ready. EmailLog.
 - [ ] 1.5 Public site: Home (offer, products, FAQ, sign-up), Self-Study and Coaching landing pages (description,
       included, price, reviews, CTA, Enrol -> checkout), pricing section, Terms, Privacy. Content from SiteContent /
@@ -98,3 +98,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 1.1: signup/login/logout/forgot/reset (1 h single-use hashed tokens, session_version invalidates old cookies), /me, rate-limited; login/signup/forgot/reset pages; demo pages removed pending M3 rebuild.
 - 2026-10-19 1.2: deps.requires_active_plan / ensure_access(is_free) / is_locked (Active+Trial unlock, admins always), 402 for locked content; unit tests.
 - 2026-10-19 1.3: Plan/Subscription/Payment/StripeEvent; /api/public/plans, /billing/checkout, /billing/portal, /billing/status, signed + idempotent /stripe/webhook (checkout, subscription created/updated/deleted, invoice paid/failed); receipt email; account + billing success pages. Not run against live Stripe test mode (no keys yet, see Open questions).
+- 2026-10-19 1.4: EmailProvider interface (console/SMTP/Resend), HTML+text templates (welcome, receipt, password reset, results ready), every send in EmailLog, failures logged not raised; provider tests with fakes.
