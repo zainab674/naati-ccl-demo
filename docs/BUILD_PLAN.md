@@ -27,7 +27,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 
 ## M2. Content and admin import
 - [x] 2.1 Admin shell + admin auth guard.
-- [ ] 2.2 Dialogue CSV import (format in MVP_SPEC.md): upload -> dry-run validation report (missing fields, enums,
+- [x] 2.2 Dialogue CSV import (format in MVP_SPEC.md): upload -> dry-run validation report (missing fields, enums,
       URL HEAD checks, duplicate keys) -> commit. Idempotent by dialogue_key/segment_no/mu_no. ImportJob records.
       Downloadable template + sample.
 - [ ] 2.3 Media ingest: on commit, download audio from URL, run the protected HLS pipeline from the demo, store in S3
@@ -104,3 +104,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 1.4: EmailProvider interface (console/SMTP/Resend), HTML+text templates (welcome, receipt, password reset, results ready), every send in EmailLog, failures logged not raised; provider tests with fakes.
 - 2026-10-19 1.5: public Home, Self-Study and Coaching landing pages, Pricing, Terms, Privacy, Enrol -> signup -> Stripe Checkout; content from SiteContent with JSON defaults (no invented reviews/prices), server-rendered with SEO metadata, sitemap.xml, robots.txt; checked desktop + mobile in the browser.
 - 2026-10-19 2.1: /api/admin router with require_admin on every route (401/403 tested), /admin shell (client guard redirects non-admins) and overview page.
+- 2026-10-19 2.2: dialogues.csv import: upload -> dry-run report (missing fields, enums, language codes, consistency across repeated rows, duplicate keys, URL HEAD/range-GET checks) -> commit; idempotent upsert by dialogue_key/segment_no/mu_no (missing items deactivated, version bump on change); ImportJob history; template + sample downloads; admin import UI. S3/local storage service added.

@@ -2,7 +2,7 @@ line-length = 120
 target-version = "py312"
 
 [lint]
-select = ["E", "F", "W", "I", "B", "UP"]
+select = ["E", "F", "W", "B", "UP"]
 ignore = ["B008"]  # FastAPI Depends() in defaults
 
 [lint.per-file-ignores]
@@ -10,6 +10,3 @@ ignore = ["B008"]  # FastAPI Depends() in defaults
 "tests/*" = ["E402"]
 "app/emails/*" = ["E501"]
 
-[lint.isort]
-known-third-party = ["alembic"]
-known-first-party = ["app"]

@@ -45,3 +45,7 @@ def english(db: Session) -> Language:
 def lote_by_code(db: Session, code: str) -> Language | None:
     return db.scalar(select(Language).where(Language.code == code.strip().lower(),
                                             Language.language_type == LanguageType.LOTE))
+
+
+def lotes_by_code(db: Session) -> dict[str, Language]:
+    return {lang.code: lang for lang in db.scalars(select(Language).where(Language.language_type == LanguageType.LOTE))}
