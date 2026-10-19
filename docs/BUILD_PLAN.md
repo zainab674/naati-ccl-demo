@@ -74,7 +74,7 @@ Milestones map to client payments. Keep the app runnable after every task.
       admin-only routes, signed media URLs.
 - [x] 5.4 End-to-end test: sign up -> pay (test mode) -> course lesson -> full mock test -> scoring -> results ->
       admin override -> emails logged.
-- [ ] 5.5 Update README with run, test and deploy instructions.
+- [x] 5.5 Update README with run, test and deploy instructions.
 
 ## Open questions (write here when blocked, then continue)
 - Number of courses at launch (spec assumes 2).
@@ -133,3 +133,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 5.2: docs/DEPLOY_HETZNER.md (server + firewall, Docker, DNS, Hetzner/AWS object storage, .env table, start + first admin steps, Stripe live webhook URL/events/portal, backups with deploy/backup.sh + restore, updates, operations).
 - 2026-10-19 5.3: security pass (docs/SECURITY.md): Origin check middleware for unsafe /api requests, security headers + no-store, API docs off in production, Secure cookies forced and long SECRET_KEY required in production, play and AI-suggestion rate limits, route-by-route admin authorisation test (33 routes), secrets scan test; existing upload limits, sanitisation, signed session-bound media reviewed.
 - 2026-10-19 5.4: tests/test_e2e.py: admin creates a mock test -> student signs up (locked content) -> checkout + signed test-mode webhooks (checkout.session.completed, invoice.paid) -> lesson opened and completed -> full 2-dialogue mock test with real audio -> worker scores 4 segments -> results 86/90 Pass -> admin override -> 87/90 -> welcome, receipt and results emails logged. Stripe and AI providers are stubbed (no keys); the UI parts were checked separately in the browser.
+- 2026-10-19 5.5: README rewritten (architecture, scoring flow, run with/without Docker, content import, tests, teacher comparison, deploy); frontend README; outdated demo SPEC.md removed.

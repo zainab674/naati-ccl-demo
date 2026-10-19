@@ -1,74 +1,90 @@
-# Benchmark NAATI CCL Prep: demo
+# CCL Platform (Benchmark Education)
 
-A proof of concept for a NAATI CCL practice platform (Hindi ↔ English). See [SPEC.md](SPEC.md) for scope.
+NAATI CCL practice and mock test platform for English ↔ Filipino. Students practise dialogues in the official test
+flow, record their interpretation segment by segment and get an estimated score out of 90 with feedback on every
+deduction. Admins import content by CSV, review scoring and override deductions.
 
-- **Exam-realistic dialogue player.** Segments play once. There's one repeat, a chime, then auto-recording. Plays are enforced on the server, so refresh, back and a second tab can't get a replay.
-- **AI marking.** Speech-to-text, then Claude marks against a structured rubric with quotes from the student's own words. Points, repeats and pass/fail are plain code.
-- **Content protection.** AES-128 encrypted HLS, signed 5-minute URLs bound to the login session, rate limiting with an anomaly flag, and a protection panel.
-- **Content studio.** Paste a script to get TTS voices, the chime and encrypted audio, published to the library.
+- Scope: [docs/MVP_SPEC.md](docs/MVP_SPEC.md) · scoring rules: [docs/SCORING_BRIEF.md](docs/SCORING_BRIEF.md) ·
+  data model: [docs/DATA_MODEL.md](docs/DATA_MODEL.md) · build log and open questions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md)
+- Deploy: [docs/DEPLOY_HETZNER.md](docs/DEPLOY_HETZNER.md) · security: [docs/SECURITY.md](docs/SECURITY.md)
+
+## Architecture
+
+| Part | Tech | Notes |
+|---|---|---|
+| `frontend/` | Next.js 16, React 19, TypeScript, Tailwind 4 | public site, student app, test player, admin |
+| `backend/` | FastAPI, SQLAlchemy 2, Alembic, PostgreSQL | REST API under `/api` |
+| worker | `python -m app.worker` | Postgres-backed job queue: media ingest and scoring |
+| storage | S3-compatible (AWS S3 / Hetzner / MinIO) | encrypted HLS audio, waveforms, recordings, CSVs |
+| providers | Groq Whisper Large V3 Turbo (STT), Gemini Flash-Lite (evaluation), Stripe, SMTP/Resend | each behind an interface, mock/console fallbacks for development |
+
+**Scoring rule:** the AI identifies and classifies errors; code applies the penalties.
+
+```
+recording ─▶ STT (word timestamps) ─▶ timing analysis in code (start delay > 5 s, pauses > 3 s)
+          ─▶ AI evaluator (per Meaning Unit: correct / omission / distortion; insertions; language quality; hesitation,
+             self-correction) ─▶ deduction engine (config/scoring.yaml) ─▶ segment, dialogue (/45), mock (/90), pass/fail
+```
+
+Rules and penalties live in `backend/config/scoring.yaml` and `backend/config/ccl.yaml`; the evaluator prompt in
+`backend/app/prompts/`; Filipino-specific guidance in the `language_scoring_configs` table (seeded).
 
 ## Run locally
 
-Backend (Python 3.12):
+### With Docker
 
 ```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Frontend http://localhost:3000 · API docs http://localhost:8000/api/docs · MinIO console http://localhost:9001.
+The admin account comes from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`.
+
+### Without Docker
+
+Needs Python 3.12, Node 20, PostgreSQL 15+ (and ffmpeg on the PATH, or the bundled `imageio-ffmpeg` binary is used).
+
+```bash
+cp .env.example .env        # set DATABASE_URL / TEST_DATABASE_URL; STORAGE_BACKEND=local is easiest
 cd backend
 python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt   # macOS/Linux: .venv/bin/pip
-cp .env.example .env                            # add keys (optional, see below)
-.venv/Scripts/python seed.py                    # builds DB + all audio (~1 min, needs internet for TTS)
-.venv/Scripts/python -m uvicorn app.main:app --port 8000
+.venv/bin/pip install -r requirements-dev.txt          # Windows: .venv\Scripts\pip
+.venv/bin/alembic upgrade head
+.venv/bin/python -m app.seed --dev                      # --dev adds clearly marked placeholder reviews
+.venv/bin/uvicorn app.main:app --reload --port 8000
+.venv/bin/python -m app.worker                          # second terminal: scoring and media jobs
+cd ../frontend && npm install && npm run dev            # third terminal
 ```
 
-Frontend (Node 20+):
+Without `GROQ_API_KEY` / `GEMINI_API_KEY` scoring runs in a labelled mock mode (the result pages say so); without
+Stripe keys plans show "Contact us"; emails print to the backend log (`EMAIL_PROVIDER=console`).
+
+## Content
+
+Admin → CSV import accepts `dialogues.csv` (one row per Meaning Unit) and `courses.csv` (one row per lesson); the
+formats are in [docs/MVP_SPEC.md](docs/MVP_SPEC.md#csv-formats) and templates/samples download from the import page.
+Every upload is validated first (dry run); committing is idempotent by key. Dialogue audio is downloaded from the CSV
+URLs, encrypted and packaged by the worker, then the dialogue can be published.
+
+## Tests and checks
 
 ```bash
-cd frontend
-npm install
-npm run dev          # http://localhost:3000  (proxies /api to :8000)
+make check            # or: bash scripts/check.sh   (ruff + pytest, eslint + next build)
 ```
 
-Accounts (password `demo1234`): `priya@example.com` (student with history), `arjun@example.com` (new student), `assessor@example.com`.
+Backend tests run against a real PostgreSQL database (`TEST_DATABASE_URL`, migrated once per run) and real ffmpeg;
+AI, STT, Stripe and email providers are stubbed. `tests/test_e2e.py` walks the whole student journey.
 
-API smoke test (22 checks: play limits, signed URLs, session binding, marking, roles): `.venv/Scripts/python smoke_test.py`
+Comparing AI scoring with teacher marking (the 10-sample check):
 
-## Keys
+```bash
+cd backend && .venv/bin/python -m scripts.eval_against_teacher samples.csv --out report.csv
+```
 
-| Key | What it turns on | Without it |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Claude marks each segment with rubric categories, severity and a quote | Static rule-based marker. It only catches numbers and large omissions |
-| `GROQ_API_KEY` or `OPENAI_API_KEY` | Whisper transcribes the student's real recording | The segment's sample answer is used as the transcript, labelled "demo mode" in the UI |
+See `scripts/teacher_samples_template.csv` for the input format.
 
-**Re-run `seed.py` after adding keys** so Priya's seeded attempts are re-marked by Claude.
+## Deploy
 
-## Where to change things
-
-| What | Where |
-|---|---|
-| CCL rules: 45/90, pass 63, min 29, repeats, response window | `backend/config/ccl.yaml` |
-| Marking rubric, severity points, filler words | `backend/config/rubric.yaml` |
-| Marking prompt and schema | `backend/app/services/marking.py` |
-| STT provider | `backend/app/services/stt.py` |
-| Dialogue content | `backend/content/dialogues/*.yaml` or the Content studio |
-
-## Deploy (Vercel, free)
-
-Two Vercel projects from this repo:
-
-| Project | Root directory | Notes |
-|---|---|---|
-| `naati-ccl-api` | `backend` | FastAPI as a Vercel Python function (`backend/vercel.json`). Env: `SECRET_KEY`, `COOKIE_SECURE=true`, `DATABASE_URL` (Neon Postgres, free via Vercel Storage), optional API keys. |
-| `naati-ccl-web` | `frontend` | Next.js. Env: `API_URL` = the API project's URL. `/api/*` is proxied to it, so cookies stay first-party. |
-
-Vercel functions have no persistent disk, so:
-- The six built-in dialogues' encrypted audio and the seeded sample answers ship **inside the function bundle** (`backend/data/media`, `backend/data/seed_audio`). Re-run `python seed.py` locally and commit those folders whenever dialogue content changes.
-- Files written at runtime (student recordings, content-studio audio) are stored **in Postgres** (`stored_files` table).
-- On first boot against an empty database the API **seeds itself** (bundled audio only, no TTS).
-- Without `DATABASE_URL` it falls back to a throwaway SQLite file in `/tmp`, so it boots, but data doesn't persist.
-
-## Known demo limits
-
-- Rate limiting is in-memory (single instance). Use Redis in production.
-- Background marking uses FastAPI background tasks, with a mark-on-read fallback for serverless. Use a job queue in production.
-- Per-user audio watermarking is explained on the protection page but not built.
-- TTS uses Microsoft Edge's free voices. Use a licensed TTS provider for production content.
+Docker Compose on one Hetzner server with Caddy for HTTPS: `docker compose -f docker-compose.prod.yml up -d --build`.
+Full steps (DNS, object storage, Stripe webhook, backups, updates) in [docs/DEPLOY_HETZNER.md](docs/DEPLOY_HETZNER.md).
