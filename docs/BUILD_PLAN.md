@@ -97,6 +97,11 @@ Milestones map to client payments. Keep the app runnable after every task.
 - Repeat penalty: SCORING_BRIEF.md sets none, so repeats are tracked but cost 0 (scoring.yaml penalties.repeat).
 - AI keys: GROQ_API_KEY and GEMINI_API_KEY are needed to run real STT/evaluation. Providers are tested with stubs;
   the 10-sample teacher comparison (4.8) is the real accuracy check. Gemini model name is GEMINI_MODEL.
+- Scoring design (from the audit, docs/AUDIT.md §4.4): with a fixed 45-point budget and -1 per MU, a dialogue's
+  difficulty depends on how many MUs it was split into (same student: 97% pass chance at 36 MUs, 14% at 80).
+  Needs an MU-splitting guideline or a normalisation rule.
+- Access during Stripe's payment retry window (past_due): keep or remove? Currently removed immediately.
+- A play that fails to load still uses up the repeat. Keep (exam strictness) or refund the play?
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
@@ -134,3 +139,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 5.3: security pass (docs/SECURITY.md): Origin check middleware for unsafe /api requests, security headers + no-store, API docs off in production, Secure cookies forced and long SECRET_KEY required in production, play and AI-suggestion rate limits, route-by-route admin authorisation test (33 routes), secrets scan test; existing upload limits, sanitisation, signed session-bound media reviewed.
 - 2026-10-19 5.4: tests/test_e2e.py: admin creates a mock test -> student signs up (locked content) -> checkout + signed test-mode webhooks (checkout.session.completed, invoice.paid) -> lesson opened and completed -> full 2-dialogue mock test with real audio -> worker scores 4 segments -> results 86/90 Pass -> admin override -> 87/90 -> welcome, receipt and results emails logged. Stripe and AI providers are stubbed (no keys); the UI parts were checked separately in the browser.
 - 2026-10-19 5.5: README rewritten (architecture, scoring flow, run with/without Docker, content import, tests, teacher comparison, deploy); frontend README; outdated demo SPEC.md removed.
+- 2026-10-19 audit: docs/AUDIT.md (traceability matrix with real/stubbed/manual/none labels, defects, tool results, scoring validity plan, outside-evidence criteria). Fixed 7 confirmed defects with failing-first regression tests: inflated score on failed segments, re-score discarding teacher work, MU weight edits re-scoring old attempts, out-of-order Stripe events, double subscription, discarded-take audio overwriting the answer, Next.js critical advisories.
