@@ -4,6 +4,7 @@ A practice attempt is one DialogueAttempt; a mock test is a MockTestAttempt grou
 dialogue. The player addresses both by one id. Segment attempts are created up front (one per active segment) so
 progress, plays and recordings are always saved server-side and a reload resumes in place.
 """
+import re
 import uuid
 from dataclasses import dataclass
 
@@ -192,18 +193,25 @@ def register_play(db: Session, ref: AttemptRef, sa: SegmentAttempt) -> bool:
 
 # ------------------------------------------------------------------ recording upload (chunked, retry-safe)
 
-def _parts_prefix(sa: SegmentAttempt) -> str:
-    return f"recordings/{sa.id}/try{sa.record_count + 1}/parts"
+RECORDING_ID = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 
 
-def save_part(ref: AttemptRef, sa: SegmentAttempt, index: int, data: bytes) -> None:
+def _parts_prefix(sa: SegmentAttempt, recording: str) -> str:
+    """Parts live under the client's id for one take, so a late retry from a discarded take (the student pressed
+    Repeat) can never overwrite a part of the take that is finally submitted."""
+    if not RECORDING_ID.match(recording):
+        raise HTTPException(400, "Invalid recording id")
+    return f"recordings/{sa.id}/try{sa.record_count + 1}/parts/{recording}"
+
+
+def save_part(ref: AttemptRef, sa: SegmentAttempt, index: int, data: bytes, recording: str = "default") -> None:
     require_in_progress(ref)
     _check_can_record(sa)
     max_bytes = ccl_config()["recording"]["max_upload_mb"] * 1024 * 1024
     if index < 0 or index > 9999 or len(data) > max_bytes:
         raise HTTPException(413, "Recording part too large")
     # Same index uploaded twice (a retry) simply overwrites: idempotent.
-    get_storage().put(f"{_parts_prefix(sa)}/{index:04d}", data, "application/octet-stream")
+    get_storage().put(f"{_parts_prefix(sa, recording)}/{index:04d}", data, "application/octet-stream")
 
 
 def skip(ref: AttemptRef, sa: SegmentAttempt) -> None:
@@ -225,7 +233,7 @@ def _check_can_record(sa: SegmentAttempt) -> None:
 
 
 def complete_recording(db: Session, ref: AttemptRef, sa: SegmentAttempt, parts: int, mime: str,
-                       timing: dict, duration: float | None) -> None:
+                       timing: dict, duration: float | None, recording: str = "default") -> None:
     require_in_progress(ref)
     _check_can_record(sa)
     rec_cfg = ccl_config()["recording"]
@@ -233,7 +241,7 @@ def complete_recording(db: Session, ref: AttemptRef, sa: SegmentAttempt, parts: 
     if mime not in rec_cfg["allowed_mime_types"]:
         raise HTTPException(415, f"Unsupported audio type {mime}")
     storage = get_storage()
-    prefix = _parts_prefix(sa)
+    prefix = _parts_prefix(sa, recording)
     chunks = []
     for i in range(parts):
         chunk = storage.get(f"{prefix}/{i:04d}")
@@ -246,7 +254,7 @@ def complete_recording(db: Session, ref: AttemptRef, sa: SegmentAttempt, parts: 
     sa.record_count += 1
     key = f"recordings/{sa.id}/try{sa.record_count}.{MIME_EXT.get(mime, 'webm')}"
     storage.put(key, data, mime)
-    storage.delete_prefix(prefix)
+    storage.delete_prefix(prefix.rsplit("/parts/", 1)[0] + "/parts")  # this take and any discarded ones
     sa.audio_user, sa.audio_mime, sa.submitted_at, sa.skipped = key, mime, utcnow(), False
     sa.audio_duration_seconds = duration
     # Client clock values (ms since epoch) only; the delay itself is measured from the audio in scoring.

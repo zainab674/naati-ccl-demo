@@ -217,7 +217,7 @@ def waveform(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID, cu: CurrentUs
 
 @router.put("/attempts/{attempt_id}/segments/{segment_attempt_id}/recording/parts/{index}")
 async def upload_part(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID, index: int, request: Request,
-                      cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+                      recording: str = "default", cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
     ratelimit.enforce(f"upload:{cu.id}", 240)
     ref = svc.resolve(db, attempt_id, cu.user)
     sa = svc.segment_attempt(ref, segment_attempt_id)
@@ -227,7 +227,7 @@ async def upload_part(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID, inde
         body += chunk
         if len(body) > max_bytes:
             raise HTTPException(413, "Recording part too large")
-    svc.save_part(ref, sa, index, bytes(body))
+    svc.save_part(ref, sa, index, bytes(body), recording)
     return {"ok": True, "index": index, "bytes": len(body)}
 
 
@@ -236,6 +236,7 @@ class CompleteIn(BaseModel):
     mime: str = "audio/webm"
     duration_seconds: float | None = None
     timing: dict = {}
+    recording: str = "default"  # the client's id for this take (see services/attempts._parts_prefix)
 
 
 @router.post("/attempts/{attempt_id}/segments/{segment_attempt_id}/recording/complete")
@@ -245,7 +246,7 @@ def complete(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID, body: Complet
     sa = svc.segment_attempt(ref, segment_attempt_id)
     if body.parts < 1 or body.parts > 10000:
         raise HTTPException(400, "parts must be at least 1")
-    svc.complete_recording(db, ref, sa, body.parts, body.mime, body.timing, body.duration_seconds)
+    svc.complete_recording(db, ref, sa, body.parts, body.mime, body.timing, body.duration_seconds, body.recording)
     db.commit()
     return {"ok": True, "record_count": sa.record_count}
 
@@ -261,12 +262,13 @@ async def upload_recording(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID,
     data = await audio.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise HTTPException(413, "Recording too large")
-    svc.save_part(ref, sa, 0, data)
+    take = uuid.uuid4().hex
+    svc.save_part(ref, sa, 0, data, take)
     try:
         timing_dict = json.loads(timing or "{}")
     except json.JSONDecodeError:
         timing_dict = {}
-    svc.complete_recording(db, ref, sa, 1, audio.content_type or "audio/webm", timing_dict, duration_seconds)
+    svc.complete_recording(db, ref, sa, 1, audio.content_type or "audio/webm", timing_dict, duration_seconds, take)
     db.commit()
     return {"ok": True, "record_count": sa.record_count}
 

@@ -8,6 +8,8 @@ export class ChunkUploader {
   private uploaded = new Set<number>();
   private queue: Promise<void> = Promise.resolve();
   private failed: Error | null = null;
+  // One id per take: parts are stored under it, so a late retry from a discarded take cannot overwrite this one.
+  private readonly take = crypto.randomUUID().replace(/-/g, "");
 
   constructor(private baseUrl: string) {}
 
@@ -26,7 +28,7 @@ export class ChunkUploader {
       if (attempt) await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
       let res: Response;
       try {
-        res = await fetch(`/api${this.baseUrl}/parts/${index}`, {
+        res = await fetch(`/api${this.baseUrl}/parts/${index}?recording=${this.take}`, {
           method: "PUT", body: this.parts[index], credentials: "same-origin",
           headers: { "Content-Type": "application/octet-stream" },
         });
@@ -52,7 +54,7 @@ export class ChunkUploader {
     if (!this.parts.length) throw new Error("Nothing was recorded. Check your microphone.");
     const res = await fetch(`/api${this.baseUrl}/complete`, {
       method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parts: this.parts.length, mime, duration_seconds: durationSeconds, timing }),
+      body: JSON.stringify({ parts: this.parts.length, mime, duration_seconds: durationSeconds, timing, recording: this.take }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
