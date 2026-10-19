@@ -37,3 +37,15 @@ body {
   animation: bar 0.9s ease-in-out infinite;
   transform-origin: bottom;
 }
+
+/* Admin-authored lesson HTML (sanitised server-side) */
+.lesson-html h2 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }
+.lesson-html h3 { font-size: 1.1rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+.lesson-html p { margin: 0.6rem 0; line-height: 1.7; }
+.lesson-html ul { list-style: disc; padding-left: 1.4rem; margin: 0.6rem 0; }
+.lesson-html ol { list-style: decimal; padding-left: 1.4rem; margin: 0.6rem 0; }
+.lesson-html a { color: var(--color-brand-600); text-decoration: underline; }
+.lesson-html table { border-collapse: collapse; margin: 0.8rem 0; }
+.lesson-html td, .lesson-html th { border: 1px solid #e2e8f0; padding: 0.35rem 0.6rem; }
+.lesson-html blockquote { border-left: 3px solid #cbd5e1; padding-left: 0.8rem; color: #475569; }
+.lesson-html img { max-width: 100%; height: auto; }

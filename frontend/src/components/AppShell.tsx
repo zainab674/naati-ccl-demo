@@ -30,6 +30,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/students", label: "Students", icon: Users },
   { href: "/admin/dialogues", label: "Dialogues", icon: BookOpen },
+  { href: "/admin/mock-tests", label: "Mock tests", icon: ClipboardCheck },
   { href: "/admin/courses", label: "Courses", icon: GraduationCap },
   { href: "/admin/imports", label: "CSV import", icon: Upload },
 ];

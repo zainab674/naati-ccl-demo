@@ -33,7 +33,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 2.3 Media ingest: on commit, download audio from URL, run the protected HLS pipeline from the demo, store in S3
       (boto3, configurable endpoint). Store waveform image. Background job with status in ImportJob.
 - [x] 2.4 Course CSV import (course_key, lesson rows) with the same dry-run/commit flow.
-- [ ] 2.5 Admin content screens: list/edit/publish/hide dialogues (segments, MUs editable), courses and lessons with a
+- [x] 2.5 Admin content screens: list/edit/publish/hide dialogues (segments, MUs editable), courses and lessons with a
       sanitised HTML editor.
 - [ ] 2.6 Optional helper: "Suggest Meaning Units" button per segment (AI suggests, admin edits/approves).
 
@@ -109,3 +109,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 2.2: dialogues.csv import: upload -> dry-run report (missing fields, enums, language codes, consistency across repeated rows, duplicate keys, URL HEAD/range-GET checks) -> commit; idempotent upsert by dialogue_key/segment_no/mu_no (missing items deactivated, version bump on change); ImportJob history; template + sample downloads; admin import UI. S3/local storage service added.
 - 2026-10-19 2.3: Postgres job queue (SKIP LOCKED, retries with backoff, failure hooks) + `python -m app.worker`; per-segment ingest job: download (size-capped) -> chime -> AES-128 HLS (demo pipeline) -> storage; waveform from CSV URL or drawn by ffmpeg; unchanged audio skipped by hash; ImportJob progress/failures. Tested with real ffmpeg.
 - 2026-10-19 2.4: courses.csv import with the same dry-run/commit flow (ImportJob), lesson HTML sanitised with nh3 allow-list (warns when content was stripped), idempotent by course_key/lesson_no, missing lessons archived.
+- 2026-10-19 2.5: admin dialogue list/editor (details, publish/hide with readiness checks, segment transcript, MU table add/remove/renumber, re-process audio, waveform preview), mock test definitions (2 dialogues, same pair), course + lesson editor with sanitised HTML and live server-side preview. Checked in the browser.
