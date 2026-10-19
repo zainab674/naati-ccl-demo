@@ -1,0 +1,86 @@
+# Build plan (work top to bottom; tick each box only when built AND verified)
+
+Milestones map to client payments. Keep the app runnable after every task.
+
+## M0. Foundation
+- [x] 0.1 Read the existing demo (`README.md`, `SPEC.md`, `backend/app`, `frontend/src`). Write a short
+      `docs/DEMO_REUSE.md`: what to keep, refactor, delete.
+- [ ] 0.2 `docker-compose.yml` for local dev: postgres, backend, frontend (+ worker, + redis if used).
+      `.env.example` with every variable (DB, SECRET_KEY, S3_*, GROQ_API_KEY, GEMINI_API_KEY, STRIPE_*, EMAIL_*, APP_URL).
+- [ ] 0.3 Switch backend to PostgreSQL + Alembic. Remove Vercel/SQLite-in-/tmp hacks and TTS seeding from the prod path.
+- [ ] 0.4 Implement the data model in `docs/DATA_MODEL.md` (models + first migration). Seed: English, Filipino,
+      LanguagePair EN<->FIL, a few topics, admin user from env, Filipino LanguageScoringConfig.
+- [ ] 0.5 Config: move CCL rules + penalties to `backend/config/ccl.yaml` / `scoring.yaml` matching SCORING_BRIEF.md
+      (MU -1, LQ -0.5, Fluency -0.5, pause 3 s, delay 5 s, pass 63, min 29, dialogue max 45, pronunciation review-only).
+- [ ] 0.6 Test setup: pytest with a Postgres test DB; frontend `npm run build` + lint pass. Add a CI-style `make check`.
+
+## M1. Accounts, payments, public site
+- [ ] 1.1 Auth: sign up, login, logout, password reset (token email), roles, httpOnly cookie sessions (reuse demo JWT).
+- [ ] 1.2 Access control helper: `requires_active_plan`, free-content flags respected.
+- [ ] 1.3 Stripe: Plan table, Checkout session endpoint, webhook (signature verified, idempotent),
+      subscription_status updates, customer portal link. Test with Stripe test mode + CLI.
+- [ ] 1.4 Email service (provider interface + SMTP/Resend impl + console impl for dev). Templates: welcome, receipt,
+      password reset, results ready. EmailLog.
+- [ ] 1.5 Public site: Home (offer, products, FAQ, sign-up), Self-Study and Coaching landing pages (description,
+      included, price, reviews, CTA, Enrol -> checkout), pricing section, Terms, Privacy. Content from SiteContent /
+      a content JSON, placeholders clearly marked. Responsive, SEO meta.
+
+## M2. Content and admin import
+- [ ] 2.1 Admin shell + admin auth guard.
+- [ ] 2.2 Dialogue CSV import (format in MVP_SPEC.md): upload -> dry-run validation report (missing fields, enums,
+      URL HEAD checks, duplicate keys) -> commit. Idempotent by dialogue_key/segment_no/mu_no. ImportJob records.
+      Downloadable template + sample.
+- [ ] 2.3 Media ingest: on commit, download audio from URL, run the protected HLS pipeline from the demo, store in S3
+      (boto3, configurable endpoint). Store waveform image. Background job with status in ImportJob.
+- [ ] 2.4 Course CSV import (course_key, lesson rows) with the same dry-run/commit flow.
+- [ ] 2.5 Admin content screens: list/edit/publish/hide dialogues (segments, MUs editable), courses and lessons with a
+      sanitised HTML editor.
+- [ ] 2.6 Optional helper: "Suggest Meaning Units" button per segment (AI suggests, admin edits/approves).
+
+## M3. Student experience
+- [ ] 3.1 Student dashboard: average score, available dialogues/mock tests, recent attempts, continue unfinished,
+      quick start.
+- [ ] 3.2 Dialogue library: filters by topic/difficulty, status + best score per dialogue.
+- [ ] 3.3 Mock test player matching the NAATI practice test flow: Info 1, Info 2 (equipment check: test sound,
+      mic record/playback), one page per segment (instructions left; waveform, source audio, record answer, attempt
+      counter, Start, Finish Attempt right), chime then recording, precise timestamps captured, repeat tracking,
+      autosave + resume, final summary of answered/skipped, Submit. Mock test = 2 dialogues.
+- [ ] 3.4 Recording upload: chunk-safe upload to S3, linked to SegmentAttempt; protected playback for student/admin.
+- [ ] 3.5 Courses: course list, lesson page (video + HTML), completion tracking, free/paid gating.
+
+## M4. AI scoring, results, review
+- [ ] 4.1 STT provider interface; Groq Whisper Large V3 Turbo impl with word timestamps, language hint `tl`;
+      fallback model via env. Store transcript + words.
+- [ ] 4.2 Audio timing analysis (code): speech start vs recording start (> 5 s), internal pauses (> 3 s), filler
+      detection candidates from LanguageScoringConfig.hesitation_markers.
+- [ ] 4.3 LLM evaluator interface; Gemini Flash-Lite impl with JSON schema output; Pydantic validation; prompt
+      versioned in `backend/app/prompts/`; Filipino guidance from LanguageScoringConfig; evaluates per MU and
+      occurrence-based errors; returns explanations + suggested versions; never returns scores.
+- [ ] 4.4 Deduction engine (pure functions, unit-tested): apply config penalties, merge AI + programmatic events,
+      pronunciation as review flag, segment/dialogue/attempt totals, floor at 0, Pass/Fail per brief.
+- [ ] 4.5 Background worker: score each SegmentAttempt after submit, retries, AIScoringRun logging, statuses,
+      low-confidence -> needs review. Send "results ready" email when the attempt completes.
+- [ ] 4.6 Results page: total /90, Pass/Fail, breakdown by criterion, per-segment transcript, errors with
+      explanations and suggested versions, recording playback, attempt history.
+- [ ] 4.7 Admin students list + attempt review: recordings, transcript, AI output, every deduction, override with
+      note (AdminReview) and recalculation; subscription status visible.
+- [ ] 4.8 Accuracy check script: `scripts/eval_against_teacher.py` that runs N teacher-marked answers through the
+      pipeline and prints AI vs teacher deductions per criterion (for the 10-sample test with the client).
+
+## M5. Launch
+- [ ] 5.1 Production Dockerfiles, `docker-compose.prod.yml`, Caddy/Nginx HTTPS, health checks, logging.
+- [ ] 5.2 `docs/DEPLOY_HETZNER.md`: server setup, Postgres, backups, env, Stripe webhook URL, DNS.
+- [ ] 5.3 Security pass: rate limits, CSRF/cookie flags, upload limits, HTML sanitisation, secrets audit,
+      admin-only routes, signed media URLs.
+- [ ] 5.4 End-to-end test: sign up -> pay (test mode) -> course lesson -> full mock test -> scoring -> results ->
+      admin override -> emails logged.
+- [ ] 5.5 Update README with run, test and deploy instructions.
+
+## Open questions (write here when blocked, then continue)
+- Number of courses at launch (spec assumes 2).
+- Who sets up the Hetzner server (spec assumes we provide compose + deploy guide).
+- Landing page content editable in admin, or file-based for MVP (spec: SiteContent records, simple admin form if time).
+- Dialogue count at launch (36 ready, 50 planned): import handles any number.
+
+## Progress log
+- 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).

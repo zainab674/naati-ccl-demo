@@ -1,0 +1,4 @@
+Read CLAUDE.md, then docs/MVP_SPEC.md, docs/SCORING_BRIEF.md, docs/DATA_MODEL.md and docs/BUILD_PLAN.md.
+Start with the first unchecked task in docs/BUILD_PLAN.md and keep working through the plan in order.
+After each task: run the checks, commit, tick the box and add a line to the Progress log.
+Only stop if you are truly blocked; otherwise record the question under Open questions and continue.
