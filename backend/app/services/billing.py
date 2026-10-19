@@ -176,15 +176,29 @@ def _period_end(sub: dict) -> datetime | None:
     return _ts(max(ends)) if ends else None
 
 
-def _apply_subscription(db: Session, sub: dict, deleted: bool = False) -> None:
+def _is_stale(row: Subscription | None, created: datetime | None) -> bool:
+    """Stripe does not guarantee delivery order: never let an older event overwrite a newer state."""
+    return bool(row and created and row.last_event_at and created < row.last_event_at)
+
+
+def _invoice_subscription_id(invoice: dict) -> str | None:
+    sub = invoice.get("subscription") or ((invoice.get("parent") or {}).get("subscription_details") or {}).get("subscription")
+    return sub.get("id") if isinstance(sub, dict) else sub
+
+
+def _apply_subscription(db: Session, sub: dict, created: datetime | None, deleted: bool = False) -> None:
     user = _user_for(db, sub)
     if not user:
         log.warning("subscription %s: no matching user", sub.get("id"))
         return
     row = db.scalar(select(Subscription).where(Subscription.stripe_subscription_id == sub["id"]))
+    if _is_stale(row, created):
+        log.info("ignoring out-of-order event for %s", sub["id"])
+        return
     if not row:
         row = Subscription(user_id=user.id, stripe_subscription_id=sub["id"], status=sub.get("status", ""))
         db.add(row)
+    row.last_event_at = created or row.last_event_at
     plan = _plan_for(db, sub)
     if plan:
         row.plan_id = plan.id
@@ -218,7 +232,7 @@ def _send_receipt(db: Session, user: User, plan: Plan | None, payment: Payment) 
         "dashboard_url": f"{s.app_url}/dashboard"}, user_id=user.id)
 
 
-def _on_checkout_completed(db: Session, session: dict) -> None:
+def _on_checkout_completed(db: Session, session: dict, created: datetime | None = None) -> None:
     user = _user_for(db, session)
     if not user:
         log.warning("checkout %s: no matching user", session.get("id"))
@@ -249,10 +263,16 @@ def _on_checkout_completed(db: Session, session: dict) -> None:
                                     stripe_checkout_session_id=session.get("id")))
 
 
-def _on_invoice_paid(db: Session, invoice: dict) -> None:
+def _on_invoice_paid(db: Session, invoice: dict, created: datetime | None = None) -> None:
     user = _user_for(db, invoice)
     if not user or not invoice.get("amount_paid"):
         return
+    sub_id = _invoice_subscription_id(invoice)
+    row = db.scalar(select(Subscription).where(Subscription.stripe_subscription_id == sub_id)) if sub_id else None
+    if row and not _is_stale(row, created):
+        # A paid renewal (e.g. a successful retry after a failed payment) restores access.
+        user.subscription_status = SubscriptionStatus.ACTIVE
+        row.last_event_at = created or row.last_event_at
     plan = _plan_for(db, invoice)
     payment = _record_payment(db, user, plan, invoice_id=invoice.get("id"),
                               payment_intent=invoice.get("payment_intent"), amount=invoice.get("amount_paid"),
@@ -262,18 +282,25 @@ def _on_invoice_paid(db: Session, invoice: dict) -> None:
         _send_receipt(db, user, plan, payment)
 
 
-def _on_invoice_failed(db: Session, invoice: dict) -> None:
+def _on_invoice_failed(db: Session, invoice: dict, created: datetime | None = None) -> None:
     user = _user_for(db, invoice)
-    if user:
-        user.subscription_status = SubscriptionStatus.EXPIRED
+    if not user:
+        return
+    sub_id = _invoice_subscription_id(invoice)
+    row = db.scalar(select(Subscription).where(Subscription.stripe_subscription_id == sub_id)) if sub_id else None
+    if _is_stale(row, created):
+        return
+    user.subscription_status = SubscriptionStatus.EXPIRED
+    if row:
+        row.last_event_at = created or row.last_event_at
 
 
 HANDLERS = {
     "checkout.session.completed": _on_checkout_completed,
     "checkout.session.async_payment_succeeded": _on_checkout_completed,
-    "customer.subscription.created": lambda db, o: _apply_subscription(db, o),
-    "customer.subscription.updated": lambda db, o: _apply_subscription(db, o),
-    "customer.subscription.deleted": lambda db, o: _apply_subscription(db, o, deleted=True),
+    "customer.subscription.created": lambda db, o, c: _apply_subscription(db, o, c),
+    "customer.subscription.updated": lambda db, o, c: _apply_subscription(db, o, c),
+    "customer.subscription.deleted": lambda db, o, c: _apply_subscription(db, o, c, deleted=True),
     "invoice.paid": _on_invoice_paid,
     "invoice.payment_succeeded": _on_invoice_paid,
     "invoice.payment_failed": _on_invoice_failed,
@@ -290,6 +317,6 @@ def handle_event(db: Session, event: dict) -> str:
         return "duplicate"
     handler = HANDLERS.get(event["type"])
     if handler:
-        handler(db, event["data"]["object"])
+        handler(db, event["data"]["object"], _ts(event.get("created")))
     db.commit()
     return "processed" if handler else "ignored"

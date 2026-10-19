@@ -69,6 +69,7 @@ class Subscription(IdMixin, Base):
     status: Mapped[str] = mapped_column(String(30))                   # raw Stripe status
     current_period_end: Mapped[datetime | None] = mapped_column(nullable=True)
     cancel_at_period_end: Mapped[bool] = mapped_column(default=False)
+    last_event_at: Mapped[datetime | None] = mapped_column(nullable=True)  # newest Stripe event applied
 
     plan = relationship("Plan", lazy="joined")
 
