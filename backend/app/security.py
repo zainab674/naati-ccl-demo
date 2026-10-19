@@ -2,7 +2,7 @@
 import hashlib
 import hmac
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 
@@ -33,7 +33,7 @@ def issue_session_token(user_id: str, role: str) -> str:
         "sub": str(user_id),
         "role": role,
         "sid": secrets.token_hex(12),  # login session id; media grants are bound to it
-        "exp": datetime.now(timezone.utc) + timedelta(hours=s.session_hours),
+        "exp": datetime.now(UTC) + timedelta(hours=s.session_hours),
     }
     return jwt.encode(payload, s.secret_key, algorithm="HS256")
 

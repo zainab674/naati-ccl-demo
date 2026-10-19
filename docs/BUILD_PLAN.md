@@ -5,14 +5,14 @@ Milestones map to client payments. Keep the app runnable after every task.
 ## M0. Foundation
 - [x] 0.1 Read the existing demo (`README.md`, `SPEC.md`, `backend/app`, `frontend/src`). Write a short
       `docs/DEMO_REUSE.md`: what to keep, refactor, delete.
-- [ ] 0.2 `docker-compose.yml` for local dev: postgres, backend, frontend (+ worker, + redis if used).
+- [x] 0.2 `docker-compose.yml` for local dev: postgres, backend, frontend (+ worker, + redis if used).
       `.env.example` with every variable (DB, SECRET_KEY, S3_*, GROQ_API_KEY, GEMINI_API_KEY, STRIPE_*, EMAIL_*, APP_URL).
-- [ ] 0.3 Switch backend to PostgreSQL + Alembic. Remove Vercel/SQLite-in-/tmp hacks and TTS seeding from the prod path.
-- [ ] 0.4 Implement the data model in `docs/DATA_MODEL.md` (models + first migration). Seed: English, Filipino,
+- [x] 0.3 Switch backend to PostgreSQL + Alembic. Remove Vercel/SQLite-in-/tmp hacks and TTS seeding from the prod path.
+- [x] 0.4 Implement the data model in `docs/DATA_MODEL.md` (models + first migration). Seed: English, Filipino,
       LanguagePair EN<->FIL, a few topics, admin user from env, Filipino LanguageScoringConfig.
-- [ ] 0.5 Config: move CCL rules + penalties to `backend/config/ccl.yaml` / `scoring.yaml` matching SCORING_BRIEF.md
+- [x] 0.5 Config: move CCL rules + penalties to `backend/config/ccl.yaml` / `scoring.yaml` matching SCORING_BRIEF.md
       (MU -1, LQ -0.5, Fluency -0.5, pause 3 s, delay 5 s, pass 63, min 29, dialogue max 45, pronunciation review-only).
-- [ ] 0.6 Test setup: pytest with a Postgres test DB; frontend `npm run build` + lint pass. Add a CI-style `make check`.
+- [x] 0.6 Test setup: pytest with a Postgres test DB; frontend `npm run build` + lint pass. Add a CI-style `make check`.
 
 ## M1. Accounts, payments, public site
 - [ ] 1.1 Auth: sign up, login, logout, password reset (token email), roles, httpOnly cookie sessions (reuse demo JWT).
@@ -84,3 +84,8 @@ Milestones map to client payments. Keep the app runnable after every task.
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
+- 2026-10-19 0.2: docker-compose.yml (postgres:17, minio, backend, worker, frontend) + root .env.example. Validated with `docker compose config`; could not run the stack here (Docker Desktop's WSL VM would not start), dev/tests used a local Postgres on :5433 instead.
+- 2026-10-19 0.3: Postgres-only settings (psycopg 3), Alembic wired to app settings; Vercel/SQLite/bundled-media/TTS seeding removed.
+- 2026-10-19 0.4: all DATA_MODEL.md tables + MockTest, Job queue, StripeEvent, PasswordResetToken; initial migration; idempotent `python -m app.seed`.
+- 2026-10-19 0.5: config/scoring.yaml (penalties, 3 s pause, 5 s delay, 63/29/45/90, pronunciation review-only) and config/ccl.yaml (test flow).
+- 2026-10-19 0.6: pytest on a real Postgres test DB (migrated once, truncated + seeded per test), ruff, `make check` / scripts/check.sh (backend lint+tests, frontend lint+build).

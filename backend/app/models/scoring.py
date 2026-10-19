@@ -6,8 +6,16 @@ from sqlalchemy import JSON, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base, IdMixin
-from .enums import (AccuracyResult, DetectionMethod, EvaluationType, FluencyType, LanguageQualityType,
-                    ReviewStatus, RunStatus, enum_col)
+from .enums import (
+    AccuracyResult,
+    DetectionMethod,
+    EvaluationType,
+    FluencyType,
+    LanguageQualityType,
+    ReviewStatus,
+    RunStatus,
+    enum_col,
+)
 
 
 class AccuracyCompletenessEvaluation(IdMixin, Base):

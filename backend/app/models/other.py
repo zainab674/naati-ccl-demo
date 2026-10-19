@@ -8,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..db import Base, IdMixin, utcnow
 from .enums import ContentStatus, EmailStatus, ImportStatus, ImportType, JobStatus, enum_col
 
-
 # ------------------------------------------------------------------ courses
 
 class Course(IdMixin, Base):
