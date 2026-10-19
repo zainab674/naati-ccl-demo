@@ -69,3 +69,12 @@ def test_public_content_defaults_and_override(client, db):
     db.add(SiteContent(key="faq", value=[{"q": "Q?", "a": "A."}]))
     db.commit()
     assert client.get("/api/public/content/faq").json()["value"] == [{"q": "Q?", "a": "A."}]
+
+
+def test_env_example_has_no_inline_comments():
+    """`KEY=   # note` makes the note the value (python-dotenv), which silently broke settings once."""
+    from app.settings import REPO_DIR
+
+    for line in (REPO_DIR / ".env.example").read_text(encoding="utf-8").splitlines():
+        if line and not line.startswith("#") and "=" in line:
+            assert " #" not in line.split("=", 1)[1], line

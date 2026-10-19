@@ -13,7 +13,7 @@ os.environ["EVALUATOR_PROVIDER"] = "mock"
 os.environ["EMAIL_PROVIDER"] = "console"
 os.environ["ADMIN_EMAIL"] = "admin@example.com"
 os.environ["ADMIN_PASSWORD"] = "admin-pass-123"
-for key in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "GROQ_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY",
+for key in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_SELF_STUDY", "STRIPE_PRICE_COACHING", "GROQ_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY",
             "OPENAI_API_KEY"):
     os.environ[key] = ""
 
