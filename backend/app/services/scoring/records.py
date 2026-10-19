@@ -39,7 +39,8 @@ def store_unanswered(db: Session, sa: SegmentAttempt) -> None:
         db.add(AccuracyCompletenessEvaluation(
             segment_attempt_id=sa.id, evaluation_type=EvaluationType.MEANING_UNIT, meaning_unit_id=mu.id,
             result=AccuracyResult.OMISSION, source_meaning=mu.meaning, student_meaning="",
-            explanation="This segment was not answered.", suggested_version=mu.reference_interpretation, confidence=1.0))
+            explanation="This segment was not answered.", suggested_version=mu.reference_interpretation, confidence=1.0,
+            weight=mu.weight))
     sa.ai_feedback = "This segment was not answered, so every meaning unit counts as omitted."
     db.flush()
 
@@ -56,7 +57,8 @@ def store_evaluation(db: Session, sa: SegmentAttempt, outcome: EvaluationOutcome
         db.add(AccuracyCompletenessEvaluation(
             segment_attempt_id=sa.id, evaluation_type=EvaluationType.MEANING_UNIT, meaning_unit_id=mu.id,
             result=MU_RESULTS[item.result], source_meaning=mu.meaning, student_meaning=item.student_interpretation,
-            explanation=item.explanation, suggested_version=item.suggested_version, confidence=item.confidence))
+            explanation=item.explanation, suggested_version=item.suggested_version, confidence=item.confidence,
+            weight=mu.weight))
     for ins in ev.insertions:
         db.add(AccuracyCompletenessEvaluation(
             segment_attempt_id=sa.id, evaluation_type=EvaluationType.INSERTION, result=AccuracyResult.INSERTION,
@@ -100,10 +102,9 @@ def recalc_segment(db: Session, sa: SegmentAttempt) -> engine.Totals:
     overrides = _overrides(sa)
     rows: list = []
     items: list[engine.Item] = []
-    weights = {m.id: m.weight for m in sa.segment.meaning_units}
     for r in sa.accuracy_evaluations:
         rows.append(r)
-        items.append(engine.Item("accuracy", r.result.value, weights.get(r.meaning_unit_id, 1.0), overrides.get(r.id)))
+        items.append(engine.Item("accuracy", r.result.value, r.weight, overrides.get(r.id)))
     for r in sa.language_quality_errors:
         rows.append(r)
         items.append(engine.Item("language", r.error_type.value, override=overrides.get(r.id)))

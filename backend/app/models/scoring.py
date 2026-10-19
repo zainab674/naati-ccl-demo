@@ -31,6 +31,8 @@ class AccuracyCompletenessEvaluation(IdMixin, Base):
     suggested_version: Mapped[str] = mapped_column(Text, default="")
     deduction: Mapped[float] = mapped_column(default=0)
     confidence: Mapped[float | None] = mapped_column(nullable=True)
+    # Meaning Unit weight at scoring time: later edits to the MU must not change scores already given.
+    weight: Mapped[float] = mapped_column(default=1)
 
 
 class LanguageQualityError(IdMixin, Base):
