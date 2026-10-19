@@ -25,8 +25,10 @@ MU_RESULTS = {"correct": AccuracyResult.CORRECT, "omission": AccuracyResult.OMIS
 
 
 def clear_results(db: Session, sa: SegmentAttempt) -> None:
+    """Remove machine-produced results before (re)scoring. Items a teacher added by hand are kept."""
     for model in (AccuracyCompletenessEvaluation, LanguageQualityError, FluencyError):
-        db.execute(delete(model).where(model.segment_attempt_id == sa.id))
+        db.execute(delete(model).where(model.segment_attempt_id == sa.id,
+                                       model.detection_method != DetectionMethod.MANUAL))
     db.expire(sa, ["accuracy_evaluations", "language_quality_errors", "fluency_errors"])
 
 

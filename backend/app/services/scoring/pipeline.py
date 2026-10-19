@@ -155,8 +155,10 @@ def finalize(segment_attempt_id: uuid.UUID) -> None:
         da.finished_at = utcnow()
         db.commit()
         if da.mock_test_attempt_id is None:
-            if da.scoring_status == ScoringStatus.COMPLETED:
+            if da.scoring_status == ScoringStatus.COMPLETED and not da.results_emailed_at:
                 _results_email(db, da.user, da.dialogue.title, da.total_score, da.maximum_score, da.result, da.id)
+                da.results_emailed_at = utcnow()
+                db.commit()
             return
         ma = db.scalar(select(MockTestAttempt).where(MockTestAttempt.id == da.mock_test_attempt_id)
                      .with_for_update(of=MockTestAttempt))
@@ -172,8 +174,10 @@ def finalize(segment_attempt_id: uuid.UUID) -> None:
         ma.scoring_status = ScoringStatus.FAILED if failed else ScoringStatus.COMPLETED
         ma.finished_at = utcnow()
         db.commit()
-        if not failed:
+        if not failed and not ma.results_emailed_at:
             _results_email(db, ma.user, ma.mock_test.title, ma.total_score, ma.maximum_score, ma.result, ma.id)
+            ma.results_emailed_at = utcnow()
+            db.commit()
 
 
 def _results_email(db: Session, user, title, total, maximum, result, attempt_id) -> None:
@@ -188,6 +192,9 @@ def rescore_segment(db: Session, sa: SegmentAttempt) -> None:
     from ...jobs import enqueue
 
     sa.scoring_status, sa.scoring_error = ScoringStatus.PENDING, ""
+    # AI results are replaced (teacher-added items are kept), so the segment goes back to the review queue:
+    # overrides made on the old AI items no longer apply.
+    sa.needs_review, sa.reviewed_by_admin = True, False
     da = sa.dialogue_attempt
     da.finished_at, da.scoring_status = None, ScoringStatus.PROCESSING
     if da.mock_test_attempt:

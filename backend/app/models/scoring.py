@@ -33,6 +33,7 @@ class AccuracyCompletenessEvaluation(IdMixin, Base):
     confidence: Mapped[float | None] = mapped_column(nullable=True)
     # Meaning Unit weight at scoring time: later edits to the MU must not change scores already given.
     weight: Mapped[float] = mapped_column(default=1)
+    detection_method: Mapped[DetectionMethod] = mapped_column(enum_col(DetectionMethod), default=DetectionMethod.AI)
 
 
 class LanguageQualityError(IdMixin, Base):

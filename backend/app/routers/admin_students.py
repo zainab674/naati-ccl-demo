@@ -159,7 +159,8 @@ def add_item(sa_id: uuid.UUID, body: ManualItemIn, cu: CurrentUser = Depends(req
         if body.criterion == "insertion":
             row = AccuracyCompletenessEvaluation(segment_attempt_id=sa.id, evaluation_type=EvaluationType.INSERTION,
                                                  result=AccuracyResult.INSERTION, student_meaning=body.student_text,
-                                                 explanation=body.explanation, confidence=1.0)
+                                                 explanation=body.explanation, confidence=1.0,
+                                                 detection_method=DetectionMethod.MANUAL)
         elif body.criterion == "language":
             row = LanguageQualityError(segment_attempt_id=sa.id, language_id=sa.target_language_id,
                                        error_type=LanguageQualityType(body.type), student_text=body.student_text,

@@ -25,6 +25,7 @@ class MockTestAttempt(IdMixin, Base):
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     submitted_at: Mapped[datetime | None] = mapped_column(nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    results_emailed_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     user = relationship("User")
     mock_test = relationship("MockTest", lazy="joined")
@@ -60,6 +61,7 @@ class DialogueAttempt(IdMixin, Base):
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     submitted_at: Mapped[datetime | None] = mapped_column(nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    results_emailed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     integrity_events: Mapped[list] = mapped_column(JSON, default=list)  # tab blur, reloads, mic denied
 
     user = relationship("User")
