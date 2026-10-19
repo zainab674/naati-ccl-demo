@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal
-from .models import Language, LanguageScoringConfig, LanguageType, Plan, Topic, User, UserRole
+from .models import Language, LanguageScoringConfig, LanguageType, Plan, SiteContent, Topic, User, UserRole
 from .security import hash_password, verify_password
 from .services.languages import get_or_create_pair
 from .settings import get_settings
@@ -98,10 +98,29 @@ def seed(db: Session) -> None:
     db.commit()
 
 
+# Development only (`python -m app.seed --dev`): clearly marked placeholder reviews so the layout can be checked.
+DEV_REVIEWS = [
+    {"name": "Sample reviewer", "text": "Sample review, replace before launch.", "rating": 5, "placeholder": True},
+    {"name": "Sample reviewer", "text": "Sample review, replace before launch.", "rating": 5, "placeholder": True},
+]
+
+
+def seed_dev(db: Session) -> None:
+    if get_settings().is_production:
+        raise RuntimeError("--dev seed data must not be loaded in production")
+    if not db.scalar(select(SiteContent).where(SiteContent.key == "reviews")):
+        db.add(SiteContent(key="reviews", value=DEV_REVIEWS))
+    db.commit()
+
+
 def main() -> None:
+    import sys
+
     logging.basicConfig(level=logging.INFO)
     with SessionLocal() as db:
         seed(db)
+        if "--dev" in sys.argv:
+            seed_dev(db)
     log.info("seed complete")
 
 

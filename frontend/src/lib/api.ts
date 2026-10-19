@@ -19,8 +19,8 @@ function errorMessage(detail: unknown, fallback: string): string {
 }
 
 /** Same-origin call to the FastAPI backend (Next rewrites /api/* to it), so the httpOnly session cookie is sent. */
-export async function api<T = unknown>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
-  const { json, headers, ...rest } = init;
+export async function api<T = unknown>(path: string, init: RequestInit & { json?: unknown; noAuthRedirect?: boolean } = {}): Promise<T> {
+  const { json, headers, noAuthRedirect, ...rest } = init;
   const res = await fetch(`/api${path}`, {
     credentials: "same-origin",
     cache: "no-store",
@@ -34,7 +34,7 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
       const data = await res.json();
       msg = errorMessage(data.detail, msg);
     } catch {}
-    if (res.status === 401 && typeof window !== "undefined" && !path.startsWith("/auth") && !path.startsWith("/public")) {
+    if (res.status === 401 && !noAuthRedirect && typeof window !== "undefined" && !path.startsWith("/auth") && !path.startsWith("/public")) {
       const next = encodeURIComponent(window.location.pathname + window.location.search);
       // Outside React (plain fetch helper), so no router is available here.
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination

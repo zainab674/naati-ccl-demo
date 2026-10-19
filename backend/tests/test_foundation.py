@@ -57,3 +57,15 @@ def test_scoring_config_matches_brief():
     assert (s["pass_total"], s["pass_min_per_dialogue"], s["dialogue_max"], s["total_max"]) == (63, 29, 45, 90)
     assert s["pronunciation_auto_deduct"] is False
     assert ccl_config()["mock_test"]["dialogues_per_test"] == 2
+
+
+def test_public_content_defaults_and_override(client, db):
+    from app.models import SiteContent
+
+    home = client.get("/api/public/content/home").json()["value"]
+    assert home["hero_title"]
+    assert client.get("/api/public/content/reviews").json()["value"] == []  # no invented reviews
+    assert client.get("/api/public/content/secret").status_code == 404
+    db.add(SiteContent(key="faq", value=[{"q": "Q?", "a": "A."}]))
+    db.commit()
+    assert client.get("/api/public/content/faq").json()["value"] == [{"q": "Q?", "a": "A."}]

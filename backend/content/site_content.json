@@ -1,0 +1,84 @@
+{
+  "_note": "Default public-site copy. A SiteContent row with the same key overrides each entry. Reviews are intentionally empty: add real, permitted customer reviews before showing them. Legal pages are drafts for Benchmark Education to review.",
+  "home": {
+    "seo_title": "NAATI CCL practice and mock tests for English and Filipino",
+    "seo_description": "Practise NAATI CCL dialogues in the official test format, record your interpretation and get a detailed estimated score with feedback on every deduction.",
+    "hero_title": "Prepare for the NAATI CCL test in English and Filipino",
+    "hero_subtitle": "Practise real-format dialogues segment by segment, record your interpretation after the chime, and see exactly where you lost marks.",
+    "hero_cta": "Start free",
+    "features": [
+      {"title": "The real test flow", "body": "Information pages, an equipment check, then one page per segment with a chime and automatic recording, like the NAATI practice test."},
+      {"title": "Detailed, explainable scoring", "body": "Each Meaning Unit is checked for omissions, insertions and distortions. Language quality and fluency are scored separately, so you can see why every point was deducted."},
+      {"title": "Fluency measured from your audio", "body": "Start delays over 5 seconds and pauses over 3 seconds are measured from your recording, not guessed."},
+      {"title": "Courses that build the skills", "body": "An introduction to the CCL test and an exam preparation course for Filipino to English, with video lessons and notes."}
+    ],
+    "how_it_works": [
+      {"title": "Create a free account", "body": "Try the introduction course and a free practice dialogue."},
+      {"title": "Choose a plan", "body": "Unlock every dialogue, full mock tests and the exam preparation course."},
+      {"title": "Practise and review", "body": "Sit mock tests of two dialogues, then study your estimated score out of 90 and the feedback for each segment."}
+    ],
+    "disclaimer": "Scores on this platform are estimates to guide your practice. They are not official NAATI results."
+  },
+  "faq": [
+    {"q": "What is the NAATI CCL test?", "a": "The Credentialed Community Language (CCL) test checks your ability to interpret dialogues between an English speaker and a speaker of your community language. It is marked out of 90, and each of the two dialogues is marked out of 45."},
+    {"q": "Which languages are available?", "a": "English and Filipino (Tagalog) at launch. More languages will be added later."},
+    {"q": "How is my score estimated?", "a": "Your recording is transcribed and each Meaning Unit of the segment is checked for omissions, insertions and distortions (1 point each). Language quality and fluency issues cost 0.5 points per occurrence. Pauses and start delays are measured from your audio."},
+    {"q": "What do I need to take a mock test?", "a": "A computer with a recent version of Chrome, Edge, Firefox or Safari, headphones or speakers, and a microphone. The player includes an equipment check before you start."},
+    {"q": "Can I try it before I pay?", "a": "Yes. Create a free account to open the introduction course and a free practice dialogue."},
+    {"q": "Are the results official?", "a": "No. Results are estimated scores to guide your preparation. Only NAATI issues official CCL results."}
+  ],
+  "reviews": [],
+  "self-study": {
+    "seo_title": "Self-Study plan: NAATI CCL practice for Filipino",
+    "seo_description": "Every practice dialogue, full mock tests and the exam preparation course, with detailed estimated scoring.",
+    "title": "Self-Study",
+    "tagline": "Practise at your own pace with every dialogue and mock test.",
+    "description": "The Self-Study plan gives you full access to the dialogue library, mock tests in the official format and the exam preparation course. Every attempt is scored with feedback on each Meaning Unit, language quality and fluency.",
+    "included": [
+      "All English and Filipino practice dialogues",
+      "Full mock tests (two dialogues, scored out of 90)",
+      "Feedback on every deduction with suggested versions",
+      "Recordings and transcripts of your attempts",
+      "Introduction to CCL and Exam Preparation courses"
+    ],
+    "cta": "Enrol now"
+  },
+  "coaching": {
+    "seo_title": "Coaching plan: NAATI CCL coaching for Filipino",
+    "seo_description": "Everything in Self-Study plus guidance from Benchmark Education's teachers.",
+    "title": "Coaching",
+    "tagline": "Everything in Self-Study, plus guidance from our teachers.",
+    "description": "The Coaching plan adds support from Benchmark Education's teachers on top of the full Self-Study platform. Contact us to discuss coaching options.",
+    "included": [
+      "Everything in Self-Study",
+      "Guidance from Benchmark Education teachers"
+    ],
+    "cta": "Contact us",
+    "contact_email": ""
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "draft": true,
+    "updated": "",
+    "sections": [
+      {"heading": "About these terms", "body": "These terms apply to your use of the Benchmark Education CCL practice platform. By creating an account you agree to them."},
+      {"heading": "Your account", "body": "Keep your login details private. Accounts are for one person and must not be shared."},
+      {"heading": "Plans and payments", "body": "Paid plans are billed through Stripe. You can manage or cancel a subscription from your account page. Access to paid content ends when your plan ends."},
+      {"heading": "Practice content", "body": "Dialogues, audio, courses and feedback are for your personal preparation. Do not copy, record, share or resell them."},
+      {"heading": "Estimated scores", "body": "Scores are estimates produced to help you practise. They are not NAATI results and do not guarantee any outcome in the real test."},
+      {"heading": "Contact", "body": "Questions about these terms can be sent to Benchmark Education."}
+    ]
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "draft": true,
+    "updated": "",
+    "sections": [
+      {"heading": "What we collect", "body": "Your name, email address, payment status (payments are processed by Stripe; we do not store card details), your practice attempts, voice recordings and their transcripts."},
+      {"heading": "How we use it", "body": "To run your account, score your practice attempts, show you feedback, send transactional emails (welcome, receipts, password resets, results) and improve the platform."},
+      {"heading": "Service providers", "body": "Recordings are transcribed and evaluated by AI service providers, and stored with a cloud storage provider. Payments are handled by Stripe."},
+      {"heading": "Your choices", "body": "You can ask us to access, correct or delete your personal information."},
+      {"heading": "Contact", "body": "Privacy questions can be sent to Benchmark Education."}
+    ]
+  }
+}

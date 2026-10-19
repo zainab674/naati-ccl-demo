@@ -54,7 +54,7 @@ services:
       S3_ACCESS_KEY_ID: ccl-dev
       S3_SECRET_ACCESS_KEY: ccl-dev-secret
       APP_URL: http://localhost:3000
-    command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: sh -c "alembic upgrade head && python -m app.seed --dev && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     ports: ["8000:8000"]
     volumes: ["./backend:/app"]
     depends_on:

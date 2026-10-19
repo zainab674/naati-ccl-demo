@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from .db import SessionLocal
-from .routers import auth, billing
+from .routers import auth, billing, public
 from .settings import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 app = FastAPI(title="CCL Platform API", docs_url="/api/docs", openapi_url="/api/openapi.json")
 app.include_router(auth.router)
 app.include_router(billing.router)
+app.include_router(public.router)
 
 
 @app.get("/api/health")

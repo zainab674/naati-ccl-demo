@@ -21,7 +21,7 @@ Milestones map to client payments. Keep the app runnable after every task.
       subscription_status updates, customer portal link. Test with Stripe test mode + CLI.
 - [x] 1.4 Email service (provider interface + SMTP/Resend impl + console impl for dev). Templates: welcome, receipt,
       password reset, results ready. EmailLog.
-- [ ] 1.5 Public site: Home (offer, products, FAQ, sign-up), Self-Study and Coaching landing pages (description,
+- [x] 1.5 Public site: Home (offer, products, FAQ, sign-up), Self-Study and Coaching landing pages (description,
       included, price, reviews, CTA, Enrol -> checkout), pricing section, Terms, Privacy. Content from SiteContent /
       a content JSON, placeholders clearly marked. Responsive, SEO meta.
 
@@ -87,6 +87,9 @@ Milestones map to client payments. Keep the app runnable after every task.
 - Plan model: monthly subscription or one-off payment for a fixed period? Both are supported
   (STRIPE_CHECKOUT_MODE=subscription|payment); one-off currently unlocks until an admin/expiry changes it.
 - Plan prices: shown from the Stripe Price (or an admin-set display text); no prices are hard-coded.
+- Public copy: backend/content/site_content.json holds factual default copy; reviews are empty until Benchmark supplies
+  real, permitted reviews; Terms/Privacy are marked DRAFT for Benchmark's legal review. Coaching contact email needed
+  (SiteContent "coaching".contact_email).
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
@@ -99,3 +102,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 1.2: deps.requires_active_plan / ensure_access(is_free) / is_locked (Active+Trial unlock, admins always), 402 for locked content; unit tests.
 - 2026-10-19 1.3: Plan/Subscription/Payment/StripeEvent; /api/public/plans, /billing/checkout, /billing/portal, /billing/status, signed + idempotent /stripe/webhook (checkout, subscription created/updated/deleted, invoice paid/failed); receipt email; account + billing success pages. Not run against live Stripe test mode (no keys yet, see Open questions).
 - 2026-10-19 1.4: EmailProvider interface (console/SMTP/Resend), HTML+text templates (welcome, receipt, password reset, results ready), every send in EmailLog, failures logged not raised; provider tests with fakes.
+- 2026-10-19 1.5: public Home, Self-Study and Coaching landing pages, Pricing, Terms, Privacy, Enrol -> signup -> Stripe Checkout; content from SiteContent with JSON defaults (no invented reviews/prices), server-rendered with SEO metadata, sitemap.xml, robots.txt; checked desktop + mobile in the browser.
