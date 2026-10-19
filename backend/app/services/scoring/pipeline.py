@@ -148,6 +148,10 @@ def finalize(segment_attempt_id: uuid.UUID) -> None:
             return
         records.recalc_dialogue(db, da)
         da.scoring_status = ScoringStatus.FAILED if ScoringStatus.FAILED in statuses else ScoringStatus.COMPLETED
+        if da.scoring_status == ScoringStatus.FAILED:
+            # A segment that could not be scored contributes no deductions, so any total now would be inflated.
+            # Publish nothing until a teacher scores it (mark reviewed) or it is re-scored.
+            da.total_score, da.result = None, None
         da.finished_at = utcnow()
         db.commit()
         if da.mock_test_attempt_id is None:
@@ -160,8 +164,11 @@ def finalize(segment_attempt_id: uuid.UUID) -> None:
         if ma.finished_at or any(d.finished_at is None for d in ma.dialogue_attempts):
             db.commit()
             return
-        records.recalc_mock(db, ma)
         failed = any(d.scoring_status == ScoringStatus.FAILED for d in ma.dialogue_attempts)
+        if failed:
+            ma.total_score, ma.result = None, None
+        else:
+            records.recalc_mock(db, ma)
         ma.scoring_status = ScoringStatus.FAILED if failed else ScoringStatus.COMPLETED
         ma.finished_at = utcnow()
         db.commit()
