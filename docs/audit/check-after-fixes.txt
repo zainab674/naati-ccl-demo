@@ -1,0 +1,74 @@
+All checks passed!
+........................................................................ [ 45%]
+........................................................................ [ 91%]
+.............                                                            [100%]
+157 passed in 26.51s
+
+> frontend@0.1.0 lint
+> eslint
+
+
+> frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+✓ Running next.config.ts took 32ms
+(node:27876) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.5s
+  Running TypeScript ...
+  Finished TypeScript in 2.2s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/29) ...
+  Generating static pages using 11 workers (7/29) 
+  Generating static pages using 11 workers (14/29) 
+  Generating static pages using 11 workers (21/29) 
+✓ Generating static pages using 11 workers (29/29) in 842ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ○ /account
+├ ○ /admin
+├ ƒ /admin/attempts/[id]
+├ ○ /admin/courses
+├ ƒ /admin/courses/[id]
+├ ○ /admin/dialogues
+├ ƒ /admin/dialogues/[id]
+├ ○ /admin/imports
+├ ƒ /admin/imports/[id]
+├ ○ /admin/mock-tests
+├ ○ /admin/review
+├ ○ /admin/students
+├ ƒ /admin/students/[id]
+├ ƒ /attempt/[id]
+├ ○ /attempts
+├ ○ /billing/success
+├ ƒ /coaching
+├ ○ /courses
+├ ƒ /courses/[id]
+├ ƒ /courses/[id]/lessons/[lessonId]
+├ ○ /dashboard
+├ ○ /dialogues
+├ ƒ /enrol/[plan]
+├ ○ /forgot-password
+├ ○ /login
+├ ○ /mock-tests
+├ ƒ /pricing
+├ ƒ /privacy
+├ ○ /reset-password
+├ ƒ /results/[id]
+├ ○ /robots.txt
+├ ƒ /self-study
+├ ○ /signup
+├ ○ /sitemap.xml
+└ ƒ /terms
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+check: OK

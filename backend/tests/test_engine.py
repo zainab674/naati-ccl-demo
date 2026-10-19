@@ -82,3 +82,9 @@ def test_pass_rules(scores, passed):
     assert m.passed is passed and m.maximum == 90 and m.total == sum(scores)
     if not passed:
         assert m.reasons
+
+
+def test_fail_reasons_name_the_right_dialogue():
+    dialogues = [dialogue_score([Totals(5, 0, 0)], 45, 29, CFG), dialogue_score([Totals(20, 0, 0)], 45, 29, CFG)]
+    m = mock_score(dialogues, CFG["pass_total"])
+    assert not any("Dialogue 1 scored" in r for r in m.reasons) and any("Dialogue 2 scored 25" in r for r in m.reasons)

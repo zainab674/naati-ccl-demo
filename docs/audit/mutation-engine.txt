@@ -1,0 +1,48 @@
+killed    line 21: constant 1.0 -> 2.0
+SURVIVED  line 28: flip False
+killed    line 33: constant 0.0 -> 1.0
+killed    line 34: constant 0.0 -> 1.0
+killed    line 35: constant 0.0 -> 1.0
+killed    line 68: Eq -> NotEq
+killed    line 87: IsNot -> Is
+killed    line 105: Sub -> Add
+killed    line 115: Lt -> LtE
+killed    line 55: GtE -> Gt
+killed    line 70: Is -> IsNot
+killed    line 77: Eq -> NotEq
+SURVIVED  line 89: constant 2 -> 3
+SURVIVED  line 106: flip True
+SURVIVED  line 112: constant 2 -> 3
+SURVIVED  line 113: constant 2 -> 3
+killed    line 118: drop `not`
+killed    line 120: drop `not`
+killed    line 39: Add -> Sub
+SURVIVED  line 39: constant 2 -> 3
+killed    line 71: constant 0.0 -> 1.0
+killed    line 74: And -> Or
+killed    line 79: And -> Or
+killed    line 83: Eq -> NotEq
+SURVIVED  line 96: flip True
+killed    line 107: constant 0.0 -> 1.0
+SURVIVED  line 108: constant 2 -> 3
+SURVIVED  line 117: constant 1 -> 2
+killed    line 39: Add -> Sub
+killed    line 42: Add -> Sub
+SURVIVED  line 42: constant 2 -> 3
+killed    line 42: Add -> Sub
+SURVIVED  line 42: constant 2 -> 3
+killed    line 43: Add -> Sub
+SURVIVED  line 43: constant 2 -> 3
+killed    line 74: NotEq -> Eq
+killed    line 79: Eq -> NotEq
+killed    line 79: drop `not`
+killed    line 88: constant 0.0 -> 1.0
+killed    line 88: flip False
+killed    line 97: Add -> Sub
+SURVIVED  line 97: constant 2 -> 3
+SURVIVED  line 74: flip True
+killed    line 80: constant 0.0 -> 1.0
+SURVIVED  line 79: flip False
+killed    line 80: flip True
+
+31/46 mutants killed (67%), 15 survived

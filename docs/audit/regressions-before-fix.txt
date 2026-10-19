@@ -1,0 +1,121 @@
+FF.FFF                                                                   [100%]
+================================== FAILURES ===================================
+_____________ test_failed_segment_does_not_publish_inflated_score _____________
+
+db = <sqlalchemy.orm.session.Session object at 0x000001B95C69E450>
+answer_audio = b'\x1aE\xdf\xa3\x9fB\x86\x81\x01B\xf7\x81\x01B\xf2\x81\x04B\xf3\x81\x08B\x82\x84webmB\x87\x81\x04B\x85\x81\x02\x18S\x8...x81\x00\xb7\x8a\xf7\x81\x01\xf1\x82\x01\xc1\xf0\x81\x03\xbb\x90\xb3\x82\x13u\xb7\x8a\xf7\x81\x01\xf1\x82R:\xf0\x81\x04'
+
+    def test_failed_segment_does_not_publish_inflated_score(db, answer_audio):  # noqa: F811
+        def down(*a):
+            raise LLMError("bad request", retryable=False)
+    
+        MockProvider.responder = down
+        student, aid, s1, _ = _scored_practice(db, answer_audio)
+        r = student.get(f"/api/attempts/{aid}/results").json()
+        assert r["scoring_status"] == "Failed"
+        # Before the fix: total_score 43 ("Pass") with the failed segment silently counted as perfect.
+>       assert r["total_score"] is None and r["result"] is None
+E       assert (43.0 is None)
+
+tests\test_audit_regressions.py:47: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> d0eaebe23167, initial schema
+INFO  [alembic.runtime.migration] Running upgrade d0eaebe23167 -> 83530a8cfe04, user session version
+INFO  [alembic.runtime.migration] Running upgrade 83530a8cfe04 -> 35fdece698e5, dialogue attempt current step
+____________ test_rescore_keeps_teacher_items_and_requeues_review _____________
+
+admin_client = <starlette.testclient.TestClient object at 0x000001B95CC4F2F0>
+db = <sqlalchemy.orm.session.Session object at 0x000001B95D08FEF0>
+answer_audio = b'\x1aE\xdf\xa3\x9fB\x86\x81\x01B\xf7\x81\x01B\xf2\x81\x04B\xf3\x81\x08B\x82\x84webmB\x87\x81\x04B\x85\x81\x02\x18S\x8...x81\x00\xb7\x8a\xf7\x81\x01\xf1\x82\x01\xc1\xf0\x81\x03\xbb\x90\xb3\x82\x13u\xb7\x8a\xf7\x81\x01\xf1\x82R:\xf0\x81\x04'
+
+    def test_rescore_keeps_teacher_items_and_requeues_review(admin_client, db, answer_audio):  # noqa: F811
+        _, aid, s1, _ = _scored_practice(db, answer_audio)
+        admin_client.post(f"/api/admin/segment-attempts/{s1}/items",
+                          json={"criterion": "language", "type": "Grammar", "student_text": "x", "explanation": "Teacher found it"})
+        admin_client.post(f"/api/admin/segment-attempts/{s1}/rescore")
+        jobs.run_until_empty()
+        db.expire_all()
+        manual = db.scalars(select(LanguageQualityError).where(LanguageQualityError.segment_attempt_id == s1)).all()
+>       assert [m.explanation for m in manual] == ["Teacher found it"]
+E       AssertionError: assert [] == ['Teacher found it']
+E         
+E         Right contains one more item: 'Teacher found it'
+E         Use -v to get more diff
+
+tests\test_audit_regressions.py:61: AssertionError
+______________ test_out_of_order_subscription_events_keep_access ______________
+
+client = <starlette.testclient.TestClient object at 0x000001B95D20DC70>
+db = <sqlalchemy.orm.session.Session object at 0x000001B95D0AB920>
+stripe_env = None
+
+    def test_out_of_order_subscription_events_keep_access(client, db, stripe_env):  # noqa: F811
+        uid = signup(client)["id"]
+        now = int(time.time())
+        sub = {"id": "sub_9", "customer": "cus_9", "metadata": {"user_id": uid, "plan_key": "self-study"},
+               "items": {"data": [{"current_period_end": now + 86400}]}}
+        newer = {**event("customer.subscription.updated", {**sub, "status": "active"}), "created": now}
+        older = {**event("customer.subscription.updated", {**sub, "status": "past_due"}), "created": now - 600}
+        send(client, newer)
+        send(client, older)  # Stripe does not guarantee delivery order
+        db.expire_all()
+>       assert db.scalar(select(User).where(User.id == uid)).subscription_status == SubscriptionStatus.ACTIVE
+E       AssertionError: assert <Subscription...ED: 'Expired'> == <Subscription...IVE: 'Active'>
+E         
+E         - Active
+E         + Expired
+
+tests\test_audit_regressions.py:101: AssertionError
+___________________ test_active_subscriber_cannot_buy_again ___________________
+
+client = <starlette.testclient.TestClient object at 0x000001B95D08E4E0>
+db = <sqlalchemy.orm.session.Session object at 0x000001B95D216990>
+stripe_env = None
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001B95D2D53D0>
+
+    def test_active_subscriber_cannot_buy_again(client, db, stripe_env, monkeypatch):  # noqa: F811
+        from app.services import billing
+    
+        calls = []
+        monkeypatch.setattr(billing, "create_checkout", lambda db, u, p: calls.append(1) or "https://checkout.stripe.com/x")
+        signup(client)
+        activate(db)
+        r = client.post("/api/billing/checkout", json={"plan_key": "self-study"})
+>       assert r.status_code == 409 and calls == []
+E       assert (200 == 409)
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_audit_regressions.py:119: AssertionError
+________ test_discarded_recording_parts_cannot_leak_into_new_recording ________
+
+db = <sqlalchemy.orm.session.Session object at 0x000001B95D1DD0A0>
+
+    def test_discarded_recording_parts_cannot_leak_into_new_recording(db):
+        student = TestClient(app)
+        signup(student)
+        d = make_dialogue(db, is_free=True, segments=1)
+        aid = student.post("/api/attempts", json={"dialogue_id": str(d.id)}).json()["id"]
+        (sid,) = segment_ids(student, aid)
+        student.post(f"/api/attempts/{aid}/segments/{sid}/play")
+        base = f"/api/attempts/{aid}/segments/{sid}/recording"
+        assert student.put(f"{base}/parts/0?recording=new", content=b"NEW-ANSWER").status_code == 200
+        # A retry of part 0 from the recording the student threw away (pressed Repeat) arrives late:
+        assert student.put(f"{base}/parts/0?recording=old", content=b"OLD-ANSWER").status_code == 200
+        r = student.post(f"{base}/complete", json={"parts": 1, "mime": "audio/webm", "recording": "new"})
+        assert r.status_code == 200, r.text
+>       assert student.get(base).content == b"NEW-ANSWER"
+E       AssertionError: assert b'OLD-ANSWER' == b'NEW-ANSWER'
+E         
+E         At index 0 diff: b'O' != b'N'
+E         Use -v to get more diff
+
+tests\test_audit_regressions.py:137: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_audit_regressions.py::test_failed_segment_does_not_publish_inflated_score
+FAILED tests/test_audit_regressions.py::test_rescore_keeps_teacher_items_and_requeues_review
+FAILED tests/test_audit_regressions.py::test_out_of_order_subscription_events_keep_access
+FAILED tests/test_audit_regressions.py::test_active_subscriber_cannot_buy_again
+FAILED tests/test_audit_regressions.py::test_discarded_recording_parts_cannot_leak_into_new_recording
+5 failed, 1 passed in 8.48s
