@@ -1,0 +1,95 @@
+# Production stack for one Hetzner server.   docs/DEPLOY_HETZNER.md walks through it.
+#   cp .env.example .env   (fill in production values: DOMAIN, SECRET_KEY, POSTGRES_PASSWORD, S3_*, keys)
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Object storage is external (AWS S3 or Hetzner Object Storage); Postgres runs here with a persistent volume.
+name: ccl-prod
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
+x-backend-env: &backend-env
+  ENVIRONMENT: production
+  DATABASE_URL: postgresql+psycopg://ccl:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/ccl
+  APP_URL: https://${DOMAIN:?set DOMAIN}
+  COOKIE_SECURE: "true"
+  STORAGE_BACKEND: s3
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ccl
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ccl
+    volumes: [pgdata:/var/lib/postgresql/data, ./backups:/backups]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ccl -d ccl"]
+      interval: 10s
+      retries: 10
+    logging: *logging
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: [.env]
+    environment: *backend-env
+    # Migrations + idempotent seed on every start, then 2 API workers behind Caddy.
+    command: >
+      sh -c "alembic upgrade head && python -m app.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips='*'"
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *logging
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    env_file: [.env]
+    environment: *backend-env
+    command: python -m app.worker
+    depends_on:
+      backend: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "from app.db import engine; engine.connect().close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    stop_grace_period: 2m   # let a scoring job finish before the container stops
+    logging: *logging
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        API_URL: http://backend:8000
+        NEXT_PUBLIC_SITE_URL: https://${DOMAIN:?set DOMAIN}
+    restart: unless-stopped
+    depends_on:
+      backend: { condition: service_healthy }
+    logging: *logging
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend, backend]
+    logging: *logging
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

@@ -68,7 +68,7 @@ Milestones map to client payments. Keep the app runnable after every task.
       pipeline and prints AI vs teacher deductions per criterion (for the 10-sample test with the client).
 
 ## M5. Launch
-- [ ] 5.1 Production Dockerfiles, `docker-compose.prod.yml`, Caddy/Nginx HTTPS, health checks, logging.
+- [x] 5.1 Production Dockerfiles, `docker-compose.prod.yml`, Caddy/Nginx HTTPS, health checks, logging.
 - [ ] 5.2 `docs/DEPLOY_HETZNER.md`: server setup, Postgres, backups, env, Stripe webhook URL, DNS.
 - [ ] 5.3 Security pass: rate limits, CSRF/cookie flags, upload limits, HTML sanitisation, secrets audit,
       admin-only routes, signed media URLs.
@@ -129,3 +129,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 4.6: results API + page: estimated total /90 (or /45), Pass/Fail with reasons, criterion breakdown per attempt and dialogue, per segment: source (config switch), what we heard, recording playback, feedback, every MU/insertion/LQ/fluency item with explanation, suggested version and deduction, review badges; live polling while scoring; attempt history; dev-mode banner when providers are mocked. Checked in the browser.
 - 2026-10-19 4.7: admin students list (search, subscription filter, attempts, average) and detail (subscriptions, payments, lessons, attempts); review queue (needs review / failed); attempt review with recordings, transcripts, word timings, every deduction, raw AI runs (request/raw/processed), per-item override with required note -> AdminReview -> segment/dialogue/mock recalculation, teacher-added errors, mark reviewed (also completes a failed segment scored by hand), re-score.
 - 2026-10-19 4.8: scripts/eval_against_teacher.py (+ teacher_samples_template.csv): runs teacher-marked answers (audio or transcript) through STT -> timing -> evaluator -> engine without DB writes, prints AI vs teacher per criterion, mean |diff|, bias, exact/within-0.5 counts, optional per-sample CSV with the AI's errors. Needs real keys for a meaningful run.
+- 2026-10-19 5.1: docker-compose.prod.yml (postgres, backend x2 uvicorn workers with migrations+seed on start, worker with graceful stop, Next.js standalone frontend, Caddy auto-HTTPS), deploy/Caddyfile (/api -> FastAPI, HSTS, 25 MB body cap, JSON logs), healthchecks on every service, rotated json-file logs, frontend multi-stage Dockerfile. Validated with docker compose config and a local standalone build; images not built here (Docker daemon unavailable on this machine).
