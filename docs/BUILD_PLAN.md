@@ -49,7 +49,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 3.5 Courses: course list, lesson page (video + HTML), completion tracking, free/paid gating.
 
 ## M4. AI scoring, results, review
-- [ ] 4.1 STT provider interface; Groq Whisper Large V3 Turbo impl with word timestamps, language hint `tl`;
+- [x] 4.1 STT provider interface; Groq Whisper Large V3 Turbo impl with word timestamps, language hint `tl`;
       fallback model via env. Store transcript + words.
 - [ ] 4.2 Audio timing analysis (code): speech start vs recording start (> 5 s), internal pauses (> 3 s), filler
       detection candidates from LanguageScoringConfig.hesitation_markers.
@@ -119,3 +119,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 3.3: player /attempt/[id]: Information 1, Information 2 (test tone + mic record/playback), one page per segment (instructions left; protected waveform, no-seek source audio, answer area, plays/recording counters, Start, Finish Attempt, Repeat, Skip) with chime -> auto-record, client timestamps (chime end, record start/stop, first speech), server-side autosave/resume, summary of answered/skipped, Submit. Walked through in the browser with real encrypted HLS (mic stubbed: the browser pane blocks capture).
 - 2026-10-19 3.4: recordings uploaded in 3 s parts while speaking (idempotent part PUTs, retries/backoff, retry-saving button), joined server-side into storage, linked to the SegmentAttempt; owner/admin-only playback endpoint. Verified the joined WebM decodes (12.2 s).
 - 2026-10-19 3.5: courses API (published courses/lessons, free = course or lesson flag, 402 on paid lessons, idempotent completion) + course list with progress, course outline, lesson page (embed/mp4 video, sanitised HTML, mark complete, previous/next with lock).
+- 2026-10-19 4.1: STT interface; Groq whisper-large-v3-turbo (verbose_json, word+segment timestamps, language hint from Language.stt_code, e.g. tl) with STT_FALLBACK_MODEL retry; recordings normalised to 16 kHz FLAC; transcript, words, provider/model and an AIScoringRun(kind=stt) stored per segment; labelled mock provider for keyless dev.
