@@ -38,7 +38,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 2.6 Optional helper: "Suggest Meaning Units" button per segment (AI suggests, admin edits/approves).
 
 ## M3. Student experience
-- [ ] 3.1 Student dashboard: average score, available dialogues/mock tests, recent attempts, continue unfinished,
+- [x] 3.1 Student dashboard: average score, available dialogues/mock tests, recent attempts, continue unfinished,
       quick start.
 - [ ] 3.2 Dialogue library: filters by topic/difficulty, status + best score per dialogue.
 - [ ] 3.3 Mock test player matching the NAATI practice test flow: Info 1, Info 2 (equipment check: test sound,
@@ -111,3 +111,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 2.4: courses.csv import with the same dry-run/commit flow (ImportJob), lesson HTML sanitised with nh3 allow-list (warns when content was stripped), idempotent by course_key/lesson_no, missing lessons archived.
 - 2026-10-19 2.5: admin dialogue list/editor (details, publish/hide with readiness checks, segment transcript, MU table add/remove/renumber, re-process audio, waveform preview), mock test definitions (2 dialogues, same pair), course + lesson editor with sanitised HTML and live server-side preview. Checked in the browser.
 - 2026-10-19 2.6: LLM provider layer (Gemini default, Anthropic Opus 5.5 / OpenAI optional, mock; strict JSON schema output, typed retryable errors); 'Suggest with AI' per segment fills the MU editor for the admin to edit and save (never auto-saved); prompt in app/prompts/suggest_meaning_units_v1.md.
+- 2026-10-19 3.1: student API (dashboard, library, mock tests, attempts with resume, server-counted plays + RepeatEvents, session-bound HLS media ported from the demo, chunked recording upload, submit) with 8 player tests; dashboard page (averages, availability, continue unfinished, quick start, recent attempts, free-plan banner; webinars slot left empty) + My attempts page.

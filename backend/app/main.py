@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from .db import SessionLocal
-from .routers import admin, admin_content, admin_imports, auth, billing, public
+from .routers import admin, admin_content, admin_imports, auth, billing, media, public, student
 from .settings import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -16,6 +16,8 @@ app.include_router(public.router)
 app.include_router(admin.router)
 app.include_router(admin_imports.router)
 app.include_router(admin_content.router)
+app.include_router(student.router)
+app.include_router(media.router)
 
 
 @app.get("/api/health")

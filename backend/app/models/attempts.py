@@ -42,6 +42,8 @@ class DialogueAttempt(IdMixin, Base):
     position: Mapped[int] = mapped_column(default=1)  # order within a mock test
     status: Mapped[AttemptStatus] = mapped_column(enum_col(AttemptStatus), default=AttemptStatus.IN_PROGRESS)
     current_segment_number: Mapped[int] = mapped_column(default=1)
+    # Player position for a practice dialogue (info1 | info2 | segment | summary); mocks keep it on MockTestAttempt.
+    current_step: Mapped[str] = mapped_column(String(20), default="info1")
     maximum_score: Mapped[float] = mapped_column(default=45)
     passing_score: Mapped[float] = mapped_column(default=29)
     accuracy_completeness_deduction: Mapped[float] = mapped_column(default=0)
