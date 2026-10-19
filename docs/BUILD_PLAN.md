@@ -26,7 +26,7 @@ Milestones map to client payments. Keep the app runnable after every task.
       a content JSON, placeholders clearly marked. Responsive, SEO meta.
 
 ## M2. Content and admin import
-- [ ] 2.1 Admin shell + admin auth guard.
+- [x] 2.1 Admin shell + admin auth guard.
 - [ ] 2.2 Dialogue CSV import (format in MVP_SPEC.md): upload -> dry-run validation report (missing fields, enums,
       URL HEAD checks, duplicate keys) -> commit. Idempotent by dialogue_key/segment_no/mu_no. ImportJob records.
       Downloadable template + sample.
@@ -103,3 +103,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 1.3: Plan/Subscription/Payment/StripeEvent; /api/public/plans, /billing/checkout, /billing/portal, /billing/status, signed + idempotent /stripe/webhook (checkout, subscription created/updated/deleted, invoice paid/failed); receipt email; account + billing success pages. Not run against live Stripe test mode (no keys yet, see Open questions).
 - 2026-10-19 1.4: EmailProvider interface (console/SMTP/Resend), HTML+text templates (welcome, receipt, password reset, results ready), every send in EmailLog, failures logged not raised; provider tests with fakes.
 - 2026-10-19 1.5: public Home, Self-Study and Coaching landing pages, Pricing, Terms, Privacy, Enrol -> signup -> Stripe Checkout; content from SiteContent with JSON defaults (no invented reviews/prices), server-rendered with SEO metadata, sitemap.xml, robots.txt; checked desktop + mobile in the browser.
+- 2026-10-19 2.1: /api/admin router with require_admin on every route (401/403 tested), /admin shell (client guard redirects non-admins) and overview page.
