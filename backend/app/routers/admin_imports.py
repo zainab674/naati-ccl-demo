@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db, utcnow
 from ..deps import CurrentUser, require_admin
 from ..models import ImportJob, ImportStatus, ImportType
+from ..services import media_ingest
 from ..services.imports import samples
 from ..services.imports.common import MAX_CSV_BYTES, CsvError
 from ..services.storage import get_storage
@@ -107,7 +108,6 @@ def commit(job_id: uuid.UUID, cu: CurrentUser = Depends(require_admin), db: Sess
     media_ids = counts.pop("media_segment_ids", [])
     job = db.get(ImportJob, job_id)
     job.counts, job.committed_at = counts, utcnow()
-    job.progress = {"media_total": len(media_ids), "media_done": 0, "media_failed": 0}
-    job.status = ImportStatus.COMPLETED
+    media_ingest.enqueue_for_import(db, job, media_ids)  # background: download, encrypt, store
     db.commit()
     return job_dict(job)

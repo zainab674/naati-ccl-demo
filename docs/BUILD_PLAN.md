@@ -30,7 +30,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 2.2 Dialogue CSV import (format in MVP_SPEC.md): upload -> dry-run validation report (missing fields, enums,
       URL HEAD checks, duplicate keys) -> commit. Idempotent by dialogue_key/segment_no/mu_no. ImportJob records.
       Downloadable template + sample.
-- [ ] 2.3 Media ingest: on commit, download audio from URL, run the protected HLS pipeline from the demo, store in S3
+- [x] 2.3 Media ingest: on commit, download audio from URL, run the protected HLS pipeline from the demo, store in S3
       (boto3, configurable endpoint). Store waveform image. Background job with status in ImportJob.
 - [ ] 2.4 Course CSV import (course_key, lesson rows) with the same dry-run/commit flow.
 - [ ] 2.5 Admin content screens: list/edit/publish/hide dialogues (segments, MUs editable), courses and lessons with a
@@ -90,6 +90,8 @@ Milestones map to client payments. Keep the app runnable after every task.
 - Public copy: backend/content/site_content.json holds factual default copy; reviews are empty until Benchmark supplies
   real, permitted reviews; Terms/Privacy are marked DRAFT for Benchmark's legal review. Coaching contact email needed
   (SiteContent "coaching".contact_email).
+- S3: the boto3 backend (configurable endpoint for AWS/Hetzner/MinIO) is written but has only been exercised
+  through the local storage backend here; verify against the real bucket once credentials exist.
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
@@ -105,3 +107,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 1.5: public Home, Self-Study and Coaching landing pages, Pricing, Terms, Privacy, Enrol -> signup -> Stripe Checkout; content from SiteContent with JSON defaults (no invented reviews/prices), server-rendered with SEO metadata, sitemap.xml, robots.txt; checked desktop + mobile in the browser.
 - 2026-10-19 2.1: /api/admin router with require_admin on every route (401/403 tested), /admin shell (client guard redirects non-admins) and overview page.
 - 2026-10-19 2.2: dialogues.csv import: upload -> dry-run report (missing fields, enums, language codes, consistency across repeated rows, duplicate keys, URL HEAD/range-GET checks) -> commit; idempotent upsert by dialogue_key/segment_no/mu_no (missing items deactivated, version bump on change); ImportJob history; template + sample downloads; admin import UI. S3/local storage service added.
+- 2026-10-19 2.3: Postgres job queue (SKIP LOCKED, retries with backoff, failure hooks) + `python -m app.worker`; per-segment ingest job: download (size-capped) -> chime -> AES-128 HLS (demo pipeline) -> storage; waveform from CSV URL or drawn by ffmpeg; unchanged audio skipped by hash; ImportJob progress/failures. Tested with real ffmpeg.

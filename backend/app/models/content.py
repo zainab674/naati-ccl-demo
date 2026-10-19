@@ -75,7 +75,7 @@ class Segment(IdMixin, Base):
     audio_file: Mapped[str] = mapped_column(String(300), default="")       # storage prefix of the HLS package
     source_audio_url: Mapped[str] = mapped_column(String(1000), default="")  # imported from CSV
     source_audio_hash: Mapped[str] = mapped_column(String(64), default="")   # skip re-processing unchanged audio
-    media_status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | ready | failed
+    media_status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|processing|ready|failed
     media_error: Mapped[str] = mapped_column(Text, default="")
     transcript: Mapped[str] = mapped_column(Text, default="")
     speaker_label: Mapped[str] = mapped_column(String(80), default="")

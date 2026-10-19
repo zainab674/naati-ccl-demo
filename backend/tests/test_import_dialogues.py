@@ -81,7 +81,7 @@ def test_commit_and_idempotent_reimport(admin_client, db):
     job = upload(admin_client, data)
     assert job["status"] == "Validated", job["report"]
     done = admin_client.post(f"/api/admin/imports/{job['id']}/commit").json()
-    assert done["status"] == "Completed"
+    assert done["status"] == "ProcessingMedia"
     assert done["counts"]["dialogues_created"] == 1 and done["counts"]["meaning_units_created"] == 3
     d = db.scalar(select(Dialogue).where(Dialogue.key == "d1"))
     assert d.status == ContentStatus.DRAFT and d.version == 1 and d.topic.name == "Health"
