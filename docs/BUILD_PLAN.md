@@ -16,7 +16,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 
 ## M1. Accounts, payments, public site
 - [x] 1.1 Auth: sign up, login, logout, password reset (token email), roles, httpOnly cookie sessions (reuse demo JWT).
-- [ ] 1.2 Access control helper: `requires_active_plan`, free-content flags respected.
+- [x] 1.2 Access control helper: `requires_active_plan`, free-content flags respected.
 - [ ] 1.3 Stripe: Plan table, Checkout session endpoint, webhook (signature verified, idempotent),
       subscription_status updates, customer portal link. Test with Stripe test mode + CLI.
 - [ ] 1.4 Email service (provider interface + SMTP/Resend impl + console impl for dev). Templates: welcome, receipt,
@@ -90,3 +90,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 0.5: config/scoring.yaml (penalties, 3 s pause, 5 s delay, 63/29/45/90, pronunciation review-only) and config/ccl.yaml (test flow).
 - 2026-10-19 0.6: pytest on a real Postgres test DB (migrated once, truncated + seeded per test), ruff, `make check` / scripts/check.sh (backend lint+tests, frontend lint+build).
 - 2026-10-19 1.1: signup/login/logout/forgot/reset (1 h single-use hashed tokens, session_version invalidates old cookies), /me, rate-limited; login/signup/forgot/reset pages; demo pages removed pending M3 rebuild.
+- 2026-10-19 1.2: deps.requires_active_plan / ensure_access(is_free) / is_locked (Active+Trial unlock, admins always), 402 for locked content; unit tests.

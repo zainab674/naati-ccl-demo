@@ -8,6 +8,7 @@ ignore = ["B008"]  # FastAPI Depends() in defaults
 [lint.per-file-ignores]
 "alembic/versions/*" = ["E501", "I", "UP"]
 "tests/*" = ["E402"]
+"app/emails/*" = ["E501"]
 
 [lint.isort]
 known-third-party = ["alembic"]

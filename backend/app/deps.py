@@ -72,3 +72,8 @@ def ensure_access(user: User, is_free: bool) -> None:
 
 def client_ip(request: Request) -> str:
     return request.client.host if request.client else ""
+
+
+def is_locked(user: User, is_free: bool) -> bool:
+    """For list views: show paid items to everyone, marked locked when the user has no active plan."""
+    return not is_free and not has_active_plan(user)

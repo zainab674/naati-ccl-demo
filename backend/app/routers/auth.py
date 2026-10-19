@@ -9,8 +9,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db, utcnow
 from ..deps import CurrentUser, client_ip, current_user, has_active_plan
 from ..models import PasswordResetToken, User, UserRole
-from ..security import (COOKIE_NAME, hash_password, hash_token, issue_session_token, new_reset_token,
-                        verify_password)
+from ..security import COOKIE_NAME, hash_password, hash_token, issue_session_token, new_reset_token, verify_password
 from ..services import ratelimit
 from ..services.email import send_template
 from ..settings import get_settings
