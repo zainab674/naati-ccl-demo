@@ -103,13 +103,9 @@ Milestones map to client payments. Keep the app runnable after every task.
   (SiteContent "coaching".contact_email).
 - S3: the boto3 backend (configurable endpoint for AWS/Hetzner/MinIO) is written but has only been exercised
   through the local storage backend here; verify against the real bucket once credentials exist.
-- Player repeats (updated 2026-10-20 from the client's Loom videos): Start again after Finish attempt repeats a segment;
-  1 repeat per dialogue (ccl.yaml max_repeats_per_dialogue), only the last attempt kept. Further repeats are blocked;
-  should they instead be allowed with a penalty (scoring.yaml penalties.repeat)?
-- Camera: shown as a preview only, never recorded; camera.required is false so students without a webcam can practise.
-  Should the camera be required, or video recorded for teacher review?
-- Navigation: Previous/Next let a student go back to an earlier segment and answer it (or use the repeat there), as
-  the NAATI test's buttons suggest. Confirm this matches the real exam.
+- DECIDED 2026-10-20 (player): repeats beyond the 1 per dialogue are blocked (no penalty option); the camera stays an
+  optional preview, never recorded; students can go back to earlier segments with Previous and answer them. All three
+  are already how the player works.
 - Repeat penalty: SCORING_BRIEF.md sets none, so repeats are tracked but cost 0 (scoring.yaml penalties.repeat).
 - AI keys: GROQ_API_KEY and GEMINI_API_KEY are needed to run real STT/evaluation. Providers are tested with stubs;
   the 10-sample teacher comparison (4.8) is the real accuracy check. Gemini model name is GEMINI_MODEL.
@@ -182,3 +178,4 @@ Scope additions (2026-10-20), questions for Nipun:
 - 2026-10-20 browser check (dev, test accounts on localhost, since deactivated): sign-up language list, library language switch (found and fixed a stale-response race on all filtered lists), hub list and inline PDF, admin Add student (Trial until 31 Dec, Arabic, invite) and the student access/account cards. Not checked: bulk-enrol modal, resource audio/video playback, Safari/iOS, a real Arabic transcript in the results view.
 - 2026-10-20 CSV uploads: every CSV upload (dialogues, courses, bulk enrol) now has "Download CSV format" (header row) and "Download example" buttons (shared CsvFormatButtons); new students example file; tests check each example passes its own validation. Checked in the browser.
 - 2026-10-20 player rebuilt to match the NAATI test in the client's Loom walkthrough: exam header, breadcrumb with page counter, title bar with Help, progress strip, Previous/Next; Information 2 example segment (sound, speak, Finish attempt, Play back) checking speakers, microphone and camera; webcam preview (never recorded) with red border while recording; source waveform with playhead and live microphone trace; Attempts counter; repeat = Start again after Finish attempt, 1 per dialogue (configurable), only the last attempt stored (earlier recording deleted) and scored; resume returns to the first unanswered segment. Backend tests for the repeat rule. Walked through in the browser with a synthetic mic/camera (the pane blocks real devices): example segment, a segment with real encrypted audio, a repeat, Start disabled after the repeat, server keeps only try2, summary, reload/resume, phone width.
+- 2026-10-20 player decisions recorded: extra repeats blocked, camera optional preview, going back to earlier segments allowed (no code change needed).
