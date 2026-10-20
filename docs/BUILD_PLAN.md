@@ -87,6 +87,12 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 6.3 Learning hub (module 15): Resource model + migration, private file upload/serving, admin CRUD, student hub
       with type/language filters and free/paid gating.
 
+## Deferred (from the client brief "CCL Platform", parked 2026-10-20 at the user's request)
+- [ ] PDF attachment per course lesson (brief: each lesson holds a video, text and a PDF).
+- [ ] Admin dashboard: new accounts and revenue (and "leads", once defined).
+- [ ] Score each segment as soon as it is answered in practice mode (brief: after one segment or the whole dialogue).
+- [ ] Show courses (and later webinars) inside the learning hub.
+
 ## Open questions (write here when blocked, then continue)
 - Number of courses at launch (spec assumes 2).
 - Who sets up the Hetzner server (spec assumes we provide compose + deploy guide).
