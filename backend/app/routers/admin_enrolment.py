@@ -18,8 +18,12 @@ from ..services.imports.common import MAX_CSV_BYTES
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 MIN_PASSWORD = 8
-TEMPLATE_CSV = ("first_name,last_name,email,language,access,access_until,target_exam_date,note\n"
-                "Demo,Student,demo.student@example.com,fil,Trial,,,Demo account for testing\n")
+TEMPLATE_CSV = "first_name,last_name,email,language,access,access_until,target_exam_date,note\n"
+# Placeholder rows showing each option (example.com addresses; not real students).
+EXAMPLE_CSV = TEMPLATE_CSV + (
+    "Demo,Student,demo.student@example.com,fil,Trial,,,Demo account for testing\n"
+    "Sample,Hindi,sample.hindi@example.com,hi,Active,31/12/2026,2026-11-20,Paid by bank transfer\n"
+    "Sample,Free,sample.free@example.com,ar,None,,,Free content only\n")
 
 
 def _student(db: Session, user_id: uuid.UUID) -> User:
@@ -143,7 +147,13 @@ def set_password(user_id: uuid.UUID, body: PasswordIn, db: Session = Depends(get
 @router.get("/students-import/template")
 def bulk_template():
     return Response(TEMPLATE_CSV, media_type="text/csv",
-                    headers={"Content-Disposition": 'attachment; filename="students_template.csv"'})
+                    headers={"Content-Disposition": 'attachment; filename="students_format.csv"'})
+
+
+@router.get("/students-import/example")
+def bulk_example():
+    return Response(EXAMPLE_CSV, media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="students_example.csv"'})
 
 
 @router.post("/students-import")

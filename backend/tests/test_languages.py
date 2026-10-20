@@ -120,3 +120,10 @@ def test_evaluator_prompt_uses_the_segment_language_and_its_guidance(db):
     cfg = db.scalar(select(LanguageScoringConfig).where(LanguageScoringConfig.language_id == hi.id))
     req = evaluator.build_request(seg, "डॉक्टर", [], cfg)
     assert "from English into Hindi" in req["system"] and "आप" in req["system"]
+
+
+def test_courses_example_download_passes_validation(admin_client):
+    sample = admin_client.get("/api/admin/imports/templates/courses-sample.csv").content
+    assert b"lote_language" in admin_client.get("/api/admin/imports/templates/courses-template.csv").content
+    job = admin_client.post("/api/admin/imports/courses", files={"file": ("s.csv", sample, "text/csv")}).json()
+    assert job["report"]["ok"], job["report"]["errors"]

@@ -1,9 +1,10 @@
 "use client";
 
-import { Download, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 
+import CsvFormatButtons from "@/components/CsvFormatButtons";
 import ImportReport, { type ImportJob, statusTone } from "@/components/ImportReport";
 import { Badge, Button, Card, cx, ErrorNote, PageHeader } from "@/components/ui";
 import { api, fmtDateTime } from "@/lib/api";
@@ -67,9 +68,8 @@ export default function ImportsPage() {
             ))}
           </div>
           <p className="mt-3 text-sm text-slate-600">{help}</p>
-          <div className="mt-3 flex flex-wrap gap-4 text-sm">
-            <a href={`/api/admin/imports/templates/${kind}-template.csv`} className="inline-flex items-center gap-1 text-brand-600 hover:underline"><Download className="size-4" /> Template</a>
-            <a href={`/api/admin/imports/templates/${kind}-sample.csv`} className="inline-flex items-center gap-1 text-brand-600 hover:underline"><Download className="size-4" /> Sample</a>
+          <div className="mt-3">
+            <CsvFormatButtons formatUrl={`/api/admin/imports/templates/${kind}-template.csv`} exampleUrl={`/api/admin/imports/templates/${kind}-sample.csv`} />
           </div>
           <form onSubmit={validate} className="mt-6 space-y-4">
             <input type="file" accept=".csv,text/csv" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setJob(null); }}

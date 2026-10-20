@@ -185,3 +185,13 @@ def test_trial_student_can_buy_and_stripe_takes_over(admin_client, db, stripe_en
     assert u.subscription_status == SubscriptionStatus.ACTIVE and u.access_expires_at is None  # no manual end date
     # Now paying through Stripe: a second checkout is refused.
     assert student.post("/api/billing/checkout", json={"plan_key": "self-study"}).status_code == 409
+
+
+def test_format_and_example_downloads(admin_client):
+    fmt = admin_client.get("/api/admin/students-import/template")
+    assert fmt.text.strip() == "first_name,last_name,email,language,access,access_until,target_exam_date,note"
+    example = admin_client.get("/api/admin/students-import/example")
+    assert "attachment" in example.headers["content-disposition"]
+    # The example passes its own validation as-is.
+    rep = admin_client.post("/api/admin/students-import", files={"file": ("e.csv", example.content, "text/csv")}).json()["report"]
+    assert rep["ok"] and rep["summary"]["to_create"] == 3

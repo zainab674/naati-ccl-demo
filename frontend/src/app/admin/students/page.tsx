@@ -1,9 +1,10 @@
 "use client";
 
-import { Download, Upload, UserPlus } from "lucide-react";
+import { Upload, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import CsvFormatButtons from "@/components/CsvFormatButtons";
 import ImportReport, { type ImportJob } from "@/components/ImportReport";
 import { Badge, Button, Card, ErrorNote, Field, inputClass, Modal, PageHeader, Spinner, SuccessNote } from "@/components/ui";
 import { subTone } from "@/lib/admin";
@@ -173,7 +174,7 @@ function BulkEnrol({ open, onClose }: { open: boolean; onClose: () => void }) {
       <div className="space-y-4 text-sm">
         <p className="text-slate-600">Columns: <code>first_name, email</code> (required), <code>last_name, language, access, access_until, target_exam_date, note</code>.
           Access is Active, Trial or None; dates are YYYY-MM-DD or DD/MM/YYYY. Students who already have an account are skipped.</p>
-        <a href="/api/admin/students-import/template" className="inline-flex items-center gap-1 text-brand-600 hover:underline"><Download className="size-4" /> Template</a>
+        <CsvFormatButtons formatUrl="/api/admin/students-import/template" exampleUrl="/api/admin/students-import/example" />
         <input type="file" accept=".csv,text/csv" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null); }}
           className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200" />
         <label className="flex items-center gap-2 text-slate-600">
