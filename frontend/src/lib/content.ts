@@ -43,3 +43,10 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:30
 export async function getTheme() {
   return getJson<import("./theme").Theme>("/public/theme");
 }
+
+export type PublicLanguage = { code: string; name: string; native_name: string };
+
+/** Community languages offered (each paired with English), for the public pages. */
+export async function getLanguages(): Promise<PublicLanguage[]> {
+  return (await getJson<PublicLanguage[]>("/public/languages")) ?? [];
+}

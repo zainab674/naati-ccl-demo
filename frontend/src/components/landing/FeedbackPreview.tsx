@@ -24,7 +24,7 @@ export function FeedbackPreview() {
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
           <div className="flex items-center gap-2.5">
             <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">Segment 4</span>
-            <span className="text-xs text-slate-500">English → Filipino</span>
+            <span className="text-xs text-slate-500">Sample answer</span>
           </div>
           <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Example</span>
         </div>

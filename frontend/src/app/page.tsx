@@ -5,12 +5,13 @@ import Link from "next/link";
 import { cx } from "@/components/cx";
 import { FeedbackPreview } from "@/components/landing/FeedbackPreview";
 import { btnPrimary, btnSecondary, FaqList, PlanCard, PublicPage, Reviews } from "@/components/public";
-import { type Faq, type Feature, getContent, getPlans, type HomeContent, type PlanContent, type Review } from "@/lib/content";
+import { type Faq, type Feature, getContent, getLanguages, getPlans, getTheme, type HomeContent, type PlanContent, type Review } from "@/lib/content";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const home = await getContent<HomeContent>("home");
+  const [home, theme] = await Promise.all([getContent<HomeContent>("home"), getTheme()]);
+  const name = theme?.name || "Benchmark Education";
   return {
-    title: { absolute: home?.seo_title ? `${home.seo_title} | Benchmark Education` : "Benchmark Education | NAATI CCL Practice" },
+    title: { absolute: home?.seo_title ? `${home.seo_title} | ${name}` : `${name} | NAATI CCL Practice` },
     description: home?.seo_description,
     openGraph: { title: home?.seo_title, description: home?.seo_description, type: "website" },
   };
@@ -20,9 +21,9 @@ const h2 = "font-display text-3xl font-semibold tracking-tight text-ink sm:text-
 const pressable = "active:translate-y-px transition-[transform,background-color,color]";
 
 export default async function HomePage() {
-  const [home, faq, reviews, plans, selfStudy, coaching] = await Promise.all([
+  const [home, faq, reviews, plans, selfStudy, coaching, languages] = await Promise.all([
     getContent<HomeContent>("home"), getContent<Faq>("faq"), getContent<Review[]>("reviews"), getPlans(),
-    getContent<PlanContent>("self-study"), getContent<PlanContent>("coaching"),
+    getContent<PlanContent>("self-study"), getContent<PlanContent>("coaching"), getLanguages(),
   ]);
   const plan = (k: string) => plans.find((p) => p.key === k);
   const cta = home?.hero_cta || "Start free";
@@ -34,7 +35,7 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-7">
             <p className="rise inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 ring-1 ring-brand-100">
-              English <span aria-hidden className="text-brand-400">⇄</span> Filipino
+              English <span aria-hidden className="text-brand-400">⇄</span> {languages.length ? `${languages.length} languages` : "your language"}
             </p>
             <h1 className="rise mt-5 max-w-[22ch] text-balance font-display text-4xl font-semibold leading-[1.06] tracking-tight text-ink sm:text-5xl xl:text-[3.5rem]" style={{ "--d": "60ms" } as React.CSSProperties}>
               {home?.hero_title || "Prepare for the NAATI CCL test"}
@@ -46,6 +47,13 @@ export default async function HomePage() {
               <Link href="/signup" className={cx(btnPrimary, pressable, "h-12 px-6 text-[15px]")}>{cta} <ArrowRight className="size-4" /></Link>
               <Link href="#plans" className={cx(btnSecondary, pressable, "h-12 px-6 text-[15px]")}>See plans</Link>
             </div>
+            {languages.length > 0 && (
+              <ul aria-label="Languages" className="rise mt-7 flex flex-wrap gap-2" style={{ "--d": "240ms" } as React.CSSProperties}>
+                {languages.map((l) => (
+                  <li key={l.code} className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 ring-1 ring-slate-200">{l.name}</li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="lg:col-span-5">
             <FeedbackPreview />

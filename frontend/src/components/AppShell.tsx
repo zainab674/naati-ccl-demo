@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BookOpen, ClipboardCheck, Flag, GraduationCap, History, LayoutDashboard, Library, LogOut, Menu, Settings, Upload, Users, X,
+  BookOpen, ClipboardCheck, Eye, Flag, GraduationCap, History, LayoutDashboard, Library, LogOut, Menu, Settings, Shield, Upload, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -75,11 +75,6 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
             </Link>
           );
         })}
-        {user.role === "admin" && (
-          <Link href={admin ? "/dashboard" : "/admin"} className="mt-4 flex items-center gap-3 rounded-lg px-3 py-2 text-xs text-brand-200 hover:text-white">
-            {admin ? "Student view" : "Admin"}
-          </Link>
-        )}
       </div>
       <div className="border-t border-white/10 px-2 pt-4">
         <div className="truncate text-sm font-medium text-white">{user.name}</div>
@@ -103,11 +98,19 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
           </div>
         )}
         <div className="min-w-0 flex-1 lg:pl-60">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:hidden">
-            <button onClick={() => setOpen(!open)} aria-label="Menu" className="rounded p-1.5 hover:bg-slate-100">
+          {/* Top bar: menu on phones; for admins, the switch between the admin area and the student view (top right). */}
+          <header className={cx("sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-8",
+            user.role !== "admin" && "lg:hidden")}>
+            <button onClick={() => setOpen(!open)} aria-label="Menu" className="rounded p-1.5 hover:bg-slate-100 lg:hidden">
               {open ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>
-            <Logo />
+            <div className="lg:hidden"><Logo /></div>
+            {user.role === "admin" && (
+              <Link href={admin ? "/dashboard" : "/admin"}
+                className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-sm font-medium text-ink shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
+                {admin ? <><Eye className="size-4" /> Student view</> : <><Shield className="size-4" /> Admin</>}
+              </Link>
+            )}
           </header>
           <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8">{children}</main>
         </div>
