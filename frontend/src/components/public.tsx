@@ -11,19 +11,20 @@ const btn = "inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 
 export const btnPrimary = cx(btn, "bg-brand-600 text-white hover:bg-brand-700");
 export const btnSecondary = cx(btn, "bg-white text-ink ring-1 ring-slate-200 hover:bg-slate-50");
 
-export function PublicHeader() {
+export function PublicHeader({ dark }: { dark?: boolean }) {
+  const link = dark ? "hover:text-white" : "hover:text-ink";
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/90 backdrop-blur">
+    <header className={cx("sticky top-0 z-30 border-b backdrop-blur-xl", dark ? "border-white/10 bg-brand-950/60" : "border-brand-100 bg-brand-50/85")}>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link href="/" aria-label="Home"><Logo compact /></Link>
-        <nav className="hidden items-center gap-6 text-sm text-slate-600 md:flex">
-          <Link href="/self-study" className="hover:text-ink">Self-Study</Link>
-          <Link href="/coaching" className="hover:text-ink">Coaching</Link>
-          <Link href="/pricing" className="hover:text-ink">Pricing</Link>
-          <Link href="/#faq" className="hover:text-ink">FAQ</Link>
+        <Link href="/" aria-label="Home"><Logo compact light={dark} /></Link>
+        <nav className={cx("hidden items-center gap-6 text-sm transition-colors md:flex", dark ? "text-brand-100/70" : "text-slate-600")}>
+          <Link href="/self-study" className={link}>Self-Study</Link>
+          <Link href="/coaching" className={link}>Coaching</Link>
+          <Link href="/pricing" className={link}>Pricing</Link>
+          <Link href="/#faq" className={link}>FAQ</Link>
         </nav>
         <div className="flex items-center gap-2">
-          <Link href="/login" className="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Sign in</Link>
+          <Link href="/login" className={cx("whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium", dark ? "text-brand-50/90 hover:bg-white/10" : "text-slate-700 hover:bg-slate-100")}>Sign in</Link>
           <Link href="/signup" className={cx(btnPrimary, "h-9 whitespace-nowrap px-4")}>Start free</Link>
         </div>
       </div>
@@ -31,35 +32,37 @@ export function PublicHeader() {
   );
 }
 
-export function PublicFooter({ disclaimer }: { disclaimer?: string }) {
+export function PublicFooter({ disclaimer, dark }: { disclaimer?: string; dark?: boolean }) {
+  const link = dark ? "hover:text-white" : "hover:text-ink";
   return (
-    <footer className="border-t border-slate-200 bg-white">
+    <footer className={cx("border-t", dark ? "border-white/10 bg-black/20" : "border-brand-100 bg-brand-100/50")}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div className="max-w-sm">
-          <Logo />
-          {disclaimer && <p className="mt-3 text-xs text-slate-500">{disclaimer}</p>}
+          <Logo light={dark} />
+          {disclaimer && <p className={cx("mt-3 text-xs", dark ? "text-brand-100/60" : "text-slate-500")}>{disclaimer}</p>}
         </div>
-        <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
-          <Link href="/self-study" className="hover:text-ink">Self-Study</Link>
-          <Link href="/coaching" className="hover:text-ink">Coaching</Link>
-          <Link href="/pricing" className="hover:text-ink">Pricing</Link>
-          <Link href="/terms" className="hover:text-ink">Terms</Link>
-          <Link href="/privacy" className="hover:text-ink">Privacy</Link>
+        <nav className={cx("flex flex-wrap gap-x-6 gap-y-2 text-sm", dark ? "text-brand-100/70" : "text-slate-600")}>
+          <Link href="/self-study" className={link}>Self-Study</Link>
+          <Link href="/coaching" className={link}>Coaching</Link>
+          <Link href="/pricing" className={link}>Pricing</Link>
+          <Link href="/terms" className={link}>Terms</Link>
+          <Link href="/privacy" className={link}>Privacy</Link>
         </nav>
       </div>
-      <div className="border-t border-slate-100 py-4 text-center text-xs text-slate-400">
+      <div className={cx("border-t py-4 text-center text-xs", dark ? "border-white/10 text-brand-100/50" : "border-brand-100 text-slate-400")}>
         © {new Date().getFullYear()} <BrandName />
       </div>
     </footer>
   );
 }
 
-export function PublicPage({ children, disclaimer }: { children: ReactNode; disclaimer?: string }) {
+/** `dark` gives the shell the deep brand look used by the landing page; other public pages stay light. */
+export function PublicPage({ children, disclaimer, dark }: { children: ReactNode; disclaimer?: string; dark?: boolean }) {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <PublicHeader />
+    <div className={cx("flex min-h-screen flex-col", dark ? "bg-brand-950 text-white" : "bg-brand-50")}>
+      <PublicHeader dark={dark} />
       <main className="flex-1">{children}</main>
-      <PublicFooter disclaimer={disclaimer} />
+      <PublicFooter disclaimer={disclaimer} dark={dark} />
     </div>
   );
 }
