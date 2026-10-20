@@ -6,7 +6,7 @@ from sqlalchemy import text
 from .db import SessionLocal
 from .middleware import SecurityMiddleware
 from .routers import (admin, admin_content, admin_enrolment, admin_imports, admin_students, auth, billing, courses, media,
-                      public, resources, student)
+                      public, resources, settings, student)
 from .settings import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -29,6 +29,8 @@ app.include_router(media.router)
 app.include_router(courses.router)
 app.include_router(resources.router)
 app.include_router(resources.admin)
+app.include_router(settings.public)
+app.include_router(settings.admin)
 
 
 @app.get("/api/health")

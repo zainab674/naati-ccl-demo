@@ -16,6 +16,11 @@
 | API docs | `/api/docs` and the OpenAPI schema are disabled in production | `app/main.py` |
 | Open redirects | post-login `next` must be a same-site path | `frontend/src/lib/api.ts` |
 
+Admin settings (Settings page): the SMTP password and Resend key are encrypted at rest with a key derived from
+SECRET_KEY, are write-only in the API and never returned; changing SECRET_KEY makes them unreadable (the page says so
+and asks for them again). Theme names reject markup; logos are checked by their first bytes (no SVG). An admin can point
+SMTP at any host, so only trusted people should be admins.
+
 Known limits: rate limits are per process (fine for one server; use Redis if the backend is scaled across hosts).
 A student who can play audio can still record it from their sound card; per-user audio watermarking is a possible
 later addition.

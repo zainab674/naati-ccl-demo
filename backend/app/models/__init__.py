@@ -11,6 +11,7 @@ from .other import (  # noqa: F401
                     LessonProgress,
                     Payment,
                     Plan,
+                    PlatformSetting,
                     PlayGrant,
                     SecurityEvent,
                     SiteContent,

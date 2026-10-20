@@ -171,3 +171,13 @@ class SecurityEvent(IdMixin, Base):
     kind: Mapped[str] = mapped_column(String(40))
     detail: Mapped[str] = mapped_column(Text, default="")
     ip: Mapped[str] = mapped_column(String(64), default="")
+
+
+# ------------------------------------------------------------------ platform settings (admin-editable)
+
+class PlatformSetting(IdMixin, Base):
+    """Admin-edited platform settings by key ("theme", "email"). Secret values inside are encrypted (services/platform)."""
+    __tablename__ = "platform_settings"
+    key: Mapped[str] = mapped_column(String(60), unique=True)
+    value: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)

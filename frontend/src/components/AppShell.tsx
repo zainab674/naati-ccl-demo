@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BookOpen, ClipboardCheck, Flag, GraduationCap, History, LayoutDashboard, Library, LogOut, Menu, Upload, Users, X,
+  BookOpen, ClipboardCheck, Flag, GraduationCap, History, LayoutDashboard, Library, LogOut, Menu, Settings, Upload, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -36,6 +36,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/courses", label: "Courses", icon: GraduationCap },
   { href: "/admin/resources", label: "Learning hub", icon: Library },
   { href: "/admin/imports", label: "CSV import", icon: Upload },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AppShell({ children, admin }: { children: ReactNode; admin?: boolean }) {

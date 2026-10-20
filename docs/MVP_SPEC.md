@@ -125,6 +125,14 @@ A library of study resources beyond courses: ebooks (PDF), glossaries, worksheet
   through an authenticated endpoint, never as a public storage link.
 - Admin: list, create, edit, upload/replace the file, publish/hide.
 
+## 16. Settings (added 2026-10-20)
+Admin > Settings, two tabs:
+- Theme: brand colour (presets or any colour dark enough for white button text), platform name and tagline, optional
+  logo (PNG/JPG/WebP, 512 KB). Applied to the whole app (a full palette is generated from the colour) and to emails.
+- Email: SMTP (host, port, STARTTLS/SSL/none, username, password) or Resend (API key), From and Reply-to. Saved
+  settings override the server's .env; passwords and keys are encrypted and never shown again. "Send test email"
+  reports the provider's exact error.
+
 ## Not in the MVP (later phases)
 Webinars; 1-on-1 coaching booking + Zoom; email marketing campaigns; messaging students; coupons; sales/revenue
 dashboard. Design the data model so these can be added without rework.

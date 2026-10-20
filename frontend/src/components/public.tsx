@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { Faq, PlanContent, PublicPlan, Review } from "@/lib/content";
 import { cx } from "./cx";
 import { Logo } from "./Logo";
+import { BrandName } from "./Theme";
 
 const btn = "inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-semibold transition-colors";
 export const btnPrimary = cx(btn, "bg-brand-600 text-white hover:bg-brand-700");
@@ -47,7 +48,7 @@ export function PublicFooter({ disclaimer }: { disclaimer?: string }) {
         </nav>
       </div>
       <div className="border-t border-slate-100 py-4 text-center text-xs text-slate-400">
-        © {new Date().getFullYear()} Benchmark Education
+        © {new Date().getFullYear()} <BrandName />
       </div>
     </footer>
   );
@@ -104,7 +105,7 @@ export function EnrolButton({ planKey, contact, contactEmail, label, light }: { 
   if (contact) {
     return contactEmail
       ? <a href={`mailto:${contactEmail}`} className={cls}>{label || "Contact us"}</a>
-      : <span className={cx("inline-flex h-11 items-center text-sm", light ? "text-brand-100" : "text-slate-600")}>Contact Benchmark Education to enrol</span>;
+      : <span className={cx("inline-flex h-11 items-center text-sm", light ? "text-brand-100" : "text-slate-600")}>Contact <BrandName /> to enrol</span>;
   }
   return <Link href={`/enrol/${planKey}`} className={cls}>{label || "Enrol now"}</Link>;
 }

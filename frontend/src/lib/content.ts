@@ -38,3 +38,8 @@ export async function getPlans(): Promise<PublicPlan[]> {
 }
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+/** The admin-chosen theme (Settings > Theme); null when the backend is unreachable (defaults apply). */
+export async function getTheme() {
+  return getJson<import("./theme").Theme>("/public/theme");
+}

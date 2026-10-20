@@ -1,14 +1,32 @@
-"""Transactional email templates: (subject, html, text). Context values are HTML-escaped."""
+"""Transactional email templates: (subject, html, text). Context values are HTML-escaped.
+
+The platform name and brand colour come from the admin theme (render() sets them for the current message)."""
+from contextvars import ContextVar
 from html import escape
 
-BRAND = "Benchmark Education"
+_brand: ContextVar[tuple[str, str]] = ContextVar("brand", default=("Benchmark Education", "#1f6778"))
+
+
+class _Brand(str):
+    """BRAND reads the current platform name, so templates keep writing f"...{BRAND}..."."""
+    def __format__(self, spec):
+        return format(_brand.get()[0], spec)
+
+    def __str__(self):
+        return _brand.get()[0]
+
+    def upper(self):
+        return _brand.get()[0].upper()
+
+
+BRAND = _Brand("")
 
 
 def _layout(title: str, body_html: str, cta: tuple[str, str] | None = None) -> str:
     button = ""
     if cta:
         label, url = cta
-        button = (f'<p style="margin:28px 0"><a href="{escape(url)}" style="background:#1f6778;color:#ffffff;'
+        button = (f'<p style="margin:28px 0"><a href="{escape(url)}" style="background:{escape(_brand.get()[1])};color:#ffffff;'
                   f'padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">'
                   f'{escape(label)}</a></p>')
     return f"""<!doctype html>
@@ -17,7 +35,7 @@ def _layout(title: str, body_html: str, cta: tuple[str, str] | None = None) -> s
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;padding:32px">
 <tr><td>
-<div style="font-weight:700;color:#1f6778;font-size:14px;letter-spacing:.04em">{BRAND.upper()} · NAATI CCL</div>
+<div style="font-weight:700;color:{escape(_brand.get()[1])};font-size:14px;letter-spacing:.04em">{BRAND.upper()} · NAATI CCL</div>
 <h1 style="font-size:22px;margin:16px 0 12px">{escape(title)}</h1>
 <div style="font-size:15px;line-height:1.6">{body_html}</div>
 {button}
@@ -101,7 +119,22 @@ TEMPLATES = {
 }
 
 
-def render(name: str, context: dict) -> tuple[str, str, str]:
+def _test(c: dict) -> tuple[str, str, str]:
+    subject = f"{BRAND}: test email"
+    html = _layout("Test email", (
+        "<p>This is a test email from your platform's Settings page. If you can read it, email delivery works.</p>"))
+    text = "This is a test email from your platform's Settings page. If you can read it, email delivery works.\n"
+    return subject, html, text
+
+
+TEMPLATES["test"] = _test
+
+
+def render(name: str, context: dict, brand: str | None = None, color: str | None = None) -> tuple[str, str, str]:
     if name not in TEMPLATES:
         raise KeyError(f"Unknown email template {name}")
-    return TEMPLATES[name](context)
+    token = _brand.set((brand or "Benchmark Education", color or "#1f6778"))
+    try:
+        return TEMPLATES[name](context)
+    finally:
+        _brand.reset(token)
