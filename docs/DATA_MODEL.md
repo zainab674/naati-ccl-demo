@@ -48,6 +48,8 @@ Additional MVP tables:
   video_url, html_content (sanitised), is_free, status. **LessonProgress**: user_id, lesson_id, completed_at.
 - **Plan**: id, name (Self-Study / Coaching), stripe_price_id, price_display, features (JSON), active.
 - **Subscription/Payment**: user_id, stripe ids, status, current_period_end, amount, currency, receipt_url.
+  Subscription.source = stripe | manual; a manual (teacher) grant also stores granted_by_id and a note.
+  User.access_expires_at ends a manual grant automatically; User.enrolled_by_id marks teacher-created accounts.
 - **SiteContent**: key/value JSON for home page, FAQ, reviews, landing copy (admin-editable later).
 - **ImportJob**: id, type (dialogues/courses), file name, status, dry_run report (JSON), counts, created_by.
 - **EmailLog**: to, template, status, provider_id, error.

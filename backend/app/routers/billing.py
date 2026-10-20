@@ -7,9 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..deps import CurrentUser, current_user
-from ..models import Payment, Plan, Subscription, SubscriptionStatus
+from ..deps import CurrentUser, current_user, has_active_plan
+from ..models import Payment, Plan, Subscription
 from ..services import billing
+from ..services.enrolment import access_is_manual
 
 router = APIRouter(prefix="/api", tags=["billing"])
 log = logging.getLogger("billing")
@@ -37,8 +38,9 @@ def checkout(body: CheckoutIn, cu: CurrentUser = Depends(current_user), db: Sess
         raise HTTPException(404, "Plan not found")
     if plan.contact_only or not plan.stripe_price_id:
         raise HTTPException(400, "This plan is not available for online purchase. Please contact us.")
-    if cu.user.subscription_status in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL):
+    if has_active_plan(cu.user) and not access_is_manual(db, cu.user):
         # Prevents a second, parallel subscription (double billing). Plan changes go through the billing portal.
+        # A student with teacher-granted access (e.g. a trial) may still buy a plan; Stripe then takes over.
         raise HTTPException(409, "You already have an active plan. Manage it from your account page.")
     try:
         return {"url": billing.create_checkout(db, cu.user, plan)}

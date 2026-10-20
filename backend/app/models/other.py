@@ -70,6 +70,10 @@ class Subscription(IdMixin, Base):
     current_period_end: Mapped[datetime | None] = mapped_column(nullable=True)
     cancel_at_period_end: Mapped[bool] = mapped_column(default=False)
     last_event_at: Mapped[datetime | None] = mapped_column(nullable=True)  # newest Stripe event applied
+    # "stripe", or "manual" for access granted by a teacher (status: active / trialing / revoked; period end = end date)
+    source: Mapped[str] = mapped_column(String(20), default="stripe", server_default="stripe")
+    granted_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    note: Mapped[str] = mapped_column(Text, default="", server_default="")
 
     plan = relationship("Plan", lazy="joined")
 

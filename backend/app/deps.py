@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from fastapi import Cookie, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from .db import get_db
+from .db import get_db, utcnow
 from .models import SubscriptionStatus, User
 from .security import decode_session_token
 
@@ -53,8 +53,16 @@ def require_admin(cu: CurrentUser = Depends(current_user)) -> CurrentUser:
     return cu
 
 
+def effective_status(user: User) -> SubscriptionStatus:
+    """The stored status, except that a manual grant past its end date counts as Expired."""
+    if (user.subscription_status in ACTIVE_PLAN_STATUSES and user.access_expires_at is not None
+            and user.access_expires_at <= utcnow()):
+        return SubscriptionStatus.EXPIRED
+    return user.subscription_status
+
+
 def has_active_plan(user: User) -> bool:
-    return user.is_admin or user.subscription_status in ACTIVE_PLAN_STATUSES
+    return user.is_admin or effective_status(user) in ACTIVE_PLAN_STATUSES
 
 
 def requires_active_plan(cu: CurrentUser = Depends(current_user)) -> CurrentUser:

@@ -24,6 +24,9 @@ class User(IdMixin, Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     flagged: Mapped[bool] = mapped_column(default=False)  # content-protection anomaly flag (from the demo)
     session_version: Mapped[int] = mapped_column(default=0)  # bump to sign out every session (password reset)
+    # Set by a manual (teacher) grant with an end date: paid access stops at this time. Cleared when Stripe takes over.
+    access_expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    enrolled_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)  # manual enrolment
 
     preferred_language = relationship("Language")
 

@@ -3,16 +3,18 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..deps import CurrentUser, require_admin
+from ..db import utcnow
+from ..deps import ACTIVE_PLAN_STATUSES, CurrentUser, effective_status, require_admin
 from ..models import (AccuracyCompletenessEvaluation, AccuracyResult, AIScoringRun, DetectionMethod, DialogueAttempt,
                       EvaluationType, FluencyError, FluencyType, LanguageQualityError, LanguageQualityType,
                       LessonProgress, Payment, ScoringStatus, SegmentAttempt, Subscription,
                       SubscriptionStatus, User, UserRole)
 from ..services import attempts as svc
+from ..services import enrolment
 from ..services.results import attempt_results, segment_result
 from ..services.scoring import records
 from ..services.scoring.pipeline import finalize, rescore_segment
@@ -23,6 +25,17 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(re
 
 # ------------------------------------------------------------------ students
 
+def _status_clause(status: SubscriptionStatus):
+    """SQL for effective_status(): a manual grant past its end date counts as Expired."""
+    now = utcnow()
+    expired = and_(User.subscription_status.in_(ACTIVE_PLAN_STATUSES), User.access_expires_at <= now)
+    if status == SubscriptionStatus.EXPIRED:
+        return or_(User.subscription_status == status, expired)
+    if status in ACTIVE_PLAN_STATUSES:
+        return and_(User.subscription_status == status, or_(User.access_expires_at.is_(None), User.access_expires_at > now))
+    return User.subscription_status == status
+
+
 @router.get("/students")
 def students(q: str = "", status: str = "", db: Session = Depends(get_db)):
     query = select(User).where(User.role == UserRole.STUDENT).order_by(User.created_at.desc())
@@ -31,7 +44,7 @@ def students(q: str = "", status: str = "", db: Session = Depends(get_db)):
         query = query.where(or_(func.lower(User.email).like(like), func.lower(User.first_name).like(like),
                                 func.lower(User.last_name).like(like)))
     if status:
-        query = query.where(User.subscription_status == SubscriptionStatus(status))
+        query = query.where(_status_clause(SubscriptionStatus(status)))
     rows = db.scalars(query.limit(500)).all()
     ids = [u.id for u in rows]
     stats = {uid: (n, avg, last) for uid, n, avg, last in db.execute(
@@ -41,11 +54,19 @@ def students(q: str = "", status: str = "", db: Session = Depends(get_db)):
     out = []
     for u in rows:
         n, avg, last = stats.get(u.id, (0, None, None))
-        out.append({"id": str(u.id), "name": u.full_name, "email": u.email, "subscription_status": u.subscription_status.value,
+        out.append({"id": str(u.id), "name": u.full_name, "email": u.email, "subscription_status": effective_status(u).value,
+                    "access_expires_at": u.access_expires_at.isoformat() if u.access_expires_at else None,
+                    "language": u.preferred_language.name if u.preferred_language else None,
+                    "is_active": u.is_active, "manually_enrolled": u.enrolled_by_id is not None,
                     "created_at": u.created_at.isoformat(), "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
                     "dialogue_attempts": n, "average_dialogue_score": round(float(avg), 1) if avg is not None else None,
                     "last_attempt_at": last.isoformat() if last else None, "flagged": u.flagged})
     return out
+
+
+def _name(db: Session, user_id) -> str | None:
+    u = db.get(User, user_id) if user_id else None
+    return u.full_name if u else None
 
 
 @router.get("/students/{user_id}")
@@ -57,12 +78,19 @@ def student(user_id: uuid.UUID, db: Session = Depends(get_db)):
     payments = db.scalars(select(Payment).where(Payment.user_id == u.id).order_by(Payment.created_at.desc())).all()
     return {
         "id": str(u.id), "name": u.full_name, "email": u.email, "role": u.role.value,
-        "subscription_status": u.subscription_status.value, "stripe_customer_id": u.stripe_customer_id,
+        "subscription_status": effective_status(u).value, "stripe_customer_id": u.stripe_customer_id,
+        "access_expires_at": u.access_expires_at.isoformat() if u.access_expires_at else None,
+        "language": u.preferred_language.code if u.preferred_language else None,
+        "is_active": u.is_active, "first_name": u.first_name, "last_name": u.last_name,
+        "enrolled_by": _name(db, u.enrolled_by_id), "stripe_managed": enrolment.stripe_managed(db, u),
+        "access_is_manual": enrolment.access_is_manual(db, u),
         "target_exam_date": u.target_exam_date.isoformat() if u.target_exam_date else None,
         "created_at": u.created_at.isoformat(), "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
         "flagged": u.flagged,
         "lessons_completed": db.scalar(select(func.count()).select_from(LessonProgress).where(LessonProgress.user_id == u.id)),
-        "subscriptions": [{"plan": s.plan.name if s.plan else None, "status": s.status, "stripe_subscription_id": s.stripe_subscription_id,
+        "subscriptions": [{"plan": s.plan.name if s.plan else None, "status": s.status, "source": s.source, "note": s.note,
+                           "granted_by": _name(db, s.granted_by_id), "created_at": s.created_at.isoformat(),
+                           "stripe_subscription_id": s.stripe_subscription_id,
                            "current_period_end": s.current_period_end.isoformat() if s.current_period_end else None,
                            "cancel_at_period_end": s.cancel_at_period_end} for s in subs],
         "payments": [{"amount": p.amount, "currency": p.currency, "status": p.status, "receipt_url": p.receipt_url,

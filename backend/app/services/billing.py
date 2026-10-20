@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from ..models import Payment, Plan, StripeEvent, Subscription, SubscriptionStatus, User
 from ..settings import get_settings
 from .email import send_template
+from .enrolment import access_is_manual
 
 log = logging.getLogger("billing")
 
@@ -207,6 +208,7 @@ def _apply_subscription(db: Session, sub: dict, created: datetime | None, delete
     row.cancel_at_period_end = bool(sub.get("cancel_at_period_end"))
     user.subscription_status = SubscriptionStatus.EXPIRED if deleted else STATUS_MAP.get(
         row.status, SubscriptionStatus.INACTIVE)
+    user.access_expires_at = None  # Stripe now manages access (replaces a manual grant's end date)
     customer = sub.get("customer")
     if customer and not user.stripe_customer_id:
         user.stripe_customer_id = customer
@@ -244,7 +246,7 @@ def _on_checkout_completed(db: Session, session: dict, created: datetime | None 
     plan = _plan_for(db, session)
     if session.get("mode") == "payment":
         # One-off purchase: unlock now and record the payment (subscriptions are recorded from invoices).
-        user.subscription_status = SubscriptionStatus.ACTIVE
+        user.subscription_status, user.access_expires_at = SubscriptionStatus.ACTIVE, None
         payment = _record_payment(db, user, plan, invoice_id=session.get("invoice"),
                                   payment_intent=session.get("payment_intent"), session_id=session.get("id"),
                                   amount=session.get("amount_total"), currency=session.get("currency"))
@@ -253,8 +255,10 @@ def _on_checkout_completed(db: Session, session: dict, created: datetime | None 
             _send_receipt(db, user, plan, payment)
     else:
         # Unlock immediately; the subscription events then keep the status in sync.
-        if user.subscription_status not in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL):
+        # (A teacher-granted trial is replaced; a Stripe trial is left for the subscription events to confirm.)
+        if user.subscription_status not in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL) or access_is_manual(db, user):
             user.subscription_status = SubscriptionStatus.ACTIVE
+        user.access_expires_at = None
         if session.get("subscription"):
             row = db.scalar(select(Subscription).where(Subscription.stripe_subscription_id == session["subscription"]))
             if not row:
@@ -271,7 +275,7 @@ def _on_invoice_paid(db: Session, invoice: dict, created: datetime | None = None
     row = db.scalar(select(Subscription).where(Subscription.stripe_subscription_id == sub_id)) if sub_id else None
     if row and not _is_stale(row, created):
         # A paid renewal (e.g. a successful retry after a failed payment) restores access.
-        user.subscription_status = SubscriptionStatus.ACTIVE
+        user.subscription_status, user.access_expires_at = SubscriptionStatus.ACTIVE, None
         row.last_event_at = created or row.last_event_at
     plan = _plan_for(db, invoice)
     payment = _record_payment(db, user, plan, invoice_id=invoice.get("id"),

@@ -77,7 +77,7 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 5.5 Update README with run, test and deploy instructions.
 
 ## M6. Scope additions (client request, 2026-10-20)
-- [ ] 6.1 Manual student enrolment (MVP_SPEC module 13): admin creates students (set password or emailed invite),
+- [x] 6.1 Manual student enrolment (MVP_SPEC module 13): admin creates students (set password or emailed invite),
       grants Active/Trial access with an optional end date (expires automatically), bulk CSV enrolment with dry run,
       edit/extend/revoke/deactivate/resend invite, grant history. Stripe purchases take over from manual grants.
 - [ ] 6.2 Additional languages (module 14): seed Hindi, Mandarin, Punjabi, Arabic, Nepali, Vietnamese + EN pairs +
@@ -151,3 +151,4 @@ Milestones map to client payments. Keep the app runnable after every task.
 - 2026-10-19 5.4: tests/test_e2e.py: admin creates a mock test -> student signs up (locked content) -> checkout + signed test-mode webhooks (checkout.session.completed, invoice.paid) -> lesson opened and completed -> full 2-dialogue mock test with real audio -> worker scores 4 segments -> results 86/90 Pass -> admin override -> 87/90 -> welcome, receipt and results emails logged. Stripe and AI providers are stubbed (no keys); the UI parts were checked separately in the browser.
 - 2026-10-19 5.5: README rewritten (architecture, scoring flow, run with/without Docker, content import, tests, teacher comparison, deploy); frontend README; outdated demo SPEC.md removed.
 - 2026-10-19 audit: docs/AUDIT.md (traceability matrix with real/stubbed/manual/none labels, defects, tool results, scoring validity plan, outside-evidence criteria). Fixed 7 confirmed defects with failing-first regression tests: inflated score on failed segments, re-score discarding teacher work, MU weight edits re-scoring old attempts, out-of-order Stripe events, double subscription, discarded-take audio overwriting the answer, Next.js critical advisories.
+- 2026-10-20 6.1: manual enrolment: POST/PATCH /api/admin/students, access grants (Active/Trial/None, optional end date in APP_TIMEZONE, expires automatically via effective_status) recorded as manual Subscription rows, set-password invite email (ENROLMENT_INVITE_HOURS) or admin-set password, deactivate signs out, bulk CSV with dry run (existing emails skipped); a teacher-granted student can still buy, and Stripe then replaces the grant. 14 API tests. Admin UI (Add student, Bulk enrol, access/account cards, grant history) type-checked, linted and built; not clicked through in the browser (signing in as admin was blocked here).

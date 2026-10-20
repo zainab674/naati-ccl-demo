@@ -50,6 +50,18 @@ def _password_reset(c: dict) -> tuple[str, str, str]:
     return subject, html, text
 
 
+def _enrolment_invite(c: dict) -> tuple[str, str, str]:
+    hours = int(c.get("expires_hours", 72))
+    subject = f"Your {BRAND} CCL practice account"
+    html = _layout(f"Welcome, {c.get('first_name', '')}", (
+        f"<p>Your teacher at {BRAND} has created a NAATI CCL practice account for you.</p>"
+        f"<p>Choose a password to sign in. This link works once and expires in {hours} hours; after that, use "
+        "\"Forgot password\" on the sign-in page.</p>"), ("Set your password", c["invite_url"]))
+    text = (f"Welcome, {c.get('first_name', '')}\n\nYour teacher at {BRAND} has created a NAATI CCL practice account "
+            f"for you. Set your password (link expires in {hours} hours):\n{c['invite_url']}\n")
+    return subject, html, text
+
+
 def _receipt(c: dict) -> tuple[str, str, str]:
     subject = f"Payment receipt: {c.get('plan_name', 'your plan')}"
     rows = [("Plan", c.get("plan_name", "")), ("Amount", c.get("amount_display", "")), ("Date", c.get("date", ""))]
@@ -83,6 +95,7 @@ def _results_ready(c: dict) -> tuple[str, str, str]:
 TEMPLATES = {
     "welcome": _welcome,
     "password_reset": _password_reset,
+    "enrolment_invite": _enrolment_invite,
     "receipt": _receipt,
     "results_ready": _results_ready,
 }

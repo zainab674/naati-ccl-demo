@@ -16,3 +16,4 @@ stripe>=16.0
 google-genai>=2.0
 anthropic>=1.7
 openai>=3.16
+tzdata>=2024.1  # access end dates are in the business time zone (APP_TIMEZONE)

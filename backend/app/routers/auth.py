@@ -7,7 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from ..db import get_db, utcnow
-from ..deps import CurrentUser, client_ip, current_user, has_active_plan
+from ..deps import CurrentUser, client_ip, current_user, effective_status, has_active_plan
 from ..models import PasswordResetToken, User, UserRole
 from ..security import COOKIE_NAME, hash_password, hash_token, issue_session_token, new_reset_token, verify_password
 from ..services import ratelimit
@@ -23,8 +23,10 @@ MIN_PASSWORD = 8
 def user_dict(u: User) -> dict:
     return {
         "id": str(u.id), "email": u.email, "first_name": u.first_name, "last_name": u.last_name,
-        "name": u.full_name, "role": u.role.value, "subscription_status": u.subscription_status.value,
+        "name": u.full_name, "role": u.role.value, "subscription_status": effective_status(u).value,
         "has_active_plan": has_active_plan(u),
+        "access_expires_at": u.access_expires_at.isoformat() if u.access_expires_at else None,
+        "language": u.preferred_language.code if u.preferred_language else None,
         "target_exam_date": u.target_exam_date.isoformat() if u.target_exam_date else None,
     }
 

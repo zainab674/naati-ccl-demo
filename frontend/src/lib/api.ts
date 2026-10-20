@@ -50,8 +50,17 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
 export type User = {
   id: string; email: string; first_name: string; last_name: string; name: string; role: "student" | "admin";
   subscription_status: "Active" | "Trial" | "Expired" | "Inactive"; has_active_plan: boolean;
-  target_exam_date: string | null;
+  target_exam_date: string | null; access_expires_at: string | null; language: string | null;
 };
+
+/** A community language (LOTE); every one is paired with English. */
+export type Language = { code: string; name: string; native_name: string };
+
+let languagesCache: Promise<Language[]> | null = null;
+export function fetchLanguages() {
+  languagesCache ??= api<Language[]>("/public/languages").catch((e) => { languagesCache = null; throw e; });
+  return languagesCache;
+}
 
 // ---------- formatting
 

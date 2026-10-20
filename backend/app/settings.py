@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-change-me"
     cookie_secure: bool = False
     session_hours: int = 12
+    app_timezone: str = "Australia/Sydney"  # business time zone: manual access ends at midnight here
+    enrolment_invite_hours: int = 72  # "set your password" link for manually enrolled students
     password_hash_iterations: int = 310_000
     cors_origins: str = ""  # extra origins allowed to POST (comma-separated); APP_URL is always allowed
 

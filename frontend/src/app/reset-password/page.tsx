@@ -38,14 +38,14 @@ function ResetForm() {
       <Field label="New password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
       <Field label="Confirm new password" type="password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
       {error && <ErrorNote>{error}</ErrorNote>}
-      <Button type="submit" loading={loading} className="w-full">Set new password</Button>
+      <Button type="submit" loading={loading} className="w-full">Set password</Button>
     </form>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <AuthLayout title="Choose a new password">
+    <AuthLayout title="Choose your password">
       <Suspense><ResetForm /></Suspense>
     </AuthLayout>
   );

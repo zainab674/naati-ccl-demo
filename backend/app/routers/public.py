@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import SiteContent
+from ..models import Language, LanguageType, RecordStatus, SiteContent
 from ..settings import BASE_DIR
 
 router = APIRouter(prefix="/api/public", tags=["public"])
@@ -25,6 +25,14 @@ def get_content(db: Session, key: str):
     if row is not None:
         return row.value
     return default_content().get(key)
+
+
+@router.get("/languages")
+def languages(db: Session = Depends(get_db)):
+    """Community languages (LOTEs) a student can choose; each is paired with English."""
+    rows = db.scalars(select(Language).where(Language.language_type == LanguageType.LOTE,
+                                             Language.status == RecordStatus.ACTIVE).order_by(Language.name))
+    return [{"code": lang.code, "name": lang.name, "native_name": lang.native_name} for lang in rows]
 
 
 @router.get("/content/{key}")
