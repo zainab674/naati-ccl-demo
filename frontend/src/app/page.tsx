@@ -1,6 +1,3 @@
-import { existsSync } from "node:fs";
-import path from "node:path";
-
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -25,9 +22,6 @@ export async function generateMetadata(): Promise<Metadata> {
 const h2 = "font-serif text-4xl font-medium leading-[1.08] tracking-tight text-white sm:text-5xl";
 const lead = "text-lg leading-relaxed text-brand-100/70";
 
-// Drop a photo here (around 2400x1400, dark-friendly) to replace the drawn horizon scene in the hero.
-const HERO_IMAGE = "/landing/hero.jpg";
-
 export default async function HomePage() {
   const [home, faq, reviews, plans, selfStudy, coaching, languages] = await Promise.all([
     getContent<HomeContent>("home"), getContent<Faq>("faq"), getContent<Review[]>("reviews"), getPlans(),
@@ -35,7 +29,6 @@ export default async function HomePage() {
   ]);
   const plan = (k: string) => plans.find((p) => p.key === k);
   const cta = home?.hero_cta || "Start free";
-  const heroImage = existsSync(path.join(process.cwd(), "public", HERO_IMAGE)) ? HERO_IMAGE : null;
 
   // Facts only: the CCL test format (2 dialogues, 90 marks), the live language count, and the free start.
   const stats: HeroStat[] = [
@@ -53,7 +46,6 @@ export default async function HomePage() {
         subtitle={home?.hero_subtitle}
         cta={cta}
         languages={languages}
-        image={heroImage}
         stats={stats}
       />
 

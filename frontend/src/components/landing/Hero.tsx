@@ -2,7 +2,6 @@
 
 import { ArrowRight } from "lucide-react";
 import { motion, type MotionValue, useScroll, useTransform } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import { type CSSProperties, useRef } from "react";
 
@@ -13,12 +12,12 @@ export type HeroLanguage = { code: string; name: string; native_name?: string | 
 export type HeroStat = { value: string; label: string };
 
 /**
- * Full-height cinematic hero: a horizon scene (or a photo at public/landing/hero.jpg when one is supplied),
+ * Full-height cinematic hero: a drawn horizon scene,
  * a centred serif headline, and glass panels carrying the real languages on either side.
  * Panels float and parallax at different depths; all of it is static under reduced motion.
  */
-export function CinematicHero({ title, subtitle, cta, languages, image, stats }: {
-  title: string; subtitle?: string; cta: string; languages: HeroLanguage[]; image: string | null; stats: HeroStat[];
+export function CinematicHero({ title, subtitle, cta, languages, stats }: {
+  title: string; subtitle?: string; cta: string; languages: HeroLanguage[]; stats: HeroStat[];
 }) {
   const ref = useRef<HTMLElement>(null);
   const reduce = useReduced();
@@ -37,26 +36,15 @@ export function CinematicHero({ title, subtitle, cta, languages, image, stats }:
     <section ref={ref} className="relative isolate flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden">
       {/* Scene */}
       <motion.div aria-hidden className="absolute inset-0 -z-20" style={reduce ? undefined : { y: bgY }}>
-        {image ? (
-          <>
-            <Image src={image} alt="" fill priority sizes="100vw" className="object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-brand-950/70 via-brand-950/30 to-brand-950" />
-          </>
-        ) : (
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--color-brand-950)_0%,color-mix(in_oklab,var(--color-brand-800)_85%,black)_42%,color-mix(in_oklab,var(--color-brand-600)_60%,#f59e0b_12%)_62%,var(--color-brand-950)_63%,var(--color-brand-950)_100%)]" />
-        )}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--color-brand-950)_0%,color-mix(in_oklab,var(--color-brand-800)_85%,black)_42%,color-mix(in_oklab,var(--color-brand-600)_60%,#f59e0b_12%)_62%,var(--color-brand-950)_63%,var(--color-brand-950)_100%)]" />
       </motion.div>
-      {!image && (
-        <>
-          <Aurora className="-z-10" />
-          {/* Sun on the horizon, its light beam, and the reflective floor. */}
-          <div aria-hidden className="absolute left-1/2 top-[62%] -z-10 h-40 w-[70rem] max-w-[140vw] -translate-x-1/2 -translate-y-1/2 rounded-[100%] bg-[radial-gradient(closest-side,color-mix(in_oklab,#fde68a_55%,transparent),color-mix(in_oklab,var(--color-brand-300)_25%,transparent)_45%,transparent)] blur-md" />
-          <motion.div aria-hidden className="absolute left-1/2 top-0 -z-10 h-[62%] w-[38rem] max-w-[90vw] -translate-x-1/2 bg-[linear-gradient(to_bottom,transparent,color-mix(in_oklab,var(--color-brand-200)_14%,transparent))] [clip-path:polygon(42%_0,58%_0,100%_100%,0_100%)]"
-            animate={reduce ? undefined : { opacity: [0.5, 1, 0.5] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} />
-          <div aria-hidden className="absolute inset-x-0 bottom-0 top-[62%] -z-10 bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--color-brand-300)_18%,transparent),transparent_40%)]" />
-          <div aria-hidden className="absolute inset-x-[8%] top-[62%] -z-10 h-px bg-gradient-to-r from-transparent via-amber-100/70 to-transparent" />
-        </>
-      )}
+      <Aurora className="-z-10" />
+      {/* Sun on the horizon, its light beam, and the reflective floor. */}
+      <div aria-hidden className="absolute left-1/2 top-[62%] -z-10 h-40 w-[70rem] max-w-[140vw] -translate-x-1/2 -translate-y-1/2 rounded-[100%] bg-[radial-gradient(closest-side,color-mix(in_oklab,#fde68a_55%,transparent),color-mix(in_oklab,var(--color-brand-300)_25%,transparent)_45%,transparent)] blur-md" />
+      <motion.div aria-hidden className="absolute left-1/2 top-0 -z-10 h-[62%] w-[38rem] max-w-[90vw] -translate-x-1/2 bg-[linear-gradient(to_bottom,transparent,color-mix(in_oklab,var(--color-brand-200)_14%,transparent))] [clip-path:polygon(42%_0,58%_0,100%_100%,0_100%)]"
+        animate={reduce ? undefined : { opacity: [0.5, 1, 0.5] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} />
+      <div aria-hidden className="absolute inset-x-0 bottom-0 top-[62%] -z-10 bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--color-brand-300)_18%,transparent),transparent_40%)]" />
+      <div aria-hidden className="absolute inset-x-[8%] top-[62%] -z-10 h-px bg-gradient-to-r from-transparent via-amber-100/70 to-transparent" />
 
       {/* Glass language panels */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden lg:block">
