@@ -76,6 +76,17 @@ Milestones map to client payments. Keep the app runnable after every task.
       admin override -> emails logged.
 - [x] 5.5 Update README with run, test and deploy instructions.
 
+## M6. Scope additions (client request, 2026-10-20)
+- [ ] 6.1 Manual student enrolment (MVP_SPEC module 13): admin creates students (set password or emailed invite),
+      grants Active/Trial access with an optional end date (expires automatically), bulk CSV enrolment with dry run,
+      edit/extend/revoke/deactivate/resend invite, grant history. Stripe purchases take over from manual grants.
+- [ ] 6.2 Additional languages (module 14): seed Hindi, Mandarin, Punjabi, Arabic, Nepali, Vietnamese + EN pairs +
+      starting LanguageScoringConfig per language; student language choice (sign-up, account); library, mock tests,
+      courses filtered by language; Course.language_pair_id; admin language filters; RTL-safe text; no
+      Filipino-only wording left in shared UI.
+- [ ] 6.3 Learning hub (module 15): Resource model + migration, private file upload/serving, admin CRUD, student hub
+      with type/language filters and free/paid gating.
+
 ## Open questions (write here when blocked, then continue)
 - Number of courses at launch (spec assumes 2).
 - Who sets up the Hetzner server (spec assumes we provide compose + deploy guide).

@@ -2,11 +2,12 @@
 
 Web-based CCL Practice and Mock Test Platform where students practise CCL dialogues, record their interpretations
 segment by segment, complete mock tests, and receive AI-assisted estimated scores and detailed feedback.
-Launch language pair: English <-> Filipino.
+Language pairs: English <-> Filipino, Hindi, Mandarin, Punjabi, Arabic, Nepali and Vietnamese (the six were added to
+the MVP on 2026-10-20 at the client's request; Filipino was the original launch pair).
 
 ## 1. Accounts and Access
 - Sign up, login, logout (email + password). Password reset by email.
-- Roles: `student`, `admin`.
+- Roles: `student`, `admin`. Admins (teachers) can also enrol students by hand (module 13).
 - Access control: only students with an active paid plan can open mock tests and course lessons
   (allow 1 free intro dialogue and the free intro course lesson(s) as configured).
 
@@ -33,7 +34,7 @@ Launch language pair: English <-> Filipino.
 - Quick start a new dialogue. (Upcoming webinars: later phase, leave a hidden slot.)
 
 ## 5. Dialogue Library
-- Browse by topic and difficulty, English <-> Filipino.
+- Browse by language, topic and difficulty. Defaults to the student's chosen language.
 - Status per dialogue: not started / in progress / completed (with best score).
 
 ## 6. Mock Test Player (exam simulation)
@@ -73,6 +74,7 @@ Implements `docs/SCORING_BRIEF.md` exactly:
 - Courses: "Introduction to CCL Test" and "Exam Preparation (Filipino to English)".
 - Course -> Lessons; each lesson: video (placeholder or URL) + HTML text (sanitised).
 - Lesson completion tracking. Free vs paid lessons flag.
+- A course belongs to one language (e.g. exam preparation for Hindi) or to all languages (e.g. the introduction).
 
 ## 10. Admin Content Management
 - **CSV bulk import for dialogues** (one or many per file): dialogues, segments, transcripts, Meaning Units,
@@ -92,10 +94,35 @@ Implements `docs/SCORING_BRIEF.md` exactly:
 ## 12. Automatic Emails
 - Welcome, payment receipt, password reset, results ready. HTML templates, sender from env.
 
+## 13. Manual Student Enrolment (added 2026-10-20)
+Teachers/admins create student accounts without Stripe, e.g. demo accounts for testing or students who paid offline.
+- Create one student: name, email, language, access (Active / Trial / none) with an optional end date, a note.
+- Either set a password directly (demo accounts) or email the student a "set your password" invite link.
+- Bulk enrolment from a CSV (`first_name, last_name, email, language, access, access_until`) with a dry-run report.
+- Edit a student later: extend, change or remove access, change language, resend the invite, deactivate the account.
+- Manually granted access ends automatically on its end date. A later Stripe purchase takes over from a manual grant.
+- Every manual grant is recorded (who, when, note) and shown on the student's admin page.
+
+## 14. Additional Languages (added 2026-10-20)
+Hindi, Mandarin, Punjabi, Arabic, Nepali and Vietnamese alongside Filipino, each paired with English.
+- Each language has an STT language hint and evaluator guidance (grammar, register, hesitation markers) in
+  LanguageScoringConfig, to be reviewed by Benchmark's teachers for that language.
+- Students choose their language at sign-up (changeable in Account). Library, mock tests, courses and resources show
+  that language by default; a student can switch to another language.
+- Admin lists filter by language; CSV imports take the language code. Right-to-left text (Arabic) displays correctly.
+- Adding a further language later is data only: Language + LanguagePair + LanguageScoringConfig rows.
+
+## 15. Learning Hub (added 2026-10-20)
+A library of study resources beyond courses: ebooks (PDF), glossaries, worksheets, audio, articles and external links.
+- Resource: title, description, type, optional language and topic, one of: a file (stored privately), an article
+  (sanitised HTML) or an external URL; free/paid flag; Draft/Published/Archived; sort order.
+- Students browse by type and language; paid resources show as locked without an active plan. Files are served only
+  through an authenticated endpoint, never as a public storage link.
+- Admin: list, create, edit, upload/replace the file, publish/hide.
+
 ## Not in the MVP (later phases)
-Manual enrolment by teachers; webinars; 1-on-1 coaching booking + Zoom; email marketing campaigns; messaging students;
-coupons; sales/revenue dashboard; learning hub/ebooks; additional languages (Hindi, Mandarin, Punjabi, Arabic, Nepali,
-Vietnamese). Design the data model so these can be added without rework.
+Webinars; 1-on-1 coaching booking + Zoom; email marketing campaigns; messaging students; coupons; sales/revenue
+dashboard. Design the data model so these can be added without rework.
 
 ## CSV formats
 
