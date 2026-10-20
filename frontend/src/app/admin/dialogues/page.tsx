@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Badge, Card, DifficultyBadge, ErrorNote, inputClass, PageHeader, Spinner } from "@/components/ui";
@@ -15,6 +16,7 @@ type DialogueRow = {
 
 
 export default function AdminDialogues() {
+  const router = useRouter();
   const [rows, setRows] = useState<DialogueRow[] | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
@@ -53,7 +55,7 @@ export default function AdminDialogues() {
             </thead>
             <tbody>
               {rows.map((d) => (
-                <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50">
+                <tr key={d.id} onClick={() => router.push(`/admin/dialogues/${d.id}`)} className="cursor-pointer border-t border-slate-100 hover:bg-slate-50">
                   <td className="px-5 py-3">
                     <Link href={`/admin/dialogues/${d.id}`} className="font-medium hover:underline">{d.title}</Link>
                     <div className="font-mono text-xs text-slate-400">{d.key} · v{d.version}</div>

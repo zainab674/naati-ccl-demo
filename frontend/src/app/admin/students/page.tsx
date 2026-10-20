@@ -61,7 +61,7 @@ export default function AdminStudents() {
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr className="[&>th]:pr-4"><th className="px-5 py-3">Student</th><th>Language</th><th>Access</th><th>Attempts</th><th>Avg dialogue</th><th>Last attempt</th><th>Joined</th><th><span className="sr-only">Actions</span></th></tr>
+              <tr className="[&>th]:pr-4"><th className="px-5 py-3">Student</th><th>Language</th><th>Access</th><th>Attempts</th><th>Avg dialogue</th><th>Last attempt</th><th>Joined</th></tr>
             </thead>
             <tbody>
               {rows.map((s) => (
@@ -78,11 +78,9 @@ export default function AdminStudents() {
                   <td className="tabular-nums">{s.average_dialogue_score ?? "–"}</td>
                   <td>{s.last_attempt_at ? fmtDate(s.last_attempt_at) : "–"}</td>
                   <td>{fmtDate(s.created_at)}</td>
-                  <td className="pr-5 text-right"><Link href={`/admin/students/${s.id}`} onClick={(e) => e.stopPropagation()}
-                    className="inline-flex h-8 items-center rounded-lg px-3 text-sm font-medium text-brand-600 ring-1 ring-slate-200 hover:bg-white">Edit</Link></td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={8} className="px-5 py-6 text-slate-500">No students found.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={7} className="px-5 py-6 text-slate-500">No students found.</td></tr>}
             </tbody>
           </table>
         </Card>

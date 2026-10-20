@@ -60,7 +60,7 @@ export default function LibraryPage() {
       {!items ? <Spinner /> : items.length === 0 ? <Card className="p-6 text-sm text-slate-500">No dialogues match these filters yet. Try another topic, difficulty or language.</Card> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {items.map((d) => (
-            <Card key={d.id} className="flex flex-col p-5">
+            <Card key={d.id} className="flex flex-col p-5" onClick={() => (d.locked ? router.push("/pricing") : starting ? undefined : start(d))}>
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-semibold leading-snug">{d.title}</h3>
                 {d.locked ? <Lock className="size-4 shrink-0 text-slate-400" /> : d.status === "completed" ? <CheckCircle2 className="size-4 shrink-0 text-emerald-600" /> : null}
@@ -81,8 +81,8 @@ export default function LibraryPage() {
                   <Badge tone={STATUS[d.status].tone}>{STATUS[d.status].label}</Badge>
                   {d.best_score !== null && <span className="ml-2 tabular-nums text-slate-600">Best {d.best_score}/{d.maximum_score}</span>}
                 </div>
-                {d.locked ? <Link href="/pricing" className="text-sm font-medium text-brand-600 hover:underline">Unlock</Link>
-                  : <Button size="sm" variant={d.status === "in_progress" ? "primary" : "secondary"} loading={starting === d.id} onClick={() => start(d)}>
+                {d.locked ? <Link href="/pricing" onClick={(e) => e.stopPropagation()} className="text-sm font-medium text-brand-600 hover:underline">Unlock</Link>
+                  : <Button size="sm" variant={d.status === "in_progress" ? "primary" : "secondary"} loading={starting === d.id} onClick={(e) => { e.stopPropagation(); start(d); }}>
                     {d.status === "in_progress" ? <><RotateCcw className="size-4" /> Continue</> : <><PlayCircle className="size-4" /> {d.status === "completed" ? "Practise again" : "Start"}</>}
                   </Button>}
               </div>

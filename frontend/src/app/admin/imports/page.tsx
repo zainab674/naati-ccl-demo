@@ -2,6 +2,7 @@
 
 import { Upload } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
 import CsvFormatButtons from "@/components/CsvFormatButtons";
@@ -15,6 +16,7 @@ const KINDS = [
 ] as const;
 
 export default function ImportsPage() {
+  const router = useRouter();
   const [kind, setKind] = useState<"dialogues" | "courses">("dialogues");
   const [file, setFile] = useState<File | null>(null);
   const [checkUrls, setCheckUrls] = useState(true);
@@ -108,7 +110,7 @@ export default function ImportsPage() {
         <table className="w-full text-sm">
           <tbody>
             {jobs.map((j) => (
-              <tr key={j.id} className="border-t border-slate-100">
+              <tr key={j.id} onClick={() => router.push(`/admin/imports/${j.id}`)} className="cursor-pointer border-t border-slate-100 hover:bg-slate-50">
                 <td className="px-6 py-2"><Link href={`/admin/imports/${j.id}`} className="hover:underline">{j.file_name}</Link></td>
                 <td className="px-2 py-2 capitalize text-slate-500">{j.type}</td>
                 <td className="px-2 py-2"><Badge tone={statusTone(j.status)}>{j.status}</Badge></td>

@@ -2,7 +2,7 @@
 
 import { Loader2, X } from "lucide-react";
 import Link from "next/link";
-import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, useEffect } from "react";
+import { type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect } from "react";
 
 import { cx } from "./cx";
 
@@ -43,8 +43,15 @@ export function LinkButton({ href, variant = "primary", className, children }:
   );
 }
 
-export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cx("rounded-xl bg-white ring-1 ring-slate-200/80 shadow-[0_1px_2px_rgba(15,28,34,0.04)]", className)}>{children}</div>;
+export function Card({ className, children, onClick }: { className?: string; children: ReactNode; onClick?: () => void }) {
+  const clickable = onClick ? {
+    onClick, role: "button", tabIndex: 0,
+    onKeyDown: (e: ReactKeyboardEvent) => {
+      if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onClick(); }
+    },
+  } : {};
+  return <div {...clickable} className={cx("rounded-xl bg-white ring-1 ring-slate-200/80 shadow-[0_1px_2px_rgba(15,28,34,0.04)]",
+    onClick && "cursor-pointer transition-shadow hover:shadow-md", className)}>{children}</div>;
 }
 
 export function Badge({ tone = "slate", children, className }:

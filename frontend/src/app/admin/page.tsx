@@ -48,9 +48,11 @@ export default function AdminOverview() {
         {o.recent_imports.length === 0 ? <p className="mt-3 text-sm text-slate-500">No imports yet.</p> : (
           <ul className="mt-3 divide-y divide-slate-100 text-sm">
             {o.recent_imports.map((j) => (
-              <li key={j.id} className="flex items-center justify-between py-2">
-                <Link href={`/admin/imports/${j.id}`} className="hover:underline">{j.file_name} <span className="text-slate-400">({j.type})</span></Link>
-                <span className="flex items-center gap-3"><Badge>{j.status}</Badge><span className="text-xs text-slate-400">{fmtDateTime(j.created_at)}</span></span>
+              <li key={j.id}>
+                <Link href={`/admin/imports/${j.id}`} className="-mx-2 flex items-center justify-between rounded px-2 py-2 hover:bg-slate-50">
+                  <span>{j.file_name} <span className="text-slate-400">({j.type})</span></span>
+                  <span className="flex items-center gap-3"><Badge>{j.status}</Badge><span className="text-xs text-slate-400">{fmtDateTime(j.created_at)}</span></span>
+                </Link>
               </li>
             ))}
           </ul>

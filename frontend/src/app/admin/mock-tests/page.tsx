@@ -47,7 +47,10 @@ export default function AdminMockTests() {
       {!mocks ? <Spinner /> : (
         <div className="grid gap-4 md:grid-cols-2">
           {mocks.map((m) => (
-            <Card key={m.id} className="p-5">
+            <Card key={m.id} className="p-5" onClick={() => {
+              setError("");
+              setForm({ id: m.id, key: m.key, title: m.title, status: m.status, is_free: m.is_free, sort_order: m.sort_order, dialogue_ids: m.dialogues.map((d) => d.id) });
+            }}>
               <div className="flex items-start justify-between gap-3">
                 <div><div className="font-semibold">{m.title}</div><div className="font-mono text-xs text-slate-400">{m.key}</div></div>
                 <div className="space-x-1"><Badge tone={statusTone(m.status)}>{m.status}</Badge>{m.is_free && <Badge tone="brand">Free</Badge>}</div>
@@ -55,10 +58,6 @@ export default function AdminMockTests() {
               <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm">
                 {m.dialogues.map((d) => <li key={d.id}>{d.title} {d.status !== "Published" && <Badge tone="amber">{d.status}</Badge>}</li>)}
               </ol>
-              <Button size="sm" variant="secondary" className="mt-4" onClick={() => {
-                setError("");
-                setForm({ id: m.id, key: m.key, title: m.title, status: m.status, is_free: m.is_free, sort_order: m.sort_order, dialogue_ids: m.dialogues.map((d) => d.id) });
-              }}>Edit</Button>
             </Card>
           ))}
           {mocks.length === 0 && <Card className="p-6 text-sm text-slate-500">No mock tests yet.</Card>}

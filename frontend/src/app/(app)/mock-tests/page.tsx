@@ -40,7 +40,7 @@ export default function MockTestsPage() {
       {!items ? <Spinner /> : items.length === 0 ? <Card className="p-6 text-sm text-slate-500">No mock tests are available yet.</Card> : (
         <div className="grid gap-4 md:grid-cols-2">
           {items.map((m) => (
-            <Card key={m.id} className="flex flex-col p-6">
+            <Card key={m.id} className="flex flex-col p-6" onClick={() => (m.locked ? router.push("/pricing") : starting ? undefined : start(m))}>
               <div className="flex items-start justify-between">
                 <h3 className="flex items-center gap-2 text-lg font-semibold"><ClipboardCheck className="size-5 text-brand-600" />{m.title}</h3>
                 {m.locked ? <Lock className="size-4 text-slate-400" /> : m.is_free ? <Badge tone="brand">Free</Badge> : null}
@@ -55,8 +55,8 @@ export default function MockTestsPage() {
               </ol>
               <div className="mt-auto flex items-center justify-between pt-6 text-sm">
                 <span className="text-slate-500">{m.attempts ? `${m.attempts} attempt${m.attempts > 1 ? "s" : ""}` : "Not attempted"}{m.best_score !== null && ` · best ${m.best_score}/90`}</span>
-                {m.locked ? <Link href="/pricing" className="font-medium text-brand-600 hover:underline">Unlock</Link>
-                  : <Button loading={starting === m.id} onClick={() => start(m)}>{m.in_progress_id ? <><RotateCcw className="size-4" /> Continue</> : "Start mock test"}</Button>}
+                {m.locked ? <Link href="/pricing" onClick={(e) => e.stopPropagation()} className="font-medium text-brand-600 hover:underline">Unlock</Link>
+                  : <Button loading={starting === m.id} onClick={(e) => { e.stopPropagation(); start(m); }}>{m.in_progress_id ? <><RotateCcw className="size-4" /> Continue</> : "Start mock test"}</Button>}
               </div>
             </Card>
           ))}

@@ -36,10 +36,12 @@ export default function AdminCourses() {
         <Card>
           <ul className="divide-y divide-slate-100">
             {rows.map((c) => (
-              <li key={c.id} className="flex items-center justify-between px-5 py-3">
-                <div><Link href={`/admin/courses/${c.id}`} className="font-medium hover:underline">{c.title}</Link>
-                  <div className="font-mono text-xs text-slate-400">{c.key} · {c.lesson_count} lessons</div></div>
-                <div className="space-x-1"><Badge tone={statusTone(c.status)}>{c.status}</Badge>{c.is_free && <Badge tone="brand">Free</Badge>}</div>
+              <li key={c.id}>
+                <Link href={`/admin/courses/${c.id}`} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+                  <div><div className="font-medium">{c.title}</div>
+                    <div className="font-mono text-xs text-slate-400">{c.key} · {c.lesson_count} lessons</div></div>
+                  <div className="space-x-1"><Badge tone={statusTone(c.status)}>{c.status}</Badge>{c.is_free && <Badge tone="brand">Free</Badge>}</div>
+                </Link>
               </li>
             ))}
             {rows.length === 0 && <li className="px-5 py-6 text-sm text-slate-500">No courses yet. Create one or import a CSV.</li>}
