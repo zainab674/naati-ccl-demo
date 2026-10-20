@@ -1,12 +1,12 @@
 "use client";
 
-import { Info, Loader2 } from "lucide-react";
+import { History, Info, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import SegmentResultCard, { fmtDed } from "@/components/SegmentResultCard";
-import { Badge, Card, ErrorNote, PageHeader, ScoreRing, Spinner } from "@/components/ui";
+import { Badge, Card, ErrorNote, LinkButton, PageHeader, ScoreRing, Spinner } from "@/components/ui";
 import { api, fmtDate, fmtDateTime } from "@/lib/api";
 import type { Results } from "@/lib/results";
 
@@ -41,7 +41,7 @@ export default function ResultsPage() {
   return (
     <>
       <PageHeader title={r.title} subtitle={<>{r.kind === "mock" ? "Mock test" : "Practice dialogue"}{r.submitted_at && ` · submitted ${fmtDateTime(r.submitted_at)}`}</>}
-        actions={<Link href="/attempts" className="text-sm text-brand-600 hover:underline">All attempts</Link>} />
+        actions={<LinkButton href="/attempts" variant="secondary"><History className="size-4" /> All attempts</LinkButton>} />
 
       {r.demo_scoring && (
         <div className="mb-4 flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200">

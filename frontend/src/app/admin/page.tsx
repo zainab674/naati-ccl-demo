@@ -1,9 +1,10 @@
 "use client";
 
+import { Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Badge, Card, ErrorNote, PageHeader, Spinner } from "@/components/ui";
+import { Badge, Card, ErrorNote, LinkButton, PageHeader, Spinner } from "@/components/ui";
 import { api, fmtDateTime } from "@/lib/api";
 
 type Overview = {
@@ -43,7 +44,7 @@ export default function AdminOverview() {
       <Card className="mt-8 p-6">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Recent imports</h2>
-          <Link href="/admin/imports" className="text-sm text-brand-600 hover:underline">Import CSV</Link>
+          <LinkButton href="/admin/imports" variant="secondary"><Upload className="size-4" /> Import CSV</LinkButton>
         </div>
         {o.recent_imports.length === 0 ? <p className="mt-3 text-sm text-slate-500">No imports yet.</p> : (
           <ul className="mt-3 divide-y divide-slate-100 text-sm">

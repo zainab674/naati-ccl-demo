@@ -1,10 +1,11 @@
 "use client";
 
+import { ClipboardCheck, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Badge, Card, DifficultyBadge, ErrorNote, inputClass, PageHeader, Spinner } from "@/components/ui";
+import { Badge, Card, DifficultyBadge, ErrorNote, inputClass, LinkButton, PageHeader, Spinner } from "@/components/ui";
 import { statusTone } from "@/lib/admin";
 import { api, fetchLanguages, type Language } from "@/lib/api";
 
@@ -35,7 +36,7 @@ export default function AdminDialogues() {
   return (
     <>
       <PageHeader title="Dialogues" subtitle="Imported dialogues start as Draft. Publish when the audio is ready."
-        actions={<div className="flex gap-3 text-sm"><Link href="/admin/mock-tests" className="text-brand-600 hover:underline">Mock tests</Link><Link href="/admin/imports" className="text-brand-600 hover:underline">Import CSV</Link></div>} />
+        actions={<div className="flex gap-2"><LinkButton href="/admin/mock-tests" variant="secondary"><ClipboardCheck className="size-4" /> Mock tests</LinkButton><LinkButton href="/admin/imports"><Upload className="size-4" /> Import CSV</LinkButton></div>} />
       <div className="mb-4 flex flex-wrap gap-3">
         <input placeholder="Search title or key" value={q} onChange={(e) => setQ(e.target.value)} className={`${inputClass} mt-0 !w-72`} />
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputClass} mt-0 !w-44`}>
