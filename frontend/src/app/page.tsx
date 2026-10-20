@@ -104,8 +104,8 @@ export default async function HomePage() {
             <SpotlightCard className="flex rounded-[1.1rem] bg-gradient-to-b from-brand-300/70 via-brand-400/20 to-white/5 p-px shadow-[0_30px_80px_-30px_var(--color-brand-400)] [&>div:last-child]:flex-1">
               <PlanCard plan={plan("self-study")} content={selfStudy} highlight />
             </SpotlightCard>
-            <SpotlightCard className="flex rounded-[1.1rem] bg-white/10 p-px [&>div:last-child]:flex-1">
-              <PlanCard plan={plan("coaching")} content={coaching} />
+            <SpotlightCard className="flex rounded-[1.1rem] bg-gradient-to-b from-white/25 via-white/10 to-white/5 p-px [&>div:last-child]:flex-1">
+              <PlanCard plan={plan("coaching")} content={coaching} glass />
             </SpotlightCard>
           </Stagger>
         </div>

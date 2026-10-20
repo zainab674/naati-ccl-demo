@@ -79,25 +79,28 @@ export function Section({ id, title, subtitle, children, muted }: { id?: string;
   );
 }
 
-export function PlanCard({ plan, content, highlight }: { plan?: PublicPlan; content: PlanContent | null; highlight?: boolean }) {
+/** `glass` is for dark pages: the plain card becomes translucent with light text instead of a white card. */
+export function PlanCard({ plan, content, highlight, glass }: { plan?: PublicPlan; content: PlanContent | null; highlight?: boolean; glass?: boolean }) {
   const key = plan?.key ?? "";
   const name = content?.title ?? plan?.name ?? "";
   const contact = !plan || plan.contact_only;
+  const onDark = highlight || glass;
   return (
-    <div className={cx("flex flex-col rounded-2xl p-7 ring-1", highlight ? "bg-brand-950 text-white ring-brand-950" : "bg-white ring-slate-200")}>
+    <div className={cx("flex flex-col rounded-2xl p-7 ring-1",
+      highlight ? "bg-brand-950 text-white ring-brand-950" : glass ? "bg-brand-950/80 text-white ring-white/10 backdrop-blur" : "bg-white text-ink ring-slate-200")}>
       <h3 className="text-lg font-semibold">{name}</h3>
-      {content?.tagline && <p className={cx("mt-1 text-sm", highlight ? "text-brand-100/80" : "text-slate-500")}>{content.tagline}</p>}
+      {content?.tagline && <p className={cx("mt-1 text-sm", onDark ? "text-brand-100/80" : "text-slate-500")}>{content.tagline}</p>}
       <div className="mt-5 text-2xl font-semibold">
-        {plan?.price_display || <span className={cx("text-base font-medium", highlight ? "text-brand-100" : "text-slate-500")}>{contact ? "Contact us for pricing" : "See price at checkout"}</span>}
+        {plan?.price_display || <span className={cx("text-base font-medium", onDark ? "text-brand-100" : "text-slate-500")}>{contact ? "Contact us for pricing" : "See price at checkout"}</span>}
       </div>
       <ul className="mt-6 flex-1 space-y-3 text-sm">
         {(content?.included ?? plan?.features ?? []).map((f) => (
-          <li key={f} className="flex gap-2"><Check className={cx("mt-0.5 size-4 shrink-0", highlight ? "text-brand-300" : "text-brand-600")} />{f}</li>
+          <li key={f} className="flex gap-2"><Check className={cx("mt-0.5 size-4 shrink-0", onDark ? "text-brand-300" : "text-brand-600")} />{f}</li>
         ))}
       </ul>
       <div className="mt-8 flex flex-wrap gap-3">
-        <EnrolButton planKey={key} contact={contact} contactEmail={content?.contact_email} label={content?.cta} light={highlight} />
-        <Link href={`/${key}`} className={cx("inline-flex h-11 items-center text-sm font-medium hover:underline", highlight ? "text-brand-100" : "text-brand-700")}>Details</Link>
+        <EnrolButton planKey={key} contact={contact} contactEmail={content?.contact_email} label={content?.cta} light={onDark} />
+        <Link href={`/${key}`} className={cx("inline-flex h-11 items-center text-sm font-medium hover:underline", onDark ? "text-brand-100" : "text-brand-700")}>Details</Link>
       </div>
     </div>
   );
@@ -118,7 +121,7 @@ export function Reviews({ reviews }: { reviews: Review[] }) {
   return (
     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
       {reviews.map((r, i) => (
-        <figure key={i} className="rounded-xl bg-white p-6 ring-1 ring-slate-200">
+        <figure key={i} className="rounded-xl bg-white p-6 text-ink ring-1 ring-slate-200">
           {r.placeholder && <div className="mb-3 inline-block rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800">Placeholder</div>}
           {r.rating ? <div className="flex gap-0.5 text-amber-500">{Array.from({ length: r.rating }).map((_, j) => <Star key={j} className="size-4 fill-current" />)}</div> : null}
           <blockquote className="mt-3 text-sm text-slate-700">&ldquo;{r.text}&rdquo;</blockquote>
