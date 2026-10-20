@@ -103,8 +103,13 @@ Milestones map to client payments. Keep the app runnable after every task.
   (SiteContent "coaching".contact_email).
 - S3: the boto3 backend (configurable endpoint for AWS/Hetzner/MinIO) is written but has only been exercised
   through the local storage backend here; verify against the real bucket once credentials exist.
-- Player "attempt counter": implemented as plays used (max 2 = one repeat, each repeat logged) and recordings used
-  (max 1) per segment, both in config/ccl.yaml. Confirm against the NAATI practice test Benchmark uses.
+- Player repeats (updated 2026-10-20 from the client's Loom videos): Start again after Finish attempt repeats a segment;
+  1 repeat per dialogue (ccl.yaml max_repeats_per_dialogue), only the last attempt kept. Further repeats are blocked;
+  should they instead be allowed with a penalty (scoring.yaml penalties.repeat)?
+- Camera: shown as a preview only, never recorded; camera.required is false so students without a webcam can practise.
+  Should the camera be required, or video recorded for teacher review?
+- Navigation: Previous/Next let a student go back to an earlier segment and answer it (or use the repeat there), as
+  the NAATI test's buttons suggest. Confirm this matches the real exam.
 - Repeat penalty: SCORING_BRIEF.md sets none, so repeats are tracked but cost 0 (scoring.yaml penalties.repeat).
 - AI keys: GROQ_API_KEY and GEMINI_API_KEY are needed to run real STT/evaluation. Providers are tested with stubs;
   the 10-sample teacher comparison (4.8) is the real accuracy check. Gemini model name is GEMINI_MODEL.
@@ -176,3 +181,4 @@ Scope additions (2026-10-20), questions for Nipun:
 - 2026-10-20 6.3: learning hub: Resource model + migration (Ebook/Glossary/Worksheet/Audio/Video/Article/Link, optional language and topic, free/paid, Draft/Published/Archived); private file upload with extension allow-list checked against the first bytes and RESOURCE_MAX_MB (Caddy allows 110 MB on that route only); files served only through /api/resources/{id}/file with plan check, no-store, same-origin framing for the inline PDF viewer; articles sanitised; publish blocked until content matches the type; admin page and student hub with type/language filters. 9 tests.
 - 2026-10-20 browser check (dev, test accounts on localhost, since deactivated): sign-up language list, library language switch (found and fixed a stale-response race on all filtered lists), hub list and inline PDF, admin Add student (Trial until 31 Dec, Arabic, invite) and the student access/account cards. Not checked: bulk-enrol modal, resource audio/video playback, Safari/iOS, a real Arabic transcript in the results view.
 - 2026-10-20 CSV uploads: every CSV upload (dialogues, courses, bulk enrol) now has "Download CSV format" (header row) and "Download example" buttons (shared CsvFormatButtons); new students example file; tests check each example passes its own validation. Checked in the browser.
+- 2026-10-20 player rebuilt to match the NAATI test in the client's Loom walkthrough: exam header, breadcrumb with page counter, title bar with Help, progress strip, Previous/Next; Information 2 example segment (sound, speak, Finish attempt, Play back) checking speakers, microphone and camera; webcam preview (never recorded) with red border while recording; source waveform with playhead and live microphone trace; Attempts counter; repeat = Start again after Finish attempt, 1 per dialogue (configurable), only the last attempt stored (earlier recording deleted) and scored; resume returns to the first unanswered segment. Backend tests for the repeat rule. Walked through in the browser with a synthetic mic/camera (the pane blocks real devices): example segment, a segment with real encrypted audio, a repeat, Start disabled after the repeat, server keeps only try2, summary, reload/resume, phone width.

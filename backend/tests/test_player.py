@@ -70,7 +70,8 @@ def test_play_limits_repeats_and_protected_media(student_client, db):
     assert student_client.get(p1["url"].replace("sig=", "sig=0")).status_code == 403
 
     p2 = student_client.post(f"/api/attempts/{aid}/segments/{sid}/play").json()
-    assert p2["is_repeat"] is True and p2["play_count"] == 2
+    assert p2["is_repeat"] is True and p2["attempts"] == 2 and p2["repeats_used"] == 1
+    # NAATI: one segment repeat per dialogue (ccl.yaml max_repeats_per_dialogue)
     assert student_client.post(f"/api/attempts/{aid}/segments/{sid}/play").status_code == 409
     assert db.query(RepeatEvent).count() == 1
     db.expire_all()
@@ -97,7 +98,7 @@ def test_chunked_recording_upload_and_playback(student_client, db):
     assert student_client.get(base).content == b"AAAABBBB"
     sa = db.scalar(select(SegmentAttempt).where(SegmentAttempt.id == sid))
     assert sa.timing == {"chime_end_ms": 1000, "record_start_ms": 1050} and sa.audio_mime == "audio/webm"
-    # One recording per segment (max_record_attempts = 1)
+    # One recording per attempt: a new answer needs a new Start
     assert student_client.post(f"{base}/complete", json={"parts": 1}).status_code == 409
     st = student_client.get(f"/api/attempts/{aid}/state").json()
     assert st["dialogues"][0]["segments"][0]["answered"] is True
@@ -163,3 +164,46 @@ def test_skip_is_final(student_client, db):
     st = student_client.get(f"/api/attempts/{aid}/state").json()
     assert st["dialogues"][0]["segments"][0]["skipped"] is True
     assert st["current"]["segment_attempt_id"] == st["dialogues"][0]["segments"][1]["segment_attempt_id"]
+
+
+def _answer(client, aid, sid, data):
+    base = f"/api/attempts/{aid}/segments/{sid}/recording"
+    assert client.put(f"{base}/parts/0?recording=t{len(data)}", content=data).status_code == 200
+    r = client.post(f"{base}/complete", json={"parts": 1, "mime": "audio/webm", "recording": f"t{len(data)}"})
+    assert r.status_code == 200, r.text
+
+
+def test_repeat_after_finish_keeps_only_the_last_attempt(student_client, db):
+    """NAATI flow: Start, speak, Finish attempt; Start again to repeat. Only the final attempt is stored and scored."""
+    from app.services.storage import get_storage
+
+    d = make_dialogue(db, is_free=True, segments=2)
+    aid = student_client.post("/api/attempts", json={"dialogue_id": str(d.id)}).json()["id"]
+    st = student_client.get(f"/api/attempts/{aid}/state").json()
+    s1, s2 = (s["segment_attempt_id"] for s in st["dialogues"][0]["segments"])
+    student_client.post(f"/api/attempts/{aid}/segments/{s1}/play")
+    _answer(student_client, aid, s1, b"FIRST")
+    first_key = db.scalar(select(SegmentAttempt).where(SegmentAttempt.id == s1)).audio_user
+    assert student_client.post(f"/api/attempts/{aid}/segments/{s1}/play").json()["is_repeat"] is True
+    _answer(student_client, aid, s1, b"SECOND-TAKE")
+    assert student_client.get(f"/api/attempts/{aid}/segments/{s1}/recording").content == b"SECOND-TAKE"
+    assert get_storage().get(first_key) is None  # the earlier attempt is not kept
+    seg = student_client.get(f"/api/attempts/{aid}/state").json()["dialogues"][0]
+    assert seg["repeats_used"] == 1 and seg["segments"][0]["attempts"] == 2
+    # The repeat is per dialogue: segment 2 can be attempted once but not repeated.
+    student_client.post(f"/api/attempts/{aid}/segments/{s2}/play")
+    assert student_client.post(f"/api/attempts/{aid}/segments/{s2}/play").status_code == 409
+    db.expire_all()
+    assert db.query(RepeatEvent).count() == 1
+
+
+def test_repeats_per_dialogue_is_configurable(student_client, db, monkeypatch):
+    from app import settings
+
+    cfg = settings.ccl_config()
+    monkeypatch.setitem(cfg["segment"], "max_repeats_per_dialogue", 0)
+    d = make_dialogue(db, is_free=True, segments=1)
+    aid = student_client.post("/api/attempts", json={"dialogue_id": str(d.id)}).json()["id"]
+    sid = first_segment(student_client.get(f"/api/attempts/{aid}/state").json())
+    student_client.post(f"/api/attempts/{aid}/segments/{sid}/play")
+    assert student_client.post(f"/api/attempts/{aid}/segments/{sid}/play").status_code == 409

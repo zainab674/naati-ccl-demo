@@ -219,7 +219,8 @@ def play(attempt_id: uuid.UUID, segment_attempt_id: uuid.UUID, cu: CurrentUser =
     grant, exp = protection.new_grant(db, sa.id, cu.id, cu.sid)
     db.commit()
     return {"url": protection.signed_url(str(grant.id), "index.m3u8", exp), "is_repeat": is_repeat,
-            "play_count": sa.play_count, "max_plays": ccl_config()["segment"]["max_plays"],
+            "attempts": sa.play_count, "repeats_used": sa.dialogue_attempt.total_repeats,
+            "max_repeats_per_dialogue": ccl_config()["segment"]["max_repeats_per_dialogue"],
             "expires_in": get_settings().signed_url_ttl_seconds}
 
 

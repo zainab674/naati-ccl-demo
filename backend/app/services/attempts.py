@@ -150,8 +150,9 @@ def state(ref: AttemptRef) -> dict:
     return {
         "id": str(ref.id), "kind": ref.kind, "title": title, "status": ref.status.value, "step": ref.step,
         "current": current,
-        "config": {"max_plays": seg_cfg["max_plays"], "max_record_attempts": seg_cfg["max_record_attempts"],
+        "config": {"max_repeats_per_dialogue": seg_cfg["max_repeats_per_dialogue"],
                    "response_window_seconds": seg_cfg["response_window_seconds"],
+                   "chime_seconds": seg_cfg.get("chime_seconds", 0.6), "camera": cfg.get("camera", {}),
                    "information_1": cfg["information_1"].strip(), "information_2": cfg["information_2"].strip(),
                    "information_1_practice": cfg.get("information_1_practice", cfg["information_1"]).strip(),
                    "max_upload_mb": cfg["recording"]["max_upload_mb"]},
@@ -159,11 +160,12 @@ def state(ref: AttemptRef) -> dict:
             "dialogue_attempt_id": str(da.id), "position": da.position, "title": da.dialogue.title,
             "description": da.dialogue.description, "instructions": da.dialogue.instructions,
             "topic": da.dialogue.topic.name if da.dialogue.topic else None,
+            "lote": da.dialogue.language_pair.lote.name, "repeats_used": da.total_repeats,
             "segments": [{
                 "segment_attempt_id": str(sa.id), "number": sa.segment_number,
                 "direction": sa.segment.direction.value, "source_language": sa.segment.source_language.name,
                 "target_language": sa.segment.target_language.name, "speaker_role": sa.segment.speaker_role,
-                "play_count": sa.play_count, "record_count": sa.record_count, "answered": bool(sa.audio_user),
+                "attempts": sa.play_count, "record_count": sa.record_count, "answered": bool(sa.audio_user),
                 "skipped": sa.skipped, "has_waveform": bool(sa.segment.waveform_image),
             } for sa in da.segment_attempts],
         } for da in ref.dialogue_attempts],
@@ -173,19 +175,19 @@ def state(ref: AttemptRef) -> dict:
 # ------------------------------------------------------------------ playing
 
 def register_play(db: Session, ref: AttemptRef, sa: SegmentAttempt) -> bool:
-    """Count a play server-side before any audio URL exists. Returns True when the play is a repeat."""
+    """Start one attempt: count it server-side before any audio URL exists. Returns True when it is a repeat.
+
+    The first Start on a segment is its attempt; every later Start (before or after Finish attempt) repeats the
+    segment and uses one of the dialogue's repeats (ccl.yaml max_repeats_per_dialogue)."""
     require_in_progress(ref)
-    max_plays = ccl_config()["segment"]["max_plays"]
-    if sa.audio_user:
-        raise HTTPException(409, "This segment has already been answered")
     if sa.skipped:
         raise HTTPException(409, "This segment was skipped")
-    if sa.play_count >= max_plays:
-        raise HTTPException(409, "No plays left for this segment")
+    da = sa.dialogue_attempt
+    is_repeat = sa.play_count > 0
+    if is_repeat and da.total_repeats >= ccl_config()["segment"]["max_repeats_per_dialogue"]:
+        raise HTTPException(409, "You have used the segment repeat allowed for this dialogue")
     sa.play_count += 1
-    is_repeat = sa.play_count > 1
     if is_repeat:
-        da = sa.dialogue_attempt
         da.total_repeats += 1
         db.add(RepeatEvent(dialogue_attempt_id=da.id, segment_attempt_id=sa.id, repeat_number=sa.play_count - 1))
     return is_repeat
@@ -227,9 +229,10 @@ def _check_can_record(sa: SegmentAttempt) -> None:
     if sa.skipped:
         raise HTTPException(409, "This segment was skipped")
     if sa.play_count < 1:
-        raise HTTPException(409, "Play the segment before recording")
-    if sa.record_count >= ccl_config()["segment"]["max_record_attempts"]:
-        raise HTTPException(409, "No recording attempts left for this segment")
+        raise HTTPException(409, "Click Start to hear the segment before recording")
+    if sa.record_count >= sa.play_count:
+        # One recording per attempt: a new answer needs a new Start (a repeat).
+        raise HTTPException(409, "This attempt is already saved. Click Start to repeat the segment")
 
 
 def complete_recording(db: Session, ref: AttemptRef, sa: SegmentAttempt, parts: int, mime: str,
@@ -254,6 +257,8 @@ def complete_recording(db: Session, ref: AttemptRef, sa: SegmentAttempt, parts: 
     sa.record_count += 1
     key = f"recordings/{sa.id}/try{sa.record_count}.{MIME_EXT.get(mime, 'webm')}"
     storage.put(key, data, mime)
+    if sa.audio_user and sa.audio_user != key:
+        storage.delete(sa.audio_user)  # only the last attempt is kept and scored
     storage.delete_prefix(prefix.rsplit("/parts/", 1)[0] + "/parts")  # this take and any discarded ones
     sa.audio_user, sa.audio_mime, sa.submitted_at, sa.skipped = key, mime, utcnow(), False
     sa.audio_duration_seconds = duration

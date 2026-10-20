@@ -4,10 +4,18 @@ mock_test:
   dialogues_per_test: 2
 
 segment:
-  max_plays: 2                # first play + 1 repeat; every repeat is logged as a RepeatEvent
-  max_record_attempts: 1      # recordings allowed per segment (attempt counter)
+  # As in the NAATI test: each press of Start is one attempt (hear the segment, speak after the chime, Finish
+  # attempt). Pressing Start again repeats the segment; only the last attempt's recording is kept and scored.
+  max_repeats_per_dialogue: 1 # NAATI allows one segment repeat per dialogue without penalty; each is a RepeatEvent
   response_window_seconds: 45 # recording stops automatically after this
   chime_seconds: 0.6          # chime appended to each segment's audio; recording starts when it ends
+
+# Webcam preview, as in the NAATI test (Information 2 checks it; segment pages show it). Video is never recorded or
+# uploaded. With required: false a student without a camera can still continue.
+camera:
+  preview: true
+  required: false
+  example_record_seconds: 10  # Information 2 example segment: longest test recording
 
 recording:
   max_upload_mb: 15
@@ -23,8 +31,9 @@ information_1_practice: >
   into segments. After each segment you will hear a chime. Interpret the segment into the other language after the
   chime. Your interpretation is recorded and scored like a dialogue in the test.
 information_2: >
-  Before you start, check your audio. Play the test sound and make sure you can hear it clearly. Then record a
-  short sample with your microphone and play it back.
+  This example segment lets you check your audio and visual equipment before the test. Click Start to hear a
+  short sound, then speak after the chime: you should see yourself on camera and see the sound wave move while you
+  speak. Click Finish attempt, then Play to hear your recording.
 
 results:
   # After submission (never during an attempt): show the source segment text next to the feedback.

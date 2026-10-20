@@ -44,7 +44,12 @@ Must mirror the official NAATI practice test flow (assessmentq):
 - One page per segment (~14 per dialogue): left = instructions; right = segment waveform image, source audio player,
   answer recording, attempt counter, Start button, Finish Attempt button.
 - Recording starts after the chime; capture precise timestamps (chime end, speech start) for fluency scoring.
-- Repeat use tracked (RepeatEvent).
+- Must look like the NAATI online test (client Loom walkthrough, Oct 2026): header with the user, breadcrumb with a
+  page counter (e.g. 3/19), page title with Help, a progress strip and Previous/Next at the bottom right; webcam
+  preview (camera checked on Information 2, never recorded); live source and microphone waveforms; Attempts counter.
+- Information 2 is an example segment: Start, speak after the sound, Finish attempt, Play back.
+- Repeat rule as in the NAATI test: Finish attempt, then Start again; one segment repeat per dialogue without
+  penalty (config); only the last attempt's recording is kept and scored. Repeat use tracked (RepeatEvent).
 - Progress auto-saved; student can resume an unfinished attempt.
 - Final page: summary of answered and skipped segments, then Submit.
 - Audio protection from the demo stays: segmented/encrypted HLS, short-lived signed URLs bound to the session,

@@ -21,6 +21,10 @@ class Storage:
     def delete_prefix(self, prefix: str) -> None:
         raise NotImplementedError
 
+    def delete(self, key: str) -> None:
+        """Delete one object; a missing key is not an error."""
+        raise NotImplementedError
+
     def list(self, prefix: str) -> list[str]:
         raise NotImplementedError
 
@@ -55,6 +59,11 @@ class LocalStorage(Storage):
             base.rmdir()
         elif base.is_file():
             base.unlink()
+
+    def delete(self, key):
+        p = self._path(key)
+        if p.is_file():
+            p.unlink()
 
     def list(self, prefix):
         base = self._path(prefix)
@@ -101,6 +110,9 @@ class S3Storage(Storage):
             if not r.get("IsTruncated"):
                 return sorted(keys)
             token = r["NextContinuationToken"]
+
+    def delete(self, key):
+        self.client.delete_object(Bucket=self.bucket, Key=key)
 
     def delete_prefix(self, prefix):
         keys = self.list(prefix)
