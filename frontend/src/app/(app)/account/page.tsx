@@ -4,8 +4,8 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 
 import { useUser } from "@/components/AppShell";
-import { Badge, Button, Card, ErrorNote, Field, PageHeader, SuccessNote } from "@/components/ui";
-import { api, fmtDate } from "@/lib/api";
+import { Badge, Button, Card, ErrorNote, Field, inputClass, PageHeader, SuccessNote } from "@/components/ui";
+import { api, fetchLanguages, fmtDate, type Language } from "@/lib/api";
 
 type Billing = {
   subscription_status: string; has_billing_account: boolean;
@@ -15,19 +15,23 @@ type Billing = {
 
 export default function AccountPage() {
   const { user, refresh } = useUser();
-  const [profile, setProfile] = useState({ first_name: user.first_name, last_name: user.last_name, target_exam_date: user.target_exam_date ?? "" });
+  const [profile, setProfile] = useState({ first_name: user.first_name, last_name: user.last_name, target_exam_date: user.target_exam_date ?? "", language: user.language ?? "" });
+  const [languages, setLanguages] = useState<Language[]>([]);
   const [pw, setPw] = useState({ current_password: "", new_password: "" });
   const [billing, setBilling] = useState<Billing | null>(null);
   const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
   const [busy, setBusy] = useState("");
 
-  useEffect(() => { api<Billing>("/billing/status").then(setBilling).catch(() => {}); }, []);
+  useEffect(() => {
+    api<Billing>("/billing/status").then(setBilling).catch(() => {});
+    fetchLanguages().then(setLanguages).catch(() => {});
+  }, []);
 
   const saveProfile = async (e: FormEvent) => {
     e.preventDefault();
     setBusy("profile");
     try {
-      await api("/me", { method: "PATCH", json: { ...profile, target_exam_date: profile.target_exam_date || null } });
+      await api("/me", { method: "PATCH", json: { ...profile, target_exam_date: profile.target_exam_date || null, language: profile.language || null } });
       await refresh();
       setMsg({ ok: "Profile saved." });
     } catch (err) { setMsg({ err: (err as Error).message }); }
@@ -97,6 +101,11 @@ export default function AccountPage() {
         <form onSubmit={saveProfile} className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="First name" required value={profile.first_name} onChange={(e) => setProfile({ ...profile, first_name: e.target.value })} />
           <Field label="Last name" value={profile.last_name} onChange={(e) => setProfile({ ...profile, last_name: e.target.value })} />
+          <label className="block"><span className="text-sm font-medium text-slate-700">Your CCL language</span>
+            <select className={inputClass} value={profile.language} onChange={(e) => setProfile({ ...profile, language: e.target.value })}>
+              <option value="">Not chosen (show all languages)</option>
+              {languages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+            </select></label>
           <Field label="Target exam date" type="date" value={profile.target_exam_date} onChange={(e) => setProfile({ ...profile, target_exam_date: e.target.value })} />
           <div className="flex items-end"><Button type="submit" loading={busy === "profile"}>Save profile</Button></div>
         </form>

@@ -10,7 +10,7 @@ from ..db import get_db, utcnow
 from ..deps import CurrentUser, client_ip, current_user, effective_status, has_active_plan
 from ..models import PasswordResetToken, User, UserRole
 from ..security import COOKIE_NAME, hash_password, hash_token, issue_session_token, new_reset_token, verify_password
-from ..services import ratelimit
+from ..services import languages, ratelimit
 from ..services.email import send_template
 from ..settings import get_settings
 
@@ -48,6 +48,7 @@ class SignupIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=MIN_PASSWORD, max_length=200)
     target_exam_date: date | None = None
+    language: str | None = None  # LOTE code
     accept_terms: bool
 
 
@@ -59,8 +60,12 @@ def signup(body: SignupIn, request: Request, response: Response, db: Session = D
     email = _norm_email(body.email)
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(409, "An account with this email already exists. Sign in or reset your password.")
+    lote = languages.lote_by_code(db, body.language) if body.language else None
+    if body.language and not lote:
+        raise HTTPException(400, f"Unknown language '{body.language}'")
     user = User(first_name=body.first_name.strip(), last_name=body.last_name.strip(), email=email,
                 password_hash=hash_password(body.password), role=UserRole.STUDENT,
+                preferred_language_id=lote.id if lote else None,
                 target_exam_date=body.target_exam_date, last_login_at=utcnow())
     db.add(user)
     db.commit()
@@ -146,15 +151,22 @@ class MeIn(BaseModel):
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, max_length=100)
     target_exam_date: date | None = None
+    language: str | None = None  # LOTE code; null clears it
 
 
 @router.patch("/me")
 def update_me(body: MeIn, cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
     user = db.get(User, cu.id)
-    for field in body.model_fields_set:
+    if "language" in body.model_fields_set:
+        lote = languages.lote_by_code(db, body.language) if body.language else None
+        if body.language and not lote:
+            raise HTTPException(400, f"Unknown language '{body.language}'")
+        user.preferred_language_id = lote.id if lote else None
+    for field in body.model_fields_set - {"language"}:
         value = getattr(body, field)
         setattr(user, field, value.strip() if isinstance(value, str) else value)
     db.commit()
+    db.refresh(user)
     return user_dict(user)
 
 

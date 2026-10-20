@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 
 from ...models import ContentStatus, Course, Lesson
 from ..html import sanitize
+from ..languages import english, get_or_create_pair, lotes_by_code
 from .common import Report, parse_bool, read_csv, valid_url
 
 REQUIRED = ["course_key", "course_title", "lesson_no", "lesson_title"]
-OPTIONAL = ["course_description", "video_url", "html_content", "is_free"]
+OPTIONAL = ["course_description", "video_url", "html_content", "is_free", "lote_language"]
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,118}$")
 
 
@@ -29,6 +30,7 @@ class C:
     key: str
     title: str
     description: str
+    lote: str = ""  # language code; empty = course for every language
     lessons: dict[int, L] = field(default_factory=OrderedDict)
 
 
@@ -38,6 +40,7 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
     if rows[0].get("_unknown_columns"):
         report.warn(1, ",".join(rows[0]["_unknown_columns"]), "Unknown column(s) will be ignored")
     courses: dict[str, C] = OrderedDict()
+    lotes = lotes_by_code(db)
     first_row: dict[str, dict] = {}
     seen: dict[tuple[str, int], int] = {}
     for row in rows:
@@ -67,14 +70,18 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
         if video and not valid_url(video):
             report.error(r, "video_url", "Not a valid http(s) URL")
             continue
+        lote = row.get("lote_language", "").lower()
+        if lote and lote not in lotes:
+            report.error(r, "lote_language", f"Unknown language code '{lote}' (use one of: {', '.join(sorted(lotes))})")
+            continue
         html = sanitize(row.get("html_content", ""))
         if row.get("html_content") and len(html) < len(row["html_content"]) * 0.9:
             report.warn(r, "html_content", "Unsafe or unsupported HTML was removed")
         if key not in courses:
-            courses[key] = C(key=key, title=row["course_title"], description=row.get("course_description", ""))
+            courses[key] = C(key=key, title=row["course_title"], description=row.get("course_description", ""), lote=lote)
             first_row[key] = row
         else:
-            for col in ("course_title", "course_description"):
+            for col in ("course_title", "course_description", "lote_language"):
                 if row.get(col) and row.get(col) != first_row[key].get(col):
                     report.error(r, col, f"Differs from row {first_row[key]['_row']} for the same course_key")
         if (key, number) in seen:
@@ -94,7 +101,9 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
 def commit(db: Session, courses: list[C], created_by=None) -> dict:
     counts = {"courses_created": 0, "courses_updated": 0, "lessons_created": 0, "lessons_updated": 0,
               "lessons_archived": 0}
+    lotes = lotes_by_code(db)
     for c in courses:
+        pair_id = get_or_create_pair(db, english(db), lotes[c.lote]).id if c.lote else None
         course = db.scalar(select(Course).where(Course.key == c.key))
         if not course:
             course = Course(key=c.key, title=c.title, description=c.description, status=ContentStatus.DRAFT)
@@ -104,6 +113,7 @@ def commit(db: Session, courses: list[C], created_by=None) -> dict:
         elif (course.title, course.description) != (c.title, c.description):
             course.title, course.description = c.title, c.description
             counts["courses_updated"] += 1
+        course.language_pair_id = pair_id
         course.is_free = all(lesson.is_free for lesson in c.lessons.values())
         existing = {lesson.lesson_number: lesson for lesson in course.lessons}
         for item in c.lessons.values():

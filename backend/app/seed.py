@@ -1,4 +1,4 @@
-"""Idempotent base data: languages, the EN<->FIL pair, topics, Filipino scoring config, plans, first admin.
+"""Idempotent base data: languages, their English pairs and scoring guidance, topics, plans, first admin.
 
     python -m app.seed
 
@@ -12,41 +12,16 @@ from sqlalchemy.orm import Session
 
 from .db import SessionLocal
 from .models import Language, LanguageScoringConfig, LanguageType, Plan, SiteContent, Topic, User, UserRole
+from .seed_languages import LANGUAGES, SCORING
 from .security import hash_password, verify_password
 from .services.languages import get_or_create_pair
 from .settings import get_settings
 
 log = logging.getLogger("seed")
 
-LANGUAGES = [
-    {"code": "en", "name": "English", "native_name": "English", "language_type": LanguageType.ENGLISH,
-     "stt_code": "en"},
-    {"code": "fil", "name": "Filipino", "native_name": "Filipino (Tagalog)", "language_type": LanguageType.LOTE,
-     "stt_code": "tl"},
-]
-
 # Common CCL dialogue domains.
 TOPICS = ["Health", "Legal", "Financial", "Education", "Community", "Consumer Affairs", "Immigration",
           "Employment", "Housing", "Social Services", "Business", "Insurance"]
-
-# Starting guidance for the evaluator. To be reviewed by Benchmark's Filipino teachers (see BUILD_PLAN open questions).
-FILIPINO_SCORING = {
-    "grammar_guidelines": (
-        "Filipino (Tagalog) as spoken in community settings. Check verb aspect (perfective/imperfective/contemplative) "
-        "matches the time reference, correct focus/affix use, correct markers (ang/ng/sa, si/ni/kay) and linkers "
-        "(na/-ng). Do not penalise acceptable spoken variation or common contractions."),
-    "register_guidelines": (
-        "Use a neutral-professional register suitable for an interpreter. Respect markers (po/opo, kayo/ninyo as "
-        "polite forms) are expected when addressing the professional or an older client; a significantly casual or "
-        "disrespectful rendering is a register error. Common English loanwords used in everyday Filipino "
-        "(appointment, form, bill, schedule) are acceptable and are not errors."),
-    "hesitation_markers": ["ah", "eh", "ano", "ano ba", "kuwan", "kwan", "parang", "e", "um", "uh"],
-    "pronunciation_config": {"auto_deduct": False, "review_only": True},
-    "ai_prompt_addition": (
-        "Code-switching with common English words (Taglish) is normal in Filipino and is not an error as long as the "
-        "segment is interpreted into Filipino and the meaning is conveyed. A segment answered fully in English when "
-        "Filipino was required is an accuracy problem (meaning not transferred into the target language)."),
-}
 
 PLANS = [
     {"key": "self-study", "name": "Self-Study", "sort_order": 1, "contact_only": False},
@@ -65,14 +40,16 @@ def seed(db: Session) -> None:
             db.flush()
             log.info("created language %s", spec["code"])
         langs[spec["code"]] = lang
-    get_or_create_pair(db, langs["en"], langs["fil"])
+    for code, lang in langs.items():
+        if lang.language_type == LanguageType.LOTE:
+            get_or_create_pair(db, langs["en"], lang)
+            if code in SCORING and not db.scalar(select(LanguageScoringConfig).where(
+                    LanguageScoringConfig.language_id == lang.id)):
+                db.add(LanguageScoringConfig(language_id=lang.id, **SCORING[code]))
 
     for i, name in enumerate(TOPICS):
         if not db.scalar(select(Topic).where(Topic.name == name)):
             db.add(Topic(name=name, sort_order=i))
-
-    if not db.scalar(select(LanguageScoringConfig).where(LanguageScoringConfig.language_id == langs["fil"].id)):
-        db.add(LanguageScoringConfig(language_id=langs["fil"].id, **FILIPINO_SCORING))
 
     prices = {"self-study": s.stripe_price_self_study, "coaching": s.stripe_price_coaching}
     for spec in PLANS:

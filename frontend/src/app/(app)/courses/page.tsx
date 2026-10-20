@@ -4,6 +4,7 @@ import { GraduationCap, Lock } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import LanguagePicker from "@/components/LanguagePicker";
 import { Badge, Card, ErrorNote, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 
@@ -12,12 +13,13 @@ type CourseRow = { id: string; title: string; description: string; lessons: numb
 export default function CoursesPage() {
   const [rows, setRows] = useState<CourseRow[] | null>(null);
   const [error, setError] = useState("");
-  useEffect(() => { api<CourseRow[]>("/courses").then(setRows).catch((e) => setError(e.message)); }, []);
+  const [language, setLanguage] = useState("");
+  useEffect(() => { api<CourseRow[]>(`/courses?language=${language}`).then(setRows).catch((e) => setError(e.message)); }, [language]);
   if (error) return <ErrorNote>{error}</ErrorNote>;
   if (!rows) return <Spinner />;
   return (
     <>
-      <PageHeader title="Courses" subtitle="Video lessons and notes to prepare for the CCL test." />
+      <PageHeader title="Courses" subtitle="Video lessons and notes to prepare for the CCL test." actions={<LanguagePicker value={language} onChange={setLanguage} />} />
       {rows.length === 0 ? <Card className="p-6 text-sm text-slate-500">No courses are available yet.</Card> : (
         <div className="grid gap-4 md:grid-cols-2">
           {rows.map((c) => (

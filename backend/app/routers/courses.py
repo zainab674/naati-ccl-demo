@@ -2,12 +2,13 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import CurrentUser, current_user, ensure_access, is_locked
 from ..models import ContentStatus, Course, Lesson, LessonProgress
+from ..services import languages
 
 router = APIRouter(prefix="/api", tags=["courses"])
 
@@ -32,12 +33,21 @@ def _course_or_404(db: Session, course_id: uuid.UUID) -> Course:
 
 
 @router.get("/courses")
-def courses(cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+def courses(language: str = "", cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+    """Courses for every language plus those for the chosen one ("" = the student's own, "all" = every course)."""
     done = _done(db, cu.id)
     out = []
-    for c in db.scalars(select(Course).where(Course.status == ContentStatus.PUBLISHED).order_by(Course.sort_order, Course.title)):
+    query = select(Course).where(Course.status == ContentStatus.PUBLISHED).order_by(Course.sort_order, Course.title)
+    try:
+        pair = languages.student_pair(db, cu.user, language)
+    except languages.LanguageRuleError as e:
+        raise HTTPException(400, str(e)) from e
+    if pair:
+        query = query.where(or_(Course.language_pair_id.is_(None), Course.language_pair_id == pair.id))
+    for c in db.scalars(query):
         lessons = _visible_lessons(c)
         out.append({"id": str(c.id), "title": c.title, "description": c.description, "lessons": len(lessons),
+                    "language_name": c.language_pair.lote.name if c.language_pair else None,
                     "completed": sum(1 for lesson in lessons if lesson.id in done),
                     "free_lessons": sum(1 for lesson in lessons if _lesson_free(c, lesson)),
                     "locked": all(is_locked(cu.user, _lesson_free(c, lesson)) for lesson in lessons) if lessons else False})

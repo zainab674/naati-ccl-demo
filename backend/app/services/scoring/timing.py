@@ -11,8 +11,8 @@ are the fallback when the audio cannot be decoded.
 """
 import array
 import math
-import re
 import subprocess
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -131,21 +131,37 @@ def timing_events(regions: list[tuple[float, float]], offset: float, cfg: dict) 
     return speech_start, events
 
 
+def _norm(text: str) -> str:
+    """NFC, lower case, punctuation removed. Keeps combining marks (Hindi/Punjabi/Nepali vowel signs, Arabic
+    diacritics), which a plain \\w regex would strip."""
+    text = unicodedata.normalize("NFC", text).lower()
+    return "".join(ch if not unicodedata.category(ch).startswith(("P", "S")) or ch == "-" else " " for ch in text)
+
+
+def _unspaced(text: str) -> bool:
+    """Scripts written without spaces between words (Chinese), where markers are found as substrings."""
+    return any("\u3400" <= ch <= "\u9fff" or "\uf900" <= ch <= "\ufaff" for ch in text)
+
+
 def filler_candidates(words: list[dict], transcript: str, markers: list[str]) -> list[dict]:
-    """Hesitation-marker words with their times. Multi-word markers ("ano ba") are matched in the transcript."""
-    single = {m.lower() for m in markers if " " not in m}
+    """Hesitation-marker words with their times. Multi-word markers ("ano ba") are matched as token sequences;
+    Chinese markers ("那个") as substrings, since Chinese is written without spaces."""
+    markers = [_norm(m).strip() for m in markers if m.strip()]
+    single = {m for m in markers if " " not in m and not _unspaced(m)}
     found = []
-    for w in words:
-        token = re.sub(r"[^\w-]", "", (w.get("word") or "").lower())
-        if token in single:
-            found.append({"text": token, "start": w.get("start")})
+    tokens = [(t, w.get("start")) for w in words for t in _norm(w.get("word") or "").split()]
     if not words:
-        for token in re.findall(r"[\w-]+", transcript.lower()):
-            if token in single:
-                found.append({"text": token, "start": None})
-    for m in (m.lower() for m in markers if " " in m):
-        for _ in re.finditer(rf"(?<!\w){re.escape(m)}(?!\w)", transcript.lower()):
-            found.append({"text": m, "start": None})
+        tokens = [(t, None) for t in _norm(transcript).split()]
+    found += [{"text": t, "start": start} for t, start in tokens if t in single]
+    plain = _norm(transcript).split()  # the word list can be partial; the transcript is complete
+    for m in (m for m in markers if " " in m and not _unspaced(m)):
+        parts = m.split()
+        for i in range(len(plain) - len(parts) + 1):
+            if plain[i:i + len(parts)] == parts:
+                found.append({"text": m, "start": None})
+    text = _norm(transcript)
+    for m in (m for m in markers if _unspaced(m)):
+        found += [{"text": m, "start": None}] * text.count(m)
     return found
 
 

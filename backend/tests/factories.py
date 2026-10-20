@@ -11,10 +11,10 @@ FAKE_PLAYLIST = ("#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-MED
 
 
 def make_dialogue(db, key="dlg-1", segments=3, mus_per_segment=2, status=ContentStatus.PUBLISHED, is_free=False,
-                  title=None, topic="Health"):
+                  title=None, topic="Health", lote="fil"):
     en = db.scalar(select(Language).where(Language.code == "en"))
-    fil = db.scalar(select(Language).where(Language.code == "fil"))
-    pair = db.scalar(select(LanguagePair))
+    fil = db.scalar(select(Language).where(Language.code == lote))
+    pair = db.scalar(select(LanguagePair).where(LanguagePair.lote_language_id == fil.id))
     t = db.scalar(select(Topic).where(Topic.name == topic))
     d = Dialogue(key=key, title=title or key.replace("-", " ").title(), topic_id=t.id, language_pair_id=pair.id,
                  status=status, is_free=is_free, description="Test dialogue")

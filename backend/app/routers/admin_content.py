@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import require_admin
 from ..jobs import enqueue
-from ..models import (ContentStatus, Course, Dialogue, Difficulty, Lesson, MeaningUnit, MockTest, MockTestDialogue,
-                      Segment, Topic)
-from ..services import media_ingest
+from ..models import (ContentStatus, Course, Dialogue, Difficulty, LanguagePair, Lesson, MeaningUnit, MockTest,
+                      MockTestDialogue, Segment, Topic)
+from ..services import languages, media_ingest
 from ..services.html import sanitize
 from ..services.storage import get_storage
 from ..settings import ccl_config
@@ -55,7 +55,8 @@ def dialogue_summary(d: Dialogue) -> dict:
         "id": str(d.id), "key": d.key, "title": d.title, "topic": d.topic.name if d.topic else None,
         "topic_id": str(d.topic_id) if d.topic_id else None, "difficulty": d.difficulty.value,
         "status": d.status.value, "is_free": d.is_free, "version": d.version,
-        "language_pair": d.language_pair.display_name, "segments": len(active),
+        "language_pair": d.language_pair.display_name, "language": d.language_pair.lote.code,
+        "language_name": d.language_pair.lote.name, "segments": len(active),
         "meaning_units": sum(1 for s in active for m in s.meaning_units if m.active),
         "media_ready": sum(1 for s in active if s.media_status == "ready"),
         "media_failed": sum(1 for s in active if s.media_status == "failed"),
@@ -64,8 +65,10 @@ def dialogue_summary(d: Dialogue) -> dict:
 
 
 @router.get("/dialogues")
-def list_dialogues(q: str = "", status: str = "", db: Session = Depends(get_db)):
+def list_dialogues(q: str = "", status: str = "", language: str = "", db: Session = Depends(get_db)):
     query = select(Dialogue).order_by(Dialogue.sort_order, Dialogue.title)
+    if language:
+        query = query.where(Dialogue.language_pair_id == _pair(db, language).id)
     if status:
         query = query.where(Dialogue.status == ContentStatus(status))
     if q:
@@ -212,9 +215,22 @@ def segment_waveform(segment_id: uuid.UUID, db: Session = Depends(get_db)):
 
 # ------------------------------------------------------------------ mock tests
 
+def _pair(db: Session, code: str) -> LanguagePair:
+    lote = languages.lote_by_code(db, code)
+    pair = languages.pair_for(db, lote) if lote else None
+    if not pair:
+        raise HTTPException(400, f"Unknown language '{code}'")
+    return pair
+
+
+def _lang(pair: LanguagePair | None) -> dict:
+    return {"language": pair.lote.code if pair else None, "language_name": pair.lote.name if pair else None}
+
+
 def mock_dict(m: MockTest) -> dict:
+    pair = m.dialogues[0].dialogue.language_pair if m.dialogues else None
     return {"id": str(m.id), "key": m.key, "title": m.title, "status": m.status.value, "is_free": m.is_free,
-            "sort_order": m.sort_order,
+            "sort_order": m.sort_order, **_lang(pair),
             "dialogues": [{"id": str(md.dialogue_id), "title": md.dialogue.title, "status": md.dialogue.status.value}
                           for md in m.dialogues]}
 
@@ -282,7 +298,7 @@ def lesson_dict(lesson: Lesson) -> dict:
 
 def course_dict(c: Course, lessons: bool = False) -> dict:
     out = {"id": str(c.id), "key": c.key, "title": c.title, "description": c.description, "status": c.status.value,
-           "is_free": c.is_free, "sort_order": c.sort_order,
+           "is_free": c.is_free, "sort_order": c.sort_order, **_lang(c.language_pair),
            "lesson_count": sum(1 for lesson in c.lessons if lesson.status != ContentStatus.ARCHIVED)}
     if lessons:
         out["lessons"] = [lesson_dict(lesson) for lesson in c.lessons]
@@ -306,6 +322,12 @@ class CourseIn(BaseModel):
     status: ContentStatus | None = None
     is_free: bool | None = None
     sort_order: int | None = None
+    language: str | None = None  # LOTE code; None/"" = course for every language
+
+
+def _apply_course_language(db: Session, c: Course, body: CourseIn) -> None:
+    if "language" in body.model_fields_set:
+        c.language_pair_id = _pair(db, body.language).id if body.language else None
 
 
 @router.post("/courses", status_code=201)
@@ -316,6 +338,7 @@ def create_course(body: CourseIn, db: Session = Depends(get_db)):
         raise HTTPException(409, "A course with this key already exists")
     c = Course(key=body.key, title=body.title, description=body.description or "",
                status=body.status or ContentStatus.DRAFT, is_free=bool(body.is_free), sort_order=body.sort_order or 0)
+    _apply_course_language(db, c, body)
     db.add(c)
     db.commit()
     return course_dict(c, lessons=True)
@@ -324,9 +347,11 @@ def create_course(body: CourseIn, db: Session = Depends(get_db)):
 @router.patch("/courses/{course_id}")
 def update_course(course_id: uuid.UUID, body: CourseIn, db: Session = Depends(get_db)):
     c = _get(db, Course, course_id)
-    for field in body.model_fields_set:
+    _apply_course_language(db, c, body)
+    for field in body.model_fields_set - {"language"}:
         setattr(c, field, getattr(body, field))
     db.commit()
+    db.refresh(c)
     return course_dict(c, lessons=True)
 
 

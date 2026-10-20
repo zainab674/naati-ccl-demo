@@ -131,7 +131,7 @@ function SegmentEditor({ seg, onSaved, onError }: { seg: Seg; onSaved: (d: Detai
       <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 px-5 py-3 text-left">
         <span className="w-8 font-semibold tabular-nums text-slate-400">{seg.segment_number}</span>
         <Badge>{seg.direction}</Badge>
-        <span className="flex-1 truncate text-sm">{seg.transcript}</span>
+        <span dir="auto" className="flex-1 truncate text-sm">{seg.transcript}</span>
         <Badge tone={tone}>{seg.media_status}</Badge>
         <span className="text-xs text-slate-500">{mus.length} MU</span>
         <ChevronDown className={cx("size-4 text-slate-400 transition-transform", open && "rotate-180")} />
@@ -151,7 +151,7 @@ function SegmentEditor({ seg, onSaved, onError }: { seg: Seg; onSaved: (d: Detai
               className="inline-flex items-center gap-1 text-brand-600 hover:underline"><RefreshCw className="size-3" /> Re-process audio</button>
           </div>
           <label className="block"><span className="text-sm font-medium text-slate-700">Source transcript</span>
-            <textarea className={cx(inputClass, "h-20 py-2")} value={transcript} onChange={(e) => setTranscript(e.target.value)} /></label>
+            <textarea dir="auto" className={cx(inputClass, "h-20 py-2")} value={transcript} onChange={(e) => setTranscript(e.target.value)} /></label>
           <div className="flex justify-between">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={seg.active} className="accent-brand-600"
               onChange={(e) => run("active", () => api(`/admin/segments/${seg.id}`, { method: "PATCH", json: { active: e.target.checked } }))} /> Active</label>
@@ -165,8 +165,8 @@ function SegmentEditor({ seg, onSaved, onError }: { seg: Seg; onSaved: (d: Detai
               {mus.map((m, i) => (
                 <div key={m.id ?? `new-${i}`} className="grid grid-cols-[3rem_1fr_1fr_4rem_2rem] items-start gap-2">
                   <input type="number" min={1} value={m.meaning_unit_number} onChange={(e) => setMu(i, { meaning_unit_number: Number(e.target.value) })} className={cx(inputClass, "mt-0")} aria-label="Number" />
-                  <textarea value={m.meaning} onChange={(e) => setMu(i, { meaning: e.target.value })} placeholder="Meaning that must be conveyed" className={cx(inputClass, "mt-0 h-16 py-2")} />
-                  <textarea value={m.reference_interpretation} onChange={(e) => setMu(i, { reference_interpretation: e.target.value })} placeholder="Reference interpretation (optional)" className={cx(inputClass, "mt-0 h-16 py-2")} />
+                  <textarea dir="auto" value={m.meaning} onChange={(e) => setMu(i, { meaning: e.target.value })} placeholder="Meaning that must be conveyed" className={cx(inputClass, "mt-0 h-16 py-2")} />
+                  <textarea dir="auto" value={m.reference_interpretation} onChange={(e) => setMu(i, { reference_interpretation: e.target.value })} placeholder="Reference interpretation (optional)" className={cx(inputClass, "mt-0 h-16 py-2")} />
                   <input type="number" min={0.1} step={0.5} value={m.weight} onChange={(e) => setMu(i, { weight: Number(e.target.value) })} className={cx(inputClass, "mt-0")} aria-label="Weight" title="Weight" />
                   <button onClick={() => setMus(mus.filter((_, j) => j !== i))} className="mt-2 text-slate-400 hover:text-rose-600" aria-label="Remove"><Trash2 className="size-4" /></button>
                 </div>

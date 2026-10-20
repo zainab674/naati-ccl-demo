@@ -26,7 +26,7 @@ export default async function HomePage() {
       <section className="bg-gradient-to-b from-brand-50 to-white px-4 pb-16 pt-16 sm:px-6 sm:pt-24">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">English · Filipino</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">English and your language</p>
             <h1 className="mt-3 text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">{home?.hero_title}</h1>
             <p className="mt-5 text-lg text-slate-600">{home?.hero_subtitle}</p>
             <div className="mt-8 flex flex-wrap gap-3">

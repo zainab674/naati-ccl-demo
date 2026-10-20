@@ -26,7 +26,7 @@ export default async function PlanLanding({ planKey }: { planKey: string }) {
       <section className="bg-gradient-to-b from-brand-50 to-white px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-start">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">NAATI CCL · English and Filipino</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">NAATI CCL practice</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">{c.title}</h1>
             <p className="mt-4 text-lg text-slate-600">{c.tagline}</p>
             <p className="mt-6 text-slate-700">{c.description}</p>

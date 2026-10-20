@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 
 import { Badge, Card, DifficultyBadge, ErrorNote, inputClass, PageHeader, Spinner } from "@/components/ui";
 import { statusTone } from "@/lib/admin";
-import { api } from "@/lib/api";
+import { api, fetchLanguages, type Language } from "@/lib/api";
 
 type DialogueRow = {
   id: string; key: string; title: string; topic: string | null; difficulty: string; status: string; is_free: boolean;
   version: number; segments: number; meaning_units: number; media_ready: number; media_failed: number;
-  estimated_duration: number | null;
+  estimated_duration: number | null; language_name: string;
 };
 
 
@@ -18,14 +18,17 @@ export default function AdminDialogues() {
   const [rows, setRows] = useState<DialogueRow[] | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
+  const [language, setLanguage] = useState("");
+  const [languages, setLanguages] = useState<Language[]>([]);
   const [error, setError] = useState("");
+  useEffect(() => { fetchLanguages().then(setLanguages).catch(() => {}); }, []);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      api<DialogueRow[]>(`/admin/dialogues?q=${encodeURIComponent(q)}&status=${status}`).then(setRows).catch((e) => setError(e.message));
+      api<DialogueRow[]>(`/admin/dialogues?q=${encodeURIComponent(q)}&status=${status}&language=${language}`).then(setRows).catch((e) => setError(e.message));
     }, 200);
     return () => clearTimeout(t);
-  }, [q, status]);
+  }, [q, status, language]);
 
   return (
     <>
@@ -36,13 +39,17 @@ export default function AdminDialogues() {
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputClass} mt-0 !w-44`}>
           <option value="">All statuses</option><option>Draft</option><option>Published</option><option>Archived</option>
         </select>
+        <select value={language} onChange={(e) => setLanguage(e.target.value)} className={`${inputClass} mt-0 !w-44`}>
+          <option value="">All languages</option>
+          {languages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+        </select>
       </div>
       {error && <ErrorNote>{error}</ErrorNote>}
       {!rows ? <Spinner /> : (
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr><th className="px-5 py-3">Dialogue</th><th>Topic</th><th>Difficulty</th><th>Segments / MUs</th><th>Audio</th><th>Status</th></tr>
+              <tr><th className="px-5 py-3">Dialogue</th><th>Language</th><th>Topic</th><th>Difficulty</th><th>Segments / MUs</th><th>Audio</th><th>Status</th></tr>
             </thead>
             <tbody>
               {rows.map((d) => (
@@ -51,6 +58,7 @@ export default function AdminDialogues() {
                     <Link href={`/admin/dialogues/${d.id}`} className="font-medium hover:underline">{d.title}</Link>
                     <div className="font-mono text-xs text-slate-400">{d.key} · v{d.version}</div>
                   </td>
+                  <td>{d.language_name}</td>
                   <td>{d.topic}</td>
                   <td><DifficultyBadge level={d.difficulty} /></td>
                   <td className="tabular-nums">{d.segments} / {d.meaning_units}</td>

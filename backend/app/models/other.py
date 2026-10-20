@@ -18,7 +18,11 @@ class Course(IdMixin, Base):
     status: Mapped[ContentStatus] = mapped_column(enum_col(ContentStatus), default=ContentStatus.DRAFT)
     sort_order: Mapped[int] = mapped_column(default=0)
     is_free: Mapped[bool] = mapped_column(default=False)
+    # None = for every language (e.g. the introduction); otherwise e.g. exam preparation for one language.
+    language_pair_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("language_pairs.id"), nullable=True,
+                                                               index=True)
 
+    language_pair = relationship("LanguagePair", lazy="joined")
     lessons: Mapped[list["Lesson"]] = relationship(
         back_populates="course", order_by="Lesson.lesson_number", cascade="all, delete-orphan")
 

@@ -1,11 +1,11 @@
 export type DialogueItem = {
   id: string; title: string; description: string; topic: string | null; difficulty: string; segments: number;
-  estimated_duration: number | null; maximum_score: number; is_free: boolean; locked: boolean;
+  estimated_duration: number | null; maximum_score: number; is_free: boolean; locked: boolean; language: string; language_name: string;
   status: "not_started" | "in_progress" | "completed"; best_score: number | null; in_progress_id: string | null; attempts: number;
 };
 
 export type MockItem = {
-  id: string; title: string; is_free: boolean; locked: boolean; attempts: number; best_score: number | null;
+  id: string; title: string; is_free: boolean; locked: boolean; attempts: number; best_score: number | null; language_name: string;
   in_progress_id: string | null; dialogues: { title: string; topic: string | null; difficulty: string }[];
 };
 

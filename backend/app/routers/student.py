@@ -11,10 +11,10 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db, utcnow
 from ..deps import CurrentUser, current_user, ensure_access, has_active_plan, is_locked
-from ..models import (AttemptStatus, ContentStatus, Dialogue, DialogueAttempt, MockTest, MockTestAttempt, RecordStatus,
-                      ScoringStatus, Topic)
+from ..models import (AttemptStatus, ContentStatus, Dialogue, DialogueAttempt, LanguagePair, MockTest, MockTestAttempt,
+                      RecordStatus, ScoringStatus, Topic)
 from ..services import attempts as svc
-from ..services import protection, ratelimit
+from ..services import languages, protection, ratelimit
 from ..services.storage import get_storage
 from ..settings import ccl_config, get_settings, scoring_config
 
@@ -74,10 +74,21 @@ def topics(db: Session = Depends(get_db)):
     return [{"id": str(t.id), "name": t.name} for t in rows]
 
 
+def _pair_filter(db: Session, cu: CurrentUser, language: str):
+    try:
+        return languages.student_pair(db, cu.user, language)
+    except languages.LanguageRuleError as e:
+        raise HTTPException(400, str(e)) from e
+
+
 @router.get("/dialogues")
-def dialogues(topic: str = "", difficulty: str = "", cu: CurrentUser = Depends(current_user),
+def dialogues(topic: str = "", difficulty: str = "", language: str = "", cu: CurrentUser = Depends(current_user),
               db: Session = Depends(get_db)):
+    """language: "" = the student's own language (all if not chosen), "all", or a language code."""
     query = select(Dialogue).where(Dialogue.status == ContentStatus.PUBLISHED).order_by(Dialogue.sort_order, Dialogue.title)
+    pair = _pair_filter(db, cu, language)
+    if pair:
+        query = query.where(Dialogue.language_pair_id == pair.id)
     if topic:
         query = query.join(Topic).where(Topic.name == topic)
     if difficulty:
@@ -88,21 +99,28 @@ def dialogues(topic: str = "", difficulty: str = "", cu: CurrentUser = Depends(c
         p = progress.get(d.id, {"status": "not_started", "best_score": None, "in_progress_id": None, "attempts": 0})
         out.append({"id": str(d.id), "title": d.title, "description": d.description,
                     "topic": d.topic.name if d.topic else None, "difficulty": d.difficulty.value,
+                    "language": d.language_pair.lote.code, "language_name": d.language_pair.lote.name,
                     "segments": sum(1 for s in d.segments if s.active), "estimated_duration": d.estimated_duration,
                     "maximum_score": d.maximum_score, "is_free": d.is_free, "locked": is_locked(cu.user, d.is_free), **p})
     return out
 
 
 @router.get("/mock-tests")
-def mock_tests(cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+def mock_tests(language: str = "", cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
     out = []
-    for m in db.scalars(select(MockTest).where(MockTest.status == ContentStatus.PUBLISHED).order_by(MockTest.sort_order)):
+    query = select(MockTest).where(MockTest.status == ContentStatus.PUBLISHED).order_by(MockTest.sort_order)
+    pair = _pair_filter(db, cu, language)
+    if pair:
+        query = query.where(MockTest.language_pair_id == pair.id)
+    for m in db.scalars(query):
         attempts = db.scalars(select(MockTestAttempt).where(MockTestAttempt.user_id == cu.id,
                                                             MockTestAttempt.mock_test_id == m.id)
                               .order_by(MockTestAttempt.started_at.desc())).all()
         in_progress = next((a for a in attempts if a.status == AttemptStatus.IN_PROGRESS), None)
         best = max((a.total_score for a in attempts if a.total_score is not None), default=None)
+        lote = db.get(LanguagePair, m.language_pair_id).lote
         out.append({"id": str(m.id), "title": m.title, "is_free": m.is_free, "locked": is_locked(cu.user, m.is_free),
+                    "language": lote.code, "language_name": lote.name,
                     "dialogues": [{"title": md.dialogue.title, "topic": md.dialogue.topic.name if md.dialogue.topic else None,
                                    "difficulty": md.dialogue.difficulty.value} for md in m.dialogues],
                     "attempts": len(attempts), "best_score": best,
@@ -119,7 +137,7 @@ def dashboard(cu: CurrentUser = Depends(current_user), db: Session = Depends(get
     mock_scores = [s["total_score"] for s in summaries if s["kind"] == "mock" and s["total_score"] is not None]
     dialogue_scores = [da.total_score for r in refs for da in r.dialogue_attempts if da.total_score is not None]
     unfinished = [s for s in summaries if s["status"] == AttemptStatus.IN_PROGRESS.value]
-    library = dialogues("", "", cu, db)
+    library = dialogues("", "", "", cu, db)  # in the student's own language
     available = [d for d in library if not d["locked"]]
     quick = next((d for d in available if d["status"] == "not_started"), available[0] if available else None)
     exam = cu.user.target_exam_date
@@ -131,7 +149,7 @@ def dashboard(cu: CurrentUser = Depends(current_user), db: Session = Depends(get
         "average_dialogue_score": round(sum(dialogue_scores) / len(dialogue_scores), 1) if dialogue_scores else None,
         "mock_max": scoring_config()["total_max"], "dialogue_max": scoring_config()["dialogue_max"],
         "dialogues_available": len(available), "dialogues_total": len(library),
-        "mock_tests_available": sum(1 for m in mock_tests(cu, db) if not m["locked"]),
+        "mock_tests_available": sum(1 for m in mock_tests("", cu, db) if not m["locked"]),
         "unfinished": unfinished[:3],
         "recent": [s for s in summaries if s["status"] != AttemptStatus.IN_PROGRESS.value][:6],
         "quick_start": quick,

@@ -47,5 +47,20 @@ def lote_by_code(db: Session, code: str) -> Language | None:
                                             Language.language_type == LanguageType.LOTE))
 
 
+def pair_for(db: Session, lote: Language) -> LanguagePair | None:
+    return db.scalar(select(LanguagePair).where(LanguagePair.lote_language_id == lote.id))
+
+
+def student_pair(db: Session, user, language: str = "") -> LanguagePair | None:
+    """Which language pair a student's lists show. "" = the student's own language (all if not chosen),
+    "all" = every language, otherwise a LOTE code. None means no filter."""
+    if language == "all":
+        return None
+    lote = lote_by_code(db, language) if language else user.preferred_language
+    if language and not lote:
+        raise LanguageRuleError(f"Unknown language '{language}'")
+    return pair_for(db, lote) if lote else None
+
+
 def lotes_by_code(db: Session) -> dict[str, Language]:
     return {lang.code: lang for lang in db.scalars(select(Language).where(Language.language_type == LanguageType.LOTE))}

@@ -1,16 +1,16 @@
 {
   "_note": "Default public-site copy. A SiteContent row with the same key overrides each entry. Reviews are intentionally empty: add real, permitted customer reviews before showing them. Legal pages are drafts for Benchmark Education to review.",
   "home": {
-    "seo_title": "NAATI CCL practice and mock tests for English and Filipino",
+    "seo_title": "NAATI CCL practice and mock tests in English and your language",
     "seo_description": "Practise NAATI CCL dialogues in the official test format, record your interpretation and get a detailed estimated score with feedback on every deduction.",
-    "hero_title": "Prepare for the NAATI CCL test in English and Filipino",
+    "hero_title": "Prepare for the NAATI CCL test in English and your language",
     "hero_subtitle": "Practise real-format dialogues segment by segment, record your interpretation after the chime, and see exactly where you lost marks.",
     "hero_cta": "Start free",
     "features": [
       {"title": "The real test flow", "body": "Information pages, an equipment check, then one page per segment with a chime and automatic recording, like the NAATI practice test."},
       {"title": "Detailed, explainable scoring", "body": "Each Meaning Unit is checked for omissions, insertions and distortions. Language quality and fluency are scored separately, so you can see why every point was deducted."},
       {"title": "Fluency measured from your audio", "body": "Start delays over 5 seconds and pauses over 3 seconds are measured from your recording, not guessed."},
-      {"title": "Courses that build the skills", "body": "An introduction to the CCL test and an exam preparation course for Filipino to English, with video lessons and notes."}
+      {"title": "Courses that build the skills", "body": "An introduction to the CCL test and exam preparation for your language, with video lessons and notes."}
     ],
     "how_it_works": [
       {"title": "Create a free account", "body": "Try the introduction course and a free practice dialogue."},
@@ -21,7 +21,7 @@
   },
   "faq": [
     {"q": "What is the NAATI CCL test?", "a": "The Credentialed Community Language (CCL) test checks your ability to interpret dialogues between an English speaker and a speaker of your community language. It is marked out of 90, and each of the two dialogues is marked out of 45."},
-    {"q": "Which languages are available?", "a": "English and Filipino (Tagalog) at launch. More languages will be added later."},
+    {"q": "Which languages are available?", "a": "English paired with Filipino, Hindi, Mandarin, Punjabi, Arabic, Nepali and Vietnamese. More languages can be added."},
     {"q": "How is my score estimated?", "a": "Your recording is transcribed and each Meaning Unit of the segment is checked for omissions, insertions and distortions (1 point each). Language quality and fluency issues cost 0.5 points per occurrence. Pauses and start delays are measured from your audio."},
     {"q": "What do I need to take a mock test?", "a": "A computer with a recent version of Chrome, Edge, Firefox or Safari, headphones or speakers, and a microphone. The player includes an equipment check before you start."},
     {"q": "Can I try it before I pay?", "a": "Yes. Create a free account to open the introduction course and a free practice dialogue."},
@@ -29,13 +29,13 @@
   ],
   "reviews": [],
   "self-study": {
-    "seo_title": "Self-Study plan: NAATI CCL practice for Filipino",
+    "seo_title": "Self-Study plan: NAATI CCL practice",
     "seo_description": "Every practice dialogue, full mock tests and the exam preparation course, with detailed estimated scoring.",
     "title": "Self-Study",
     "tagline": "Practise at your own pace with every dialogue and mock test.",
     "description": "The Self-Study plan gives you full access to the dialogue library, mock tests in the official format and the exam preparation course. Every attempt is scored with feedback on each Meaning Unit, language quality and fluency.",
     "included": [
-      "All English and Filipino practice dialogues",
+      "All practice dialogues in your language",
       "Full mock tests (two dialogues, scored out of 90)",
       "Feedback on every deduction with suggested versions",
       "Recordings and transcripts of your attempts",
@@ -44,7 +44,7 @@
     "cta": "Enrol now"
   },
   "coaching": {
-    "seo_title": "Coaching plan: NAATI CCL coaching for Filipino",
+    "seo_title": "Coaching plan: NAATI CCL coaching",
     "seo_description": "Everything in Self-Study plus guidance from Benchmark Education's teachers.",
     "title": "Coaching",
     "tagline": "Everything in Self-Study, plus guidance from our teachers.",

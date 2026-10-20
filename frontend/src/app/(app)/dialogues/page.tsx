@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import LanguagePicker from "@/components/LanguagePicker";
 import { Badge, Button, Card, cx, DifficultyBadge, ErrorNote, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 import { type DialogueItem, minutes } from "@/lib/student";
@@ -21,13 +22,14 @@ export default function LibraryPage() {
   const [topics, setTopics] = useState<{ id: string; name: string }[]>([]);
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("");
+  const [language, setLanguage] = useState("");
   const [error, setError] = useState("");
   const [starting, setStarting] = useState("");
 
   useEffect(() => { api<{ id: string; name: string }[]>("/topics").then(setTopics).catch(() => {}); }, []);
   useEffect(() => {
-    api<DialogueItem[]>(`/dialogues?topic=${encodeURIComponent(topic)}&difficulty=${difficulty}`).then(setItems).catch((e) => setError(e.message));
-  }, [topic, difficulty]);
+    api<DialogueItem[]>(`/dialogues?topic=${encodeURIComponent(topic)}&difficulty=${difficulty}&language=${language}`).then(setItems).catch((e) => setError(e.message));
+  }, [topic, difficulty, language]);
 
   const start = async (d: DialogueItem) => {
     if (d.in_progress_id) { router.push(`/attempt/${d.in_progress_id}`); return; }
@@ -42,7 +44,8 @@ export default function LibraryPage() {
 
   return (
     <>
-      <PageHeader title="Practice dialogues" subtitle="English ↔ Filipino. Each dialogue is scored out of 45." />
+      <PageHeader title="Practice dialogues" subtitle="Interpret between English and your language. Each dialogue is scored out of 45."
+        actions={<LanguagePicker value={language} onChange={setLanguage} />} />
       <div className="mb-3 flex flex-wrap gap-2">
         <button className={chip(!topic)} onClick={() => setTopic("")}>All topics</button>
         {topics.map((t) => <button key={t.id} className={chip(topic === t.name)} onClick={() => setTopic(t.name)}>{t.name}</button>)}
@@ -51,7 +54,7 @@ export default function LibraryPage() {
         {["", "Easy", "Intermediate", "Difficult"].map((d) => <button key={d} className={chip(difficulty === d)} onClick={() => setDifficulty(d)}>{d || "Any difficulty"}</button>)}
       </div>
       {error && <div className="mb-4"><ErrorNote>{error}</ErrorNote></div>}
-      {!items ? <Spinner /> : items.length === 0 ? <Card className="p-6 text-sm text-slate-500">No dialogues match these filters.</Card> : (
+      {!items ? <Spinner /> : items.length === 0 ? <Card className="p-6 text-sm text-slate-500">No dialogues match these filters yet. Try another topic, difficulty or language.</Card> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {items.map((d) => (
             <Card key={d.id} className="flex flex-col p-5">
@@ -60,6 +63,7 @@ export default function LibraryPage() {
                 {d.locked ? <Lock className="size-4 shrink-0 text-slate-400" /> : d.status === "completed" ? <CheckCircle2 className="size-4 shrink-0 text-emerald-600" /> : null}
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
+                {language === "all" && <Badge tone="violet">{d.language_name}</Badge>}
                 {d.topic && <Badge>{d.topic}</Badge>}
                 <DifficultyBadge level={d.difficulty} />
                 {d.is_free && <Badge tone="brand">Free</Badge>}

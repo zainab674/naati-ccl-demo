@@ -11,7 +11,7 @@ export default function AuthLayout({ title, subtitle, children }: { title: strin
         <Link href="/"><Logo light /></Link>
         <div className="max-w-md">
           <h1 className="text-4xl font-semibold leading-tight tracking-tight">Practise the CCL the way you&apos;ll sit it.</h1>
-          <p className="mt-4 text-brand-100/80">English and Filipino dialogues, segment by segment, with feedback on every deduction.</p>
+          <p className="mt-4 text-brand-100/80">CCL dialogues in English and your language, segment by segment, with feedback on every deduction.</p>
           <ul className="mt-10 space-y-4 text-sm text-brand-100">
             <li className="flex gap-3"><Headphones className="size-5 shrink-0 text-brand-300" /> The same flow as the NAATI practice test.</li>
             <li className="flex gap-3"><Mic className="size-5 shrink-0 text-brand-300" /> Record your interpretation after the chime.</li>

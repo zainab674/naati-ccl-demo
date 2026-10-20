@@ -30,7 +30,7 @@ export default function SegmentResultCard({ seg, recordingUrl, defaultOpen, acti
       <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 px-5 py-3 text-left">
         <span className="w-8 font-semibold tabular-nums text-slate-400">{seg.number}</span>
         <Badge>{seg.direction}</Badge>
-        <span className="flex-1 truncate text-sm text-slate-600">{seg.skipped ? "Not answered" : seg.transcript || "(no speech recognised)"}</span>
+        <span dir="auto" className="flex-1 truncate text-sm text-slate-600">{seg.skipped ? "Not answered" : seg.transcript || "(no speech recognised)"}</span>
         {seg.needs_review && !seg.reviewed && <Badge tone="amber">Under review</Badge>}
         {seg.reviewed && <Badge tone="violet">Reviewed by a teacher</Badge>}
         <span className="text-xs text-slate-500">{errors} issue{errors === 1 ? "" : "s"}</span>
@@ -42,10 +42,10 @@ export default function SegmentResultCard({ seg, recordingUrl, defaultOpen, acti
           <div className="grid gap-4 md:grid-cols-2">
             {seg.source_transcript !== null && (
               <div><div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Source ({seg.source_language})</div>
-                <p className="mt-1 text-sm">{seg.source_transcript}</p></div>
+                <p dir="auto" className="mt-1 text-sm">{seg.source_transcript}</p></div>
             )}
             <div><div className="text-xs font-semibold uppercase tracking-wide text-slate-500">What we heard ({seg.target_language})</div>
-              <p className="mt-1 text-sm">{seg.skipped ? <i className="text-slate-500">You did not answer this segment.</i> : seg.transcript || <i className="text-slate-500">No speech was recognised.</i>}</p>
+              <p dir="auto" className="mt-1 text-sm">{seg.skipped ? <i className="text-slate-500">You did not answer this segment.</i> : seg.transcript || <i className="text-slate-500">No speech was recognised.</i>}</p>
               {recordingUrl && seg.has_recording && <audio controls preload="none" src={recordingUrl} className="mt-2 h-9 w-full" controlsList="nodownload" />}
             </div>
           </div>
@@ -56,15 +56,15 @@ export default function SegmentResultCard({ seg, recordingUrl, defaultOpen, acti
             {seg.accuracy.map((a) => (
               <Row key={a.id} label={`MU ${a.meaning_unit} · ${LABELS[a.result]}`} deduction={a.deduction}
                 tone={a.result === "Correct" ? "green" : "red"} extra={actions?.("accuracy", a)}>
-                <div className="flex items-start gap-1.5">{a.result === "Correct" ? <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600" /> : <CircleX className="mt-0.5 size-4 shrink-0 text-rose-600" />}<span className="font-medium">{a.source_meaning}</span></div>
-                {a.student_meaning && <div className="text-slate-600">You said: &ldquo;{a.student_meaning}&rdquo;</div>}
+                <div className="flex items-start gap-1.5">{a.result === "Correct" ? <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600" /> : <CircleX className="mt-0.5 size-4 shrink-0 text-rose-600" />}<bdi className="font-medium">{a.source_meaning}</bdi></div>
+                {a.student_meaning && <div className="text-slate-600">You said: &ldquo;<bdi>{a.student_meaning}</bdi>&rdquo;</div>}
                 {a.result !== "Correct" && a.explanation && <div className="text-slate-600">{a.explanation}</div>}
-                {a.result !== "Correct" && a.suggested_version && <div className="text-emerald-800">Suggested: &ldquo;{a.suggested_version}&rdquo;</div>}
+                {a.result !== "Correct" && a.suggested_version && <div className="text-emerald-800">Suggested: &ldquo;<bdi>{a.suggested_version}</bdi>&rdquo;</div>}
               </Row>
             ))}
             {seg.insertions.map((a) => (
               <Row key={a.id} label="Insertion" tone="red" deduction={a.deduction} extra={actions?.("accuracy", a)}>
-                <div>Added: &ldquo;{a.student_meaning}&rdquo;</div><div className="text-slate-600">{a.explanation}</div>
+                <div>Added: &ldquo;<bdi>{a.student_meaning}</bdi>&rdquo;</div><div className="text-slate-600">{a.explanation}</div>
               </Row>
             ))}
           </Section>
@@ -72,9 +72,9 @@ export default function SegmentResultCard({ seg, recordingUrl, defaultOpen, acti
           <Section title="Language quality" total={seg.deductions.language} empty="No language quality issues found.">
             {seg.language.map((e) => (
               <Row key={e.id} label={LABELS[e.type] ?? e.type} tone={e.type === "Pronunciation" ? "slate" : "amber"} deduction={e.deduction} extra={actions?.("language", e)}>
-                {e.student_text && <div>&ldquo;{e.student_text}&rdquo;</div>}
+                {e.student_text && <div>&ldquo;<bdi>{e.student_text}</bdi>&rdquo;</div>}
                 <div className="text-slate-600">{e.explanation}</div>
-                {e.suggested_version && <div className="text-emerald-800">Suggested: &ldquo;{e.suggested_version}&rdquo;</div>}
+                {e.suggested_version && <div className="text-emerald-800">Suggested: &ldquo;<bdi>{e.suggested_version}</bdi>&rdquo;</div>}
                 {e.type === "Pronunciation" && e.needs_review && <div className="text-xs text-slate-500">Flagged for a teacher to check; not deducted automatically.</div>}
               </Row>
             ))}
@@ -83,7 +83,7 @@ export default function SegmentResultCard({ seg, recordingUrl, defaultOpen, acti
           <Section title="Fluency" total={seg.deductions.fluency} empty="No fluency issues found.">
             {seg.fluency.map((e) => (
               <Row key={e.id} label={LABELS[e.type] ?? e.type} tone="amber" deduction={e.deduction} extra={actions?.("fluency", e)}>
-                {e.transcript_excerpt && <div>&ldquo;{e.transcript_excerpt}&rdquo;</div>}
+                {e.transcript_excerpt && <div>&ldquo;<bdi>{e.transcript_excerpt}</bdi>&rdquo;</div>}
                 <div className="text-slate-600">{e.explanation}</div>
                 {e.detection_method === "AudioAnalysis" && <div className="text-xs text-slate-500">Measured from your recording{e.timestamp_seconds !== null ? ` at ${e.timestamp_seconds.toFixed(1)} s` : ""}.</div>}
               </Row>

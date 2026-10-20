@@ -27,7 +27,8 @@ DIALOGUES_SAMPLE = DIALOGUES_HEADER + "\n" + "\n".join([
     f'Reason: works in the morning,I work in the mornings.,1,true',
 ]) + "\n"
 
-COURSES_HEADER = "course_key,course_title,course_description,lesson_no,lesson_title,video_url,html_content,is_free"
+COURSES_HEADER = ("course_key,course_title,course_description,lesson_no,lesson_title,video_url,html_content,is_free,"
+                  "lote_language")
 COURSES_TEMPLATE = COURSES_HEADER + "\n"
 COURSES_SAMPLE = COURSES_HEADER + "\n" + "\n".join([
     'intro-to-ccl,Introduction to CCL Test (format example; replace),What the CCL test is and how it is marked.,1,'

@@ -44,7 +44,7 @@ Use UUID primary keys, `created_at`/`updated_at` on everything, Alembic migratio
     status (Pending/Reviewed/Approved).
 
 Additional MVP tables:
-- **Course**: id, key, title, description, status, sort_order, is_free. **Lesson**: id, course_id, lesson_number, title,
+- **Course**: id, key, title, description, status, sort_order, is_free, language_pair_id? (null = all languages). **Lesson**: id, course_id, lesson_number, title,
   video_url, html_content (sanitised), is_free, status. **LessonProgress**: user_id, lesson_id, completed_at.
 - **Plan**: id, name (Self-Study / Coaching), stripe_price_id, price_display, features (JSON), active.
 - **Subscription/Payment**: user_id, stripe ids, status, current_period_end, amount, currency, receipt_url.

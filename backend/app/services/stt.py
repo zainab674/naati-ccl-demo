@@ -79,6 +79,12 @@ class GroqProvider(STTProvider):
             return self._call(s.stt_fallback_model, audio, language, prompt)
 
 
+# Whisper's verbose_json reports a language name; store the ISO code we send as the hint (Language.stt_code).
+WHISPER_LANGUAGE_CODES = {"english": "en", "tagalog": "tl", "filipino": "tl", "hindi": "hi", "chinese": "zh",
+                          "mandarin": "zh", "punjabi": "pa", "panjabi": "pa", "arabic": "ar", "nepali": "ne",
+                          "vietnamese": "vi"}
+
+
 def parse_verbose_json(data: dict, provider: str, model: str) -> Transcript:
     words = [{"word": (w.get("word") or "").strip(), "start": float(w.get("start") or 0), "end": float(w.get("end") or 0)}
              for w in (data.get("words") or [])]
@@ -86,7 +92,7 @@ def parse_verbose_json(data: dict, provider: str, model: str) -> Transcript:
     logprobs = [s["avg_logprob"] for s in segs if s.get("avg_logprob") is not None]
     no_speech = [s["no_speech_prob"] for s in segs if s.get("no_speech_prob") is not None]
     lang = (data.get("language") or "").lower() or None
-    lang = {"english": "en", "tagalog": "tl", "filipino": "tl"}.get(lang, lang)
+    lang = WHISPER_LANGUAGE_CODES.get(lang, lang)
     return Transcript(text=(data.get("text") or "").strip(), words=words, language=lang,
                       confidence=round(math.exp(sum(logprobs) / len(logprobs)), 3) if logprobs else None,
                       no_speech_prob=round(max(no_speech), 3) if no_speech else None,

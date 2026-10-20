@@ -7,21 +7,23 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Badge, Button, Card, cx, ErrorNote, Field, inputClass, PageHeader, Spinner, SuccessNote } from "@/components/ui";
 import { statusTone } from "@/lib/admin";
-import { api } from "@/lib/api";
+import { api, fetchLanguages, type Language } from "@/lib/api";
 
 type Lesson = { id: string; lesson_number: number; title: string; video_url: string; html_content: string; is_free: boolean; status: string };
-type Course = { id: string; key: string; title: string; description: string; status: string; is_free: boolean; sort_order: number; lessons: Lesson[] };
+type Course = { id: string; key: string; title: string; description: string; status: string; is_free: boolean; sort_order: number; language: string | null; lessons: Lesson[] };
 
 export default function CourseEditor() {
   const { id } = useParams<{ id: string }>();
   const [c, setC] = useState<Course | null>(null);
-  const [form, setForm] = useState({ title: "", description: "", sort_order: 0 });
+  const [form, setForm] = useState({ title: "", description: "", sort_order: 0, language: "" });
+  const [languages, setLanguages] = useState<Language[]>([]);
+  useEffect(() => { fetchLanguages().then(setLanguages).catch(() => {}); }, []);
   const [selected, setSelected] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
 
   const apply = useCallback((x: Course) => {
     setC(x);
-    setForm({ title: x.title, description: x.description, sort_order: x.sort_order });
+    setForm({ title: x.title, description: x.description, sort_order: x.sort_order, language: x.language ?? "" });
   }, []);
   const load = useCallback(() => api<Course>(`/admin/courses/${id}`).then(apply), [id, apply]);
   useEffect(() => {
@@ -55,9 +57,14 @@ export default function CourseEditor() {
       <Card className="mb-6 grid gap-4 p-6 sm:grid-cols-[2fr_1fr]">
         <Field label="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
         <Field label="Sort order" type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} />
+        <label className="block sm:col-span-2"><span className="text-sm font-medium text-slate-700">Language</span>
+          <select className={inputClass} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+            <option value="">All languages (e.g. the introduction course)</option>
+            {languages.map((l) => <option key={l.code} value={l.code}>{l.name} only</option>)}
+          </select></label>
         <label className="block sm:col-span-2"><span className="text-sm font-medium text-slate-700">Description</span>
           <textarea className={cx(inputClass, "h-20 py-2")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
-        <div className="sm:col-span-2 flex justify-end"><Button onClick={() => patchCourse(form)}>Save course</Button></div>
+        <div className="sm:col-span-2 flex justify-end"><Button onClick={() => patchCourse({ ...form, language: form.language || null })}>Save course</Button></div>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">

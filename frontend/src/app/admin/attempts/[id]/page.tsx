@@ -109,7 +109,7 @@ function AdminSegmentTools({ seg, onAction, onRuns }: { seg: SegmentResult; onAc
           </select>
           {item.criterion !== "insertion" && <select className={cx(inputClass, "mt-0")} value={item.type} onChange={(e) => setItem({ ...item, type: e.target.value })}>
             {types[item.criterion].map((t) => <option key={t}>{t}</option>)}</select>}
-          <input className={cx(inputClass, "mt-0")} placeholder="Student text" value={item.student_text} onChange={(e) => setItem({ ...item, student_text: e.target.value })} />
+          <input dir="auto" className={cx(inputClass, "mt-0")} placeholder="Student text" value={item.student_text} onChange={(e) => setItem({ ...item, student_text: e.target.value })} />
           <input className={cx(inputClass, "mt-0")} placeholder="Explanation (shown to student)" value={item.explanation} onChange={(e) => setItem({ ...item, explanation: e.target.value })} />
           <Button size="sm" onClick={async () => { await onAction(`/admin/segment-attempts/${seg.segment_attempt_id}/items`, item, "Error added; totals recalculated."); setAdding(false); }}>Add</Button>
         </div>

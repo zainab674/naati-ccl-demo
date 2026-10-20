@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import LanguagePicker from "@/components/LanguagePicker";
 import { Badge, Button, Card, DifficultyBadge, ErrorNote, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { MockItem } from "@/lib/student";
@@ -14,8 +15,9 @@ export default function MockTestsPage() {
   const [items, setItems] = useState<MockItem[] | null>(null);
   const [error, setError] = useState("");
   const [starting, setStarting] = useState("");
+  const [language, setLanguage] = useState("");
 
-  useEffect(() => { api<MockItem[]>("/mock-tests").then(setItems).catch((e) => setError(e.message)); }, []);
+  useEffect(() => { api<MockItem[]>(`/mock-tests?language=${language}`).then(setItems).catch((e) => setError(e.message)); }, [language]);
 
   const start = async (m: MockItem) => {
     if (m.in_progress_id) { router.push(`/attempt/${m.in_progress_id}`); return; }
@@ -28,7 +30,8 @@ export default function MockTestsPage() {
 
   return (
     <>
-      <PageHeader title="Mock tests" subtitle="Two dialogues in the official test format. Pass mark 63/90 with at least 29 in each dialogue." />
+      <PageHeader title="Mock tests" subtitle="Two dialogues in the official test format. Pass mark 63/90 with at least 29 in each dialogue."
+        actions={<LanguagePicker value={language} onChange={setLanguage} />} />
       {error && <div className="mb-4"><ErrorNote>{error}</ErrorNote></div>}
       {!items ? <Spinner /> : items.length === 0 ? <Card className="p-6 text-sm text-slate-500">No mock tests are available yet.</Card> : (
         <div className="grid gap-4 md:grid-cols-2">

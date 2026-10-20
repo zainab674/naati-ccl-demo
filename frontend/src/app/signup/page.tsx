@@ -2,20 +2,22 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type ChangeEvent, type FormEvent, Suspense, useState } from "react";
+import { type ChangeEvent, type FormEvent, Suspense, useEffect, useState } from "react";
 
 import AuthLayout from "@/components/AuthLayout";
-import { Button, ErrorNote, Field } from "@/components/ui";
-import { api, safeNext } from "@/lib/api";
+import { Button, ErrorNote, Field, inputClass } from "@/components/ui";
+import { api, fetchLanguages, type Language, safeNext } from "@/lib/api";
 
 function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [f, setF] = useState({ first_name: "", last_name: "", email: "", password: "", target_exam_date: "" });
+  const [f, setF] = useState({ first_name: "", last_name: "", email: "", password: "", target_exam_date: "", language: "" });
+  const [languages, setLanguages] = useState<Language[]>([]);
+  useEffect(() => { fetchLanguages().then(setLanguages).catch(() => {}); }, []);
   const [accept, setAccept] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const set = (k: keyof typeof f) => (e: ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+  const set = (k: keyof typeof f) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -24,7 +26,7 @@ function SignupForm() {
     try {
       await api("/auth/signup", {
         method: "POST",
-        json: { ...f, target_exam_date: f.target_exam_date || null, accept_terms: accept },
+        json: { ...f, target_exam_date: f.target_exam_date || null, language: f.language || null, accept_terms: accept },
       });
       router.replace(safeNext(params.get("next"), "/dashboard"));
     } catch (err) {
@@ -42,6 +44,11 @@ function SignupForm() {
       <Field label="Email" type="email" required value={f.email} onChange={set("email")} autoComplete="email" />
       <Field label="Password" type="password" required minLength={8} value={f.password} onChange={set("password")}
         autoComplete="new-password" hint="At least 8 characters." />
+      <label className="block"><span className="text-sm font-medium text-slate-700">Your CCL language</span>
+        <select className={inputClass} value={f.language} onChange={set("language")}>
+          <option value="">Choose later</option>
+          {languages.map((l) => <option key={l.code} value={l.code}>{l.name}{l.native_name && l.native_name !== l.name ? ` (${l.native_name})` : ""}</option>)}
+        </select></label>
       <Field label="Target exam date (optional)" type="date" value={f.target_exam_date} onChange={set("target_exam_date")} />
       <label className="flex items-start gap-2 text-sm text-slate-600">
         <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} required className="mt-0.5 accent-brand-600" />

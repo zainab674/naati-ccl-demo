@@ -16,8 +16,10 @@ def test_health(client):
 def test_seed_is_idempotent(db):
     seed(db)
     seed(db)
-    assert db.query(Language).count() == 2
-    assert db.query(LanguagePair).count() == 1
+    # English + Filipino, Hindi, Mandarin, Punjabi, Arabic, Nepali, Vietnamese; one English pair each
+    assert db.query(Language).count() == 8
+    assert db.query(LanguagePair).count() == 7
+    assert db.query(LanguageScoringConfig).count() == 7
     assert db.query(Topic).count() >= 5
     assert db.query(Plan).count() == 2
     admin = db.scalar(select(User).where(User.email == "admin@example.com"))
@@ -38,10 +40,10 @@ def test_language_pair_rules(db):
     with pytest.raises(LanguageRuleError, match="already exists"):
         validate_pair(db, en, fil)
     # A new LOTE needs no schema change: just rows.
-    hi = Language(code="hi", name="Hindi", language_type=LanguageType.LOTE)
-    db.add(hi)
+    new = Language(code="xx", name="Test language", language_type=LanguageType.LOTE)
+    db.add(new)
     db.flush()
-    validate_pair(db, en, hi)
+    validate_pair(db, en, new)
 
 
 def test_scoring_config_matches_brief():

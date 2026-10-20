@@ -5,7 +5,7 @@ import { type Faq, getContent, getPlans, type HomeContent, type PlanContent } fr
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Compare the Self-Study and Coaching plans for NAATI CCL preparation in English and Filipino.",
+  description: "Compare the Self-Study and Coaching plans for NAATI CCL preparation.",
 };
 
 export default async function PricingPage({ searchParams }: PageProps<"/pricing">) {
