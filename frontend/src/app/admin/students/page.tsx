@@ -2,6 +2,7 @@
 
 import { Upload, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import CsvFormatButtons from "@/components/CsvFormatButtons";
@@ -23,6 +24,7 @@ const EMPTY: NewStudent = { first_name: "", last_name: "", email: "", language: 
 type BulkResult = { report: ImportJob["report"]; committed: boolean; created: { id: string; email: string }[] };
 
 export default function AdminStudents() {
+  const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
@@ -59,11 +61,11 @@ export default function AdminStudents() {
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr className="[&>th]:pr-4"><th className="px-5 py-3">Student</th><th>Language</th><th>Access</th><th>Attempts</th><th>Avg dialogue</th><th>Last attempt</th><th>Joined</th></tr>
+              <tr className="[&>th]:pr-4"><th className="px-5 py-3">Student</th><th>Language</th><th>Access</th><th>Attempts</th><th>Avg dialogue</th><th>Last attempt</th><th>Joined</th><th><span className="sr-only">Actions</span></th></tr>
             </thead>
             <tbody>
               {rows.map((s) => (
-                <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50">
+                <tr key={s.id} onClick={() => router.push(`/admin/students/${s.id}`)} className="cursor-pointer border-t border-slate-100 hover:bg-slate-50">
                   <td className="px-5 py-3"><Link href={`/admin/students/${s.id}`} className="font-medium hover:underline">{s.name}</Link>
                     <div className="text-xs text-slate-500">{s.email}
                       {s.flagged && <Badge tone="red" className="ml-2">Flagged</Badge>}
@@ -76,9 +78,11 @@ export default function AdminStudents() {
                   <td className="tabular-nums">{s.average_dialogue_score ?? "–"}</td>
                   <td>{s.last_attempt_at ? fmtDate(s.last_attempt_at) : "–"}</td>
                   <td>{fmtDate(s.created_at)}</td>
+                  <td className="pr-5 text-right"><Link href={`/admin/students/${s.id}`} onClick={(e) => e.stopPropagation()}
+                    className="inline-flex h-8 items-center rounded-lg px-3 text-sm font-medium text-brand-600 ring-1 ring-slate-200 hover:bg-white">Edit</Link></td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={7} className="px-5 py-6 text-slate-500">No students found.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={8} className="px-5 py-6 text-slate-500">No students found.</td></tr>}
             </tbody>
           </table>
         </Card>
