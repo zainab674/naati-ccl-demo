@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BookOpen, ClipboardCheck, Flag, GraduationCap, History, LayoutDashboard, LogOut, Menu, Upload, Users, X,
+  BookOpen, ClipboardCheck, Flag, GraduationCap, History, LayoutDashboard, Library, LogOut, Menu, Upload, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -23,6 +23,7 @@ const STUDENT_NAV: NavItem[] = [
   { href: "/dialogues", label: "Practice dialogues", icon: BookOpen },
   { href: "/mock-tests", label: "Mock tests", icon: ClipboardCheck },
   { href: "/courses", label: "Courses", icon: GraduationCap },
+  { href: "/resources", label: "Learning hub", icon: Library },
   { href: "/attempts", label: "My attempts", icon: History },
 ];
 
@@ -33,6 +34,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/dialogues", label: "Dialogues", icon: BookOpen },
   { href: "/admin/mock-tests", label: "Mock tests", icon: ClipboardCheck },
   { href: "/admin/courses", label: "Courses", icon: GraduationCap },
+  { href: "/admin/resources", label: "Learning hub", icon: Library },
   { href: "/admin/imports", label: "CSV import", icon: Upload },
 ];
 

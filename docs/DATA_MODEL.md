@@ -53,6 +53,9 @@ Additional MVP tables:
 - **SiteContent**: key/value JSON for home page, FAQ, reviews, landing copy (admin-editable later).
 - **ImportJob**: id, type (dialogues/courses), file name, status, dry_run report (JSON), counts, created_by.
 - **EmailLog**: to, template, status, provider_id, error.
+- **Resource** (learning hub): key, title, description, resource_type (Ebook/Glossary/Worksheet/Audio/Video/Article/
+  Link), language_pair_id? (null = all), topic_id?, status, is_free, sort_order, private file (file_key, file_name,
+  file_size, content_type) or external_url or html_content (sanitised).
 - Keep from the demo: PlayGrant / protected media, SecurityEvent, StoredFile (if useful).
 
 Relationships: Language -> LanguagePair -> Dialogue -> Segment -> MeaningUnit; Topic -> Dialogue;

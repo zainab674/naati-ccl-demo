@@ -14,7 +14,11 @@ export default function CoursesPage() {
   const [rows, setRows] = useState<CourseRow[] | null>(null);
   const [error, setError] = useState("");
   const [language, setLanguage] = useState("");
-  useEffect(() => { api<CourseRow[]>(`/courses?language=${language}`).then(setRows).catch((e) => setError(e.message)); }, [language]);
+  useEffect(() => {
+    let stale = false;
+    api<CourseRow[]>(`/courses?language=${language}`).then((d) => { if (!stale) setRows(d); }).catch((e) => setError(e.message));
+    return () => { stale = true; };
+  }, [language]);
   if (error) return <ErrorNote>{error}</ErrorNote>;
   if (!rows) return <Spinner />;
   return (

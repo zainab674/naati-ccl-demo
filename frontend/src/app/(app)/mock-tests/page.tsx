@@ -17,7 +17,11 @@ export default function MockTestsPage() {
   const [starting, setStarting] = useState("");
   const [language, setLanguage] = useState("");
 
-  useEffect(() => { api<MockItem[]>(`/mock-tests?language=${language}`).then(setItems).catch((e) => setError(e.message)); }, [language]);
+  useEffect(() => {
+    let stale = false;
+    api<MockItem[]>(`/mock-tests?language=${language}`).then((d) => { if (!stale) setItems(d); }).catch((e) => setError(e.message));
+    return () => { stale = true; };
+  }, [language]);
 
   const start = async (m: MockItem) => {
     if (m.in_progress_id) { router.push(`/attempt/${m.in_progress_id}`); return; }

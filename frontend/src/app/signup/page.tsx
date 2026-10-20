@@ -47,7 +47,7 @@ function SignupForm() {
       <label className="block"><span className="text-sm font-medium text-slate-700">Your CCL language</span>
         <select className={inputClass} value={f.language} onChange={set("language")}>
           <option value="">Choose later</option>
-          {languages.map((l) => <option key={l.code} value={l.code}>{l.name}{l.native_name && l.native_name !== l.name ? ` (${l.native_name})` : ""}</option>)}
+          {languages.map((l) => <option key={l.code} value={l.code}>{!l.native_name || l.native_name.startsWith(l.name) ? l.native_name || l.name : `${l.name} (${l.native_name})`}</option>)}
         </select></label>
       <Field label="Target exam date (optional)" type="date" value={f.target_exam_date} onChange={set("target_exam_date")} />
       <label className="flex items-start gap-2 text-sm text-slate-600">

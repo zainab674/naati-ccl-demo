@@ -1,8 +1,10 @@
 # CCL Platform (Benchmark Education)
 
-NAATI CCL practice and mock test platform for English ↔ Filipino. Students practise dialogues in the official test
-flow, record their interpretation segment by segment and get an estimated score out of 90 with feedback on every
-deduction. Admins import content by CSV, review scoring and override deductions.
+NAATI CCL practice and mock test platform for English paired with Filipino, Hindi, Mandarin, Punjabi, Arabic, Nepali
+or Vietnamese. Students practise dialogues in the official test flow, record their interpretation segment by segment
+and get an estimated score out of 90 with feedback on every deduction. They also have courses and a learning hub
+(ebooks, glossaries, worksheets, audio, articles, links). Admins import content by CSV, enrol students by hand or by
+CSV (e.g. demo accounts), review scoring and override deductions.
 
 - Scope: [docs/MVP_SPEC.md](docs/MVP_SPEC.md) · scoring rules: [docs/SCORING_BRIEF.md](docs/SCORING_BRIEF.md) ·
   data model: [docs/DATA_MODEL.md](docs/DATA_MODEL.md) · build log and open questions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md)
@@ -27,7 +29,8 @@ recording ─▶ STT (word timestamps) ─▶ timing analysis in code (start del
 ```
 
 Rules and penalties live in `backend/config/scoring.yaml` and `backend/config/ccl.yaml`; the evaluator prompt in
-`backend/app/prompts/`; Filipino-specific guidance in the `language_scoring_configs` table (seeded).
+`backend/app/prompts/`; per-language guidance in the `language_scoring_configs` table (seeded from
+`backend/app/seed_languages.py`; adding a language is data only).
 
 ## Run locally
 
@@ -66,6 +69,11 @@ Admin → CSV import accepts `dialogues.csv` (one row per Meaning Unit) and `cou
 formats are in [docs/MVP_SPEC.md](docs/MVP_SPEC.md#csv-formats) and templates/samples download from the import page.
 Every upload is validated first (dry run); committing is idempotent by key. Dialogue audio is downloaded from the CSV
 URLs, encrypted and packaged by the worker, then the dialogue can be published.
+
+Admin → Learning hub manages study resources; files (PDF, EPUB, Office, MP3/M4A/WAV, MP4, images, up to
+`RESOURCE_MAX_MB`) are stored privately and served only to signed-in students with access.
+Admin → Students → Add student / Bulk enrol creates accounts without Stripe, with Trial/Active access and an optional
+end date; students get a set-password email, or the admin sets a password for demo accounts.
 
 ## Tests and checks
 

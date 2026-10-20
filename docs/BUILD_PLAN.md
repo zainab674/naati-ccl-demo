@@ -84,7 +84,7 @@ Milestones map to client payments. Keep the app runnable after every task.
       starting LanguageScoringConfig per language; student language choice (sign-up, account); library, mock tests,
       courses filtered by language; Course.language_pair_id; admin language filters; RTL-safe text; no
       Filipino-only wording left in shared UI.
-- [ ] 6.3 Learning hub (module 15): Resource model + migration, private file upload/serving, admin CRUD, student hub
+- [x] 6.3 Learning hub (module 15): Resource model + migration, private file upload/serving, admin CRUD, student hub
       with type/language filters and free/paid gating.
 
 ## Open questions (write here when blocked, then continue)
@@ -130,6 +130,9 @@ Scope additions (2026-10-20), questions for Nipun:
 - Content: dialogues, mock tests and the exam preparation course are needed for each new language. The public copy now
   lists all seven languages; confirm they should be advertised before their content is ready.
 - Pricing: one price for every language (as built), or per-language plans?
+- Learning hub: which ebooks/resources exist, and may students download them, or should they be view-only (a
+  view-only PDF can still be saved by a determined user; watermarking with the student's email is possible later)?
+  Which resources are free? Max file size is 50 MB (RESOURCE_MAX_MB).
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
@@ -170,3 +173,5 @@ Scope additions (2026-10-20), questions for Nipun:
 - 2026-10-19 audit: docs/AUDIT.md (traceability matrix with real/stubbed/manual/none labels, defects, tool results, scoring validity plan, outside-evidence criteria). Fixed 7 confirmed defects with failing-first regression tests: inflated score on failed segments, re-score discarding teacher work, MU weight edits re-scoring old attempts, out-of-order Stripe events, double subscription, discarded-take audio overwriting the answer, Next.js critical advisories.
 - 2026-10-20 6.1: manual enrolment: POST/PATCH /api/admin/students, access grants (Active/Trial/None, optional end date in APP_TIMEZONE, expires automatically via effective_status) recorded as manual Subscription rows, set-password invite email (ENROLMENT_INVITE_HOURS) or admin-set password, deactivate signs out, bulk CSV with dry run (existing emails skipped); a teacher-granted student can still buy, and Stripe then replaces the grant. 14 API tests. Admin UI (Add student, Bulk enrol, access/account cards, grant history) type-checked, linted and built; not clicked through in the browser (signing in as admin was blocked here).
 - 2026-10-20 6.2: Hindi, Mandarin, Punjabi, Arabic, Nepali, Vietnamese seeded with English pairs, Whisper hints and draft evaluator guidance (app/seed_languages.py, teacher review pending); language at sign-up and in Account; library, mock tests, courses filtered by the student's language (switchable, or all); Course.language_pair_id (+ courses.csv lote_language, admin course editor); admin dialogue language filter; /api/public/languages; filler matching fixed for Indic vowel signs, Arabic and unspaced Chinese; Whisper language names mapped; bdi/dir=auto for right-to-left text; Filipino-only wording removed. 12 tests.
+- 2026-10-20 6.3: learning hub: Resource model + migration (Ebook/Glossary/Worksheet/Audio/Video/Article/Link, optional language and topic, free/paid, Draft/Published/Archived); private file upload with extension allow-list checked against the first bytes and RESOURCE_MAX_MB (Caddy allows 110 MB on that route only); files served only through /api/resources/{id}/file with plan check, no-store, same-origin framing for the inline PDF viewer; articles sanitised; publish blocked until content matches the type; admin page and student hub with type/language filters. 9 tests.
+- 2026-10-20 browser check (dev, test accounts on localhost, since deactivated): sign-up language list, library language switch (found and fixed a stale-response race on all filtered lists), hub list and inline PDF, admin Add student (Trial until 31 Dec, Arabic, invite) and the student access/account cards. Not checked: bulk-enrol modal, resource audio/video playback, Safari/iOS, a real Arabic transcript in the results view.

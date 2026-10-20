@@ -17,6 +17,7 @@ from .other import (  # noqa: F401
                     StripeEvent,
                     Subscription,
 )
+from .resources import Resource  # noqa: F401
 from .scoring import (  # noqa: F401
                     AccuracyCompletenessEvaluation,
                     AdminReview,

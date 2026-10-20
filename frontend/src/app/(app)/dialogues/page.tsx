@@ -28,7 +28,10 @@ export default function LibraryPage() {
 
   useEffect(() => { api<{ id: string; name: string }[]>("/topics").then(setTopics).catch(() => {}); }, []);
   useEffect(() => {
-    api<DialogueItem[]>(`/dialogues?topic=${encodeURIComponent(topic)}&difficulty=${difficulty}&language=${language}`).then(setItems).catch((e) => setError(e.message));
+    let stale = false; // a slower earlier request must not overwrite a newer filter's results
+    api<DialogueItem[]>(`/dialogues?topic=${encodeURIComponent(topic)}&difficulty=${difficulty}&language=${language}`)
+      .then((d) => { if (!stale) setItems(d); }).catch((e) => setError(e.message));
+    return () => { stale = true; };
   }, [topic, difficulty, language]);
 
   const start = async (d: DialogueItem) => {

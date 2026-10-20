@@ -12,7 +12,13 @@
 	}
 
 	# Recording parts are small, but allow headroom for the single-request upload fallback and CSV imports.
-	request_body {
+	# Learning hub files (ebooks, audio) get more; the backend enforces RESOURCE_MAX_MB (default 50 MB) itself.
+	@hubUpload path_regexp ^/api/admin/resources/[^/]+/file$
+	@otherRequests not path_regexp ^/api/admin/resources/[^/]+/file$
+	request_body @hubUpload {
+		max_size 110MB
+	}
+	request_body @otherRequests {
 		max_size 25MB
 	}
 

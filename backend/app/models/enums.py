@@ -136,3 +136,13 @@ class EmailStatus(StrEnum):
 class Direction(StrEnum):
     EN_TO_LOTE = "EN>LOTE"
     LOTE_TO_EN = "LOTE>EN"
+
+
+class ResourceType(StrEnum):
+    EBOOK = "Ebook"
+    GLOSSARY = "Glossary"
+    WORKSHEET = "Worksheet"
+    AUDIO = "Audio"
+    VIDEO = "Video"
+    ARTICLE = "Article"
+    LINK = "Link"

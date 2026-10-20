@@ -58,7 +58,7 @@ export default function AdminStudents() {
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr><th className="px-5 py-3">Student</th><th>Language</th><th>Access</th><th>Attempts</th><th>Avg dialogue</th><th>Last attempt</th><th>Joined</th></tr>
+              <tr className="[&>th]:pr-4"><th className="px-5 py-3">Student</th><th>Language</th><th>Access</th><th>Attempts</th><th>Avg dialogue</th><th>Last attempt</th><th>Joined</th></tr>
             </thead>
             <tbody>
               {rows.map((s) => (
