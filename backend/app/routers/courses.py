@@ -8,13 +8,15 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import CurrentUser, current_user, ensure_access, is_locked
 from ..models import ContentStatus, Course, Lesson, LessonProgress
+from ..services import courses as outline_svc
 from ..services import languages
 
 router = APIRouter(prefix="/api", tags=["courses"])
 
 
 def _visible_lessons(c: Course) -> list[Lesson]:
-    return [lesson for lesson in c.lessons if lesson.status == ContentStatus.PUBLISHED]
+    """Published lessons in reading order (chapters first, then lessons without a chapter)."""
+    return outline_svc.reading_order(c)
 
 
 def _lesson_free(c: Course, lesson: Lesson) -> bool:
@@ -58,11 +60,19 @@ def courses(language: str = "", cu: CurrentUser = Depends(current_user), db: Ses
 def course(course_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
     c = _course_or_404(db, course_id)
     done = _done(db, cu.id)
+    numbers = outline_svc.display_numbers(c)
+
+    def item(lesson: Lesson) -> dict:
+        return {"id": str(lesson.id), "lesson_number": lesson.lesson_number, "number": numbers[lesson.id],
+                "title": lesson.title, "is_free": _lesson_free(c, lesson), "locked": is_locked(cu.user, _lesson_free(c, lesson)),
+                "completed": lesson.id in done, "has_video": bool(lesson.video_url)}
+
+    groups = outline_svc.outline(c)
     return {"id": str(c.id), "title": c.title, "description": c.description,
-            "lessons": [{"id": str(lesson.id), "lesson_number": lesson.lesson_number, "title": lesson.title,
-                         "is_free": _lesson_free(c, lesson), "locked": is_locked(cu.user, _lesson_free(c, lesson)),
-                         "completed": lesson.id in done, "has_video": bool(lesson.video_url)}
-                        for lesson in _visible_lessons(c)]}
+            "chapters": [{"id": str(g.chapter.id) if g.chapter else None, "number": g.chapter.number if g.chapter else None,
+                          "title": g.chapter.title if g.chapter else None, "lessons": [item(x) for x in g.lessons]}
+                         for g in groups],
+            "lessons": [item(x) for g in groups for x in g.lessons]}
 
 
 @router.get("/lessons/{lesson_id}")
@@ -77,6 +87,8 @@ def lesson(lesson_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Se
     nxt = visible[idx + 1] if idx + 1 < len(visible) else None
     prev = visible[idx - 1] if idx > 0 else None
     return {"id": str(les.id), "course_id": str(c.id), "course_title": c.title, "lesson_number": les.lesson_number,
+            "number": outline_svc.display_numbers(c)[les.id],
+            "chapter": {"number": les.chapter.number, "title": les.chapter.title} if les.chapter else None,
             "title": les.title, "video_url": les.video_url, "html_content": les.html_content,  # sanitised on write
             "completed": les.id in _done(db, cu.id),
             "next": {"id": str(nxt.id), "title": nxt.title, "locked": is_locked(cu.user, _lesson_free(c, nxt))} if nxt else None,

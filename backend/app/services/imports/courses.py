@@ -1,4 +1,6 @@
-"""courses.csv: one row per lesson. Upserts by course_key / lesson_no; lessons missing from a re-import are archived."""
+"""courses.csv: one row per lesson. Upserts by course_key / lesson_no; lessons missing from a re-import are archived.
+Optional chapter_no / chapter_title group lessons into chapters (upserted by number; a course whose rows give chapters
+loses chapters the file no longer mentions, and their lessons become chapterless)."""
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -6,13 +8,13 @@ from dataclasses import dataclass, field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ...models import ContentStatus, Course, Lesson
+from ...models import ContentStatus, Course, CourseChapter, Lesson
 from ..html import sanitize
 from ..languages import english, get_or_create_pair, lotes_by_code
 from .common import Report, parse_bool, read_csv, valid_url
 
 REQUIRED = ["course_key", "course_title", "lesson_no", "lesson_title"]
-OPTIONAL = ["course_description", "video_url", "html_content", "is_free", "lote_language"]
+OPTIONAL = ["course_description", "video_url", "html_content", "is_free", "lote_language", "chapter_no", "chapter_title"]
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,118}$")
 
 
@@ -23,6 +25,7 @@ class L:
     video_url: str
     html: str
     is_free: bool
+    chapter: int | None = None
 
 
 @dataclass
@@ -32,6 +35,7 @@ class C:
     description: str
     lote: str = ""  # language code; empty = course for every language
     lessons: dict[int, L] = field(default_factory=OrderedDict)
+    chapters: dict[int, str] = field(default_factory=dict)  # chapter number -> title
 
 
 def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
@@ -74,6 +78,18 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
         if lote and lote not in lotes:
             report.error(r, "lote_language", f"Unknown language code '{lote}' (use one of: {', '.join(sorted(lotes))})")
             continue
+        chapter = None
+        if row.get("chapter_no"):
+            try:
+                chapter = int(row["chapter_no"])
+                if chapter < 1:
+                    raise ValueError
+            except ValueError:
+                report.error(r, "chapter_no", "Must be a whole number from 1")
+                continue
+        elif row.get("chapter_title"):
+            report.error(r, "chapter_no", "Give a chapter number with the chapter title")
+            continue
         html = sanitize(row.get("html_content", ""))
         if row.get("html_content") and len(html) < len(row["html_content"]) * 0.9:
             report.warn(r, "html_content", "Unsafe or unsupported HTML was removed")
@@ -88,13 +104,25 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
             report.error(r, "lesson_no", f"Duplicate course_key/lesson_no (also row {seen[(key, number)]})")
             continue
         seen[(key, number)] = r
+        if chapter is not None:
+            title = row.get("chapter_title", "")
+            known = courses[key].chapters.get(chapter)
+            if known is None:
+                if not title:
+                    report.error(r, "chapter_title", f"Give a title for chapter {chapter} (on its first row)")
+                    continue
+                courses[key].chapters[chapter] = title
+            elif title and title != known:
+                report.error(r, "chapter_title", f"Chapter {chapter} is already called '{known}'")
+                continue
         courses[key].lessons[number] = L(number=number, title=row["lesson_title"], video_url=video, html=html,
-                                         is_free=is_free)
+                                         is_free=is_free, chapter=chapter)
     existing = set(db.scalars(select(Course.key).where(Course.key.in_(list(courses)))))
     report.summary = {"rows": len(rows), "courses": len(courses),
                       "new_courses": len([k for k in courses if k not in existing]),
                       "updated_courses": len([k for k in courses if k in existing]),
-                      "lessons": sum(len(c.lessons) for c in courses.values())}
+                      "lessons": sum(len(c.lessons) for c in courses.values()),
+                      "chapters": sum(len(c.chapters) for c in courses.values())}
     return report, list(courses.values())
 
 
@@ -115,11 +143,31 @@ def commit(db: Session, courses: list[C], created_by=None) -> dict:
             counts["courses_updated"] += 1
         course.language_pair_id = pair_id
         course.is_free = all(lesson.is_free for lesson in c.lessons.values())
+        chapter_ids = {}
+        if c.chapters:
+            by_number = {ch.number: ch for ch in course.chapters}
+            for n, title in c.chapters.items():
+                ch = by_number.get(n)
+                if not ch:
+                    ch = CourseChapter(course_id=course.id, number=n, title=title)
+                    db.add(ch)
+                    course.chapters.append(ch)
+                ch.title = title
+                db.flush()
+                chapter_ids[n] = ch.id
+            for n, ch in by_number.items():
+                if n not in c.chapters:
+                    for lesson in course.lessons:
+                        if lesson.chapter_id == ch.id:
+                            lesson.chapter_id = None
+                    db.delete(ch)
         existing = {lesson.lesson_number: lesson for lesson in course.lessons}
         for item in c.lessons.values():
             lesson = existing.get(item.number)
             values = {"title": item.title, "video_url": item.video_url, "html_content": item.html,
                       "is_free": item.is_free, "status": ContentStatus.PUBLISHED}
+            if c.chapters:  # files without chapter columns leave chapters as the admin set them
+                values["chapter_id"] = chapter_ids.get(item.chapter)
             if not lesson:
                 lesson = Lesson(course_id=course.id, lesson_number=item.number, **values)
                 db.add(lesson)

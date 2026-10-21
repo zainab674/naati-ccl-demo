@@ -80,6 +80,8 @@ Implements `docs/SCORING_BRIEF.md` exactly:
 - Course -> Lessons; each lesson: video (placeholder or URL) + HTML text (sanitised).
 - Lesson completion tracking. Free vs paid lessons flag.
 - A course belongs to one language (e.g. exam preparation for Hindi) or to all languages (e.g. the introduction).
+- Chapters group lessons (Chapter 2 → Lessons 2.1, 2.2). The lesson page has a collapsible "Course Content" sidebar
+  (chapters, lessons, done / current / locked) beside the video and text, with Previous / Next in outline order.
 
 ## 10. Admin Content Management
 - **CSV bulk import for dialogues** (one or many per file): dialogues, segments, transcripts, Meaning Units,

@@ -28,12 +28,12 @@ DIALOGUES_SAMPLE = DIALOGUES_HEADER + "\n" + "\n".join([
 ]) + "\n"
 
 COURSES_HEADER = ("course_key,course_title,course_description,lesson_no,lesson_title,video_url,html_content,is_free,"
-                  "lote_language")
+                  "lote_language,chapter_no,chapter_title")
 COURSES_TEMPLATE = COURSES_HEADER + "\n"
 COURSES_SAMPLE = COURSES_HEADER + "\n" + "\n".join([
     'intro-to-ccl,Introduction to CCL Test (format example; replace),What the CCL test is and how it is marked.,1,'
     'SAMPLE What is the CCL test?,https://www.youtube.com/embed/VIDEO_ID,"<p>Sample lesson text. Replace before '
-    'launch.</p>",true',
+    'launch.</p>",true,,1,SAMPLE CCL test overview',
     'intro-to-ccl,Introduction to CCL Test (format example; replace),What the CCL test is and how it is marked.,2,'
-    'SAMPLE How the test is marked,,"<h2>Marking</h2><p>Sample lesson text. Replace before launch.</p>",true',
+    'SAMPLE How the test is marked,,"<h2>Marking</h2><p>Sample lesson text. Replace before launch.</p>",true,,1,',
 ]) + "\n"

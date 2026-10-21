@@ -4,6 +4,7 @@ from .content import Dialogue, Language, LanguagePair, MeaningUnit, MockTest, Mo
 from .enums import *  # noqa: F401,F403
 from .other import (  # noqa: F401
                     Course,
+                    CourseChapter,
                     EmailLog,
                     ImportJob,
                     Job,

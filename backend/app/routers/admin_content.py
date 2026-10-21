@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import require_admin
 from ..jobs import enqueue
-from ..models import (ContentStatus, Course, Dialogue, Difficulty, LanguagePair, Lesson, MeaningUnit, MockTest,
+from ..models import (ContentStatus, Course, CourseChapter, Dialogue, Difficulty, LanguagePair, Lesson, MeaningUnit, MockTest,
                       MockTestDialogue, Segment, Topic)
+from ..services import courses as outline_svc
 from ..services import languages, media_ingest
 from ..services.html import sanitize
 from ..services.storage import get_storage
@@ -290,10 +291,11 @@ def update_mock_test(mock_id: uuid.UUID, body: MockTestIn, db: Session = Depends
 
 # ------------------------------------------------------------------ courses and lessons
 
-def lesson_dict(lesson: Lesson) -> dict:
+def lesson_dict(lesson: Lesson, number: str | None = None) -> dict:
     return {"id": str(lesson.id), "lesson_number": lesson.lesson_number, "title": lesson.title,
             "video_url": lesson.video_url, "html_content": lesson.html_content, "is_free": lesson.is_free,
-            "status": lesson.status.value}
+            "status": lesson.status.value, "chapter_id": str(lesson.chapter_id) if lesson.chapter_id else None,
+            "number": number}
 
 
 def course_dict(c: Course, lessons: bool = False) -> dict:
@@ -301,7 +303,12 @@ def course_dict(c: Course, lessons: bool = False) -> dict:
            "is_free": c.is_free, "sort_order": c.sort_order, **_lang(c.language_pair),
            "lesson_count": sum(1 for lesson in c.lessons if lesson.status != ContentStatus.ARCHIVED)}
     if lessons:
-        out["lessons"] = [lesson_dict(lesson) for lesson in c.lessons]
+        numbers = outline_svc.display_numbers(c, published_only=False)
+        out["chapters"] = [{"id": str(ch.id), "number": ch.number, "title": ch.title} for ch in c.chapters]
+        # Editor order: as students read them (chapters, then loose lessons); archived lessons last.
+        ordered = outline_svc.reading_order(c, published_only=False)
+        rest = [lesson for lesson in c.lessons if lesson not in ordered]
+        out["lessons"] = [lesson_dict(lesson, numbers.get(lesson.id)) for lesson in ordered + rest]
     return out
 
 
@@ -357,6 +364,7 @@ def update_course(course_id: uuid.UUID, body: CourseIn, db: Session = Depends(ge
 
 class LessonIn(BaseModel):
     lesson_number: int | None = Field(default=None, ge=1)
+    chapter_id: uuid.UUID | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)
     video_url: str | None = Field(default=None, max_length=1000)
     html_content: str | None = None
@@ -372,6 +380,10 @@ def _apply_lesson(db: Session, lesson: Lesson, body: LessonIn) -> None:
                                                Lesson.lesson_number == body.lesson_number, Lesson.id != lesson.id))
         if clash:
             raise HTTPException(409, f"Lesson number {body.lesson_number} is already used")
+    if body.chapter_id is not None:
+        ch = db.get(CourseChapter, body.chapter_id)
+        if not ch or ch.course_id != lesson.course_id:
+            raise HTTPException(400, "That chapter belongs to another course")
     for field in body.model_fields_set:
         value = getattr(body, field)
         setattr(lesson, field, sanitize(value) if field == "html_content" else value)
@@ -395,6 +407,61 @@ def update_lesson(lesson_id: uuid.UUID, body: LessonIn, db: Session = Depends(ge
     _apply_lesson(db, lesson, body)
     db.commit()
     return lesson_dict(lesson)
+
+
+# ------------------------------------------------------------------ chapters
+
+class ChapterIn(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    move: str | None = Field(default=None, pattern="^(up|down)$")  # reorder by swapping with a neighbour
+
+
+@router.post("/courses/{course_id}/chapters", status_code=201)
+def create_chapter(course_id: uuid.UUID, body: ChapterIn, db: Session = Depends(get_db)):
+    c = _get(db, Course, course_id)
+    number = max([ch.number for ch in c.chapters] or [0]) + 1
+    db.add(CourseChapter(course_id=c.id, number=number, title=(body.title or f"Chapter {number}").strip()))
+    db.commit()
+    db.refresh(c)
+    return course_dict(c, lessons=True)
+
+
+@router.patch("/chapters/{chapter_id}")
+def update_chapter(chapter_id: uuid.UUID, body: ChapterIn, db: Session = Depends(get_db)):
+    ch = _get(db, CourseChapter, chapter_id)
+    c = ch.course
+    if body.title:
+        ch.title = body.title.strip()
+    if body.move:
+        order = list(c.chapters)
+        i = order.index(ch)
+        j = i - 1 if body.move == "up" else i + 1
+        if 0 <= j < len(order):
+            other = order[j]
+            # Swap numbers through a temporary value (number is unique per course).
+            a, b = ch.number, other.number
+            ch.number = -1
+            db.flush()
+            other.number = a
+            db.flush()
+            ch.number = b
+    db.commit()
+    db.refresh(c)
+    return course_dict(c, lessons=True)
+
+
+@router.delete("/chapters/{chapter_id}")
+def delete_chapter(chapter_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Removes the chapter only: its lessons stay, listed after the chapters until moved."""
+    ch = _get(db, CourseChapter, chapter_id)
+    c = ch.course
+    for lesson in c.lessons:
+        if lesson.chapter_id == ch.id:
+            lesson.chapter_id = None
+    db.delete(ch)
+    db.commit()
+    db.refresh(c)
+    return course_dict(c, lessons=True)
 
 
 class HtmlIn(BaseModel):

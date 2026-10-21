@@ -25,6 +25,19 @@ class Course(IdMixin, Base):
     language_pair = relationship("LanguagePair", lazy="joined")
     lessons: Mapped[list["Lesson"]] = relationship(
         back_populates="course", order_by="Lesson.lesson_number", cascade="all, delete-orphan")
+    chapters: Mapped[list["CourseChapter"]] = relationship(
+        back_populates="course", order_by="CourseChapter.number", cascade="all, delete-orphan")
+
+
+class CourseChapter(IdMixin, Base):
+    """A group of lessons ("Chapter 2: Interpreting Skills"). Lessons without a chapter are listed after the chapters."""
+    __tablename__ = "course_chapters"
+    __table_args__ = (UniqueConstraint("course_id", "number"),)
+    course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(String(200))
+
+    course: Mapped[Course] = relationship(back_populates="chapters")
 
 
 class Lesson(IdMixin, Base):
@@ -37,8 +50,11 @@ class Lesson(IdMixin, Base):
     html_content: Mapped[str] = mapped_column(Text, default="")  # sanitised on write
     is_free: Mapped[bool] = mapped_column(default=False)
     status: Mapped[ContentStatus] = mapped_column(enum_col(ContentStatus), default=ContentStatus.PUBLISHED)
+    chapter_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("course_chapters.id", ondelete="SET NULL"),
+                                                         nullable=True, index=True)
 
     course: Mapped[Course] = relationship(back_populates="lessons")
+    chapter = relationship("CourseChapter")
 
 
 class LessonProgress(IdMixin, Base):

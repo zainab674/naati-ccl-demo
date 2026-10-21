@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, FolderPlus, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -9,8 +9,10 @@ import { Badge, Button, Card, cx, ErrorNote, Field, inputClass, PageHeader, Spin
 import { statusTone } from "@/lib/admin";
 import { api, fetchLanguages, type Language } from "@/lib/api";
 
-type Lesson = { id: string; lesson_number: number; title: string; video_url: string; html_content: string; is_free: boolean; status: string };
-type Course = { id: string; key: string; title: string; description: string; status: string; is_free: boolean; sort_order: number; language: string | null; lessons: Lesson[] };
+type Lesson = { id: string; lesson_number: number; title: string; video_url: string; html_content: string; is_free: boolean; status: string;
+  chapter_id: string | null; number: string | null };
+type Chapter = { id: string; number: number; title: string };
+type Course = { id: string; key: string; title: string; description: string; status: string; is_free: boolean; sort_order: number; language: string | null; chapters: Chapter[]; lessons: Lesson[] };
 
 export default function CourseEditor() {
   const { id } = useParams<{ id: string }>();
@@ -36,12 +38,25 @@ export default function CourseEditor() {
     catch (e) { setMsg({ err: (e as Error).message }); }
   };
 
-  const addLesson = async () => {
+  const addLesson = async (chapterId: string | null = null) => {
     try {
-      const l = await api<Lesson>(`/admin/courses/${id}/lessons`, { method: "POST", json: { status: "Draft" } });
+      const l = await api<Lesson>(`/admin/courses/${id}/lessons`, { method: "POST", json: { status: "Draft", chapter_id: chapterId } });
       await load();
       setSelected(l.id);
     } catch (e) { setMsg({ err: (e as Error).message }); }
+  };
+
+  const chapterAction = async (path: string, init: Parameters<typeof api>[1]) => {
+    setMsg({});
+    try { setC(await api<Course>(path, init)); } catch (e) { setMsg({ err: (e as Error).message }); }
+  };
+  const addChapter = () => {
+    const title = prompt("Chapter title", `Chapter ${(c?.chapters.length ?? 0) + 1}`);
+    if (title?.trim()) chapterAction(`/admin/courses/${id}/chapters`, { method: "POST", json: { title: title.trim() } });
+  };
+  const renameChapter = (ch: Chapter) => {
+    const title = prompt("Chapter title", ch.title);
+    if (title?.trim() && title.trim() !== ch.title) chapterAction(`/admin/chapters/${ch.id}`, { method: "PATCH", json: { title: title.trim() } });
   };
 
   if (!c) return msg.err ? <ErrorNote>{msg.err}</ErrorNote> : <Spinner />;
@@ -68,26 +83,45 @@ export default function CourseEditor() {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
-        <Card className="h-fit">
-          <ul className="divide-y divide-slate-100">
-            {c.lessons.map((l) => (
-              <li key={l.id}>
-                <button onClick={() => setSelected(l.id)} className={cx("flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm hover:bg-slate-50", selected === l.id && "bg-brand-50")}>
-                  <span><span className="mr-2 tabular-nums text-slate-400">{l.lesson_number}</span>{l.title}</span>
-                  <span className="space-x-1">{l.is_free && <Badge tone="brand">Free</Badge>}{l.status !== "Published" && <Badge tone={statusTone(l.status)}>{l.status}</Badge>}</span>
-                </button>
-              </li>
+        <Card className="h-fit overflow-hidden">
+          {[...c.chapters.map((ch) => ({ ch, lessons: c.lessons.filter((l) => l.chapter_id === ch.id) })),
+            { ch: null as Chapter | null, lessons: c.lessons.filter((l) => !l.chapter_id || !c.chapters.some((ch) => ch.id === l.chapter_id)) }]
+            .filter((g) => g.ch || g.lessons.length || !c.chapters.length)
+            .map(({ ch, lessons }, gi, groups) => (
+              <div key={ch?.id ?? "loose"} className="border-b border-slate-100 last:border-0">
+                {(ch || c.chapters.length > 0) && (
+                  <div className="flex items-center gap-1 bg-slate-50 px-3 py-2">
+                    <span className="flex-1 truncate text-xs font-semibold uppercase tracking-wide text-slate-600">{ch ? `Chapter ${ch.number}: ${ch.title}` : "Not in a chapter"}</span>
+                    {ch && <>
+                      <button title="Rename" onClick={() => renameChapter(ch)} className="rounded p-1 text-slate-400 hover:bg-white hover:text-ink"><Pencil className="size-3.5" /></button>
+                      <button title="Move up" disabled={gi === 0} onClick={() => chapterAction(`/admin/chapters/${ch.id}`, { method: "PATCH", json: { move: "up" } })} className="rounded p-1 text-slate-400 hover:bg-white hover:text-ink disabled:opacity-30"><ArrowUp className="size-3.5" /></button>
+                      <button title="Move down" disabled={!groups[gi + 1]?.ch} onClick={() => chapterAction(`/admin/chapters/${ch.id}`, { method: "PATCH", json: { move: "down" } })} className="rounded p-1 text-slate-400 hover:bg-white hover:text-ink disabled:opacity-30"><ArrowDown className="size-3.5" /></button>
+                      <button title="Delete chapter (its lessons are kept)" onClick={() => { if (confirm(`Delete chapter "${ch.title}"? Its lessons are kept and move to "Not in a chapter".`)) chapterAction(`/admin/chapters/${ch.id}`, { method: "DELETE" }); }} className="rounded p-1 text-slate-400 hover:bg-white hover:text-rose-600"><Trash2 className="size-3.5" /></button>
+                    </>}
+                  </div>
+                )}
+                <ul className="divide-y divide-slate-100">
+                  {lessons.map((l) => (
+                    <li key={l.id}>
+                      <button onClick={() => setSelected(l.id)} className={cx("flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm hover:bg-slate-50", selected === l.id && "bg-brand-50")}>
+                        <span><span className="mr-2 tabular-nums text-slate-400">{l.number ?? l.lesson_number}</span>{l.title}</span>
+                        <span className="space-x-1">{l.is_free && <Badge tone="brand">Free</Badge>}{l.status !== "Published" && <Badge tone={statusTone(l.status)}>{l.status}</Badge>}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="px-2 py-1.5"><Button size="sm" variant="ghost" onClick={() => addLesson(ch?.id ?? null)}><Plus className="size-4" /> Add lesson</Button></div>
+              </div>
             ))}
-          </ul>
-          <div className="p-3"><Button size="sm" variant="ghost" onClick={addLesson}><Plus className="size-4" /> Add lesson</Button></div>
+          <div className="border-t border-slate-100 p-2"><Button size="sm" variant="secondary" onClick={addChapter}><FolderPlus className="size-4" /> Add chapter</Button></div>
         </Card>
-        {lesson ? <LessonEditor key={lesson.id} lesson={lesson} onSaved={() => load()} /> : <Card className="p-6 text-sm text-slate-500">Select a lesson to edit it.</Card>}
+        {lesson ? <LessonEditor key={lesson.id} lesson={lesson} chapters={c.chapters} onSaved={() => load()} /> : <Card className="p-6 text-sm text-slate-500">Select a lesson to edit it.</Card>}
       </div>
     </>
   );
 }
 
-function LessonEditor({ lesson, onSaved }: { lesson: Lesson; onSaved: () => void }) {
+function LessonEditor({ lesson, chapters, onSaved }: { lesson: Lesson; chapters: Chapter[]; onSaved: () => void }) {
   const [f, setF] = useState(lesson);
   const [preview, setPreview] = useState(lesson.html_content);
   const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
@@ -105,7 +139,7 @@ function LessonEditor({ lesson, onSaved }: { lesson: Lesson; onSaved: () => void
     setBusy(true);
     setMsg({});
     try {
-      const { id, ...body } = f;
+      const { id, number: _display, ...body } = f;  // eslint-disable-line @typescript-eslint/no-unused-vars
       await api(`/admin/lessons/${id}`, { method: "PATCH", json: body });
       setMsg({ ok: "Lesson saved." });
       onSaved();
@@ -116,9 +150,14 @@ function LessonEditor({ lesson, onSaved }: { lesson: Lesson; onSaved: () => void
   return (
     <Card className="space-y-4 p-6">
       <div className="grid gap-4 sm:grid-cols-[6rem_1fr]">
-        <Field label="Number" type="number" min={1} value={f.lesson_number} onChange={(e) => setF({ ...f, lesson_number: Number(e.target.value) })} />
+        <Field label="Order" type="number" min={1} value={f.lesson_number} onChange={(e) => setF({ ...f, lesson_number: Number(e.target.value) })} />
         <Field label="Title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
       </div>
+      <label className="block"><span className="text-sm font-medium text-slate-700">Chapter</span>
+        <select className={inputClass} value={f.chapter_id ?? ""} onChange={(e) => setF({ ...f, chapter_id: e.target.value || null })}>
+          <option value="">Not in a chapter</option>
+          {chapters.map((ch) => <option key={ch.id} value={ch.id}>Chapter {ch.number}: {ch.title}</option>)}
+        </select></label>
       <Field label="Video URL (embed link)" value={f.video_url} onChange={(e) => setF({ ...f, video_url: e.target.value })} placeholder="https://www.youtube.com/embed/..." />
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="block"><span className="text-sm font-medium text-slate-700">Lesson text (HTML)</span>
