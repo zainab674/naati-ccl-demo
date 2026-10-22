@@ -162,7 +162,7 @@ function PasswordInput(props: InputHTMLAttributes<HTMLInputElement>) {
       <input {...props} type={shown ? "text" : "password"} className={cx(inputClass, "mt-0 pr-10")} />
       <button type="button" onClick={(e) => { e.preventDefault(); setShown(!shown); }} disabled={props.disabled}
         aria-label={shown ? "Hide password" : "Show password"} aria-pressed={shown} title={shown ? "Hide" : "Show"}
-        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-ink disabled:opacity-40">
+        className="absolute inset-y-1 right-1 flex w-9 items-center justify-center rounded-md text-slate-400 outline-none hover:text-ink focus-visible:text-ink focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:opacity-40">
         {shown ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
       </button>
     </span>
