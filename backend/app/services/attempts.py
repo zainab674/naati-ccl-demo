@@ -139,6 +139,8 @@ def state(ref: AttemptRef) -> dict:
     cfg = ccl_config()
     seg_cfg = cfg["segment"]
     title = ref.mock.mock_test.title if ref.mock else ref.dialogue_attempts[0].dialogue.title
+    started = ref.mock.started_at if ref.mock else ref.dialogue_attempts[0].started_at
+    timer = cfg.get("timer", {})
     current = None
     for da in ref.dialogue_attempts:
         for sa in da.segment_attempts:
@@ -150,7 +152,9 @@ def state(ref: AttemptRef) -> dict:
     return {
         "id": str(ref.id), "kind": ref.kind, "title": title, "status": ref.status.value, "step": ref.step,
         "current": current,
-        "config": {"max_repeats_per_dialogue": seg_cfg["max_repeats_per_dialogue"],
+        # Seconds since the attempt began, from the server clock (the player's countdown does not trust the device).
+        "elapsed_seconds": int((utcnow() - started).total_seconds()) if started else 0,
+        "config": {"time_limit_minutes": timer.get("mock_minutes" if ref.mock else "practice_minutes", 0),"max_repeats_per_dialogue": seg_cfg["max_repeats_per_dialogue"],
                    "response_window_seconds": seg_cfg["response_window_seconds"],
                    "chime_seconds": seg_cfg.get("chime_seconds", 0.6), "camera": cfg.get("camera", {}),
                    "information_1": cfg["information_1"].strip(), "information_2": cfg["information_2"].strip(),

@@ -21,19 +21,20 @@ recording:
   max_upload_mb: 15
   allowed_mime_types: ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav"]
 
-# Shown on the Information pages of the player (folded: line breaks become spaces).
+# Countdown at the top right of the player, as in the NAATI online test. Display only: the test is not ended when it
+# reaches zero. 0 shows the time used instead of a countdown.
+timer:
+  practice_minutes: 30
+  mock_minutes: 60
+
+# First line of the Information pages of the player (folded: line breaks become spaces). The rest of the wording
+# follows the NAATI practice test and is in the player.
 information_1: >
-  This test has two dialogues. Each dialogue is a conversation between an English speaker and a speaker of your
-  test language, divided into segments. After each segment you will hear a chime. Interpret the segment into the
-  other language after the chime. Your interpretation is recorded.
+  The test includes 2 dialogues.
 information_1_practice: >
-  This practice dialogue is a conversation between an English speaker and a speaker of your test language, divided
-  into segments. After each segment you will hear a chime. Interpret the segment into the other language after the
-  chime. Your interpretation is recorded and scored like a dialogue in the test.
+  The Practice Test includes 1 dialogue only (there will be 2 dialogues in your actual CCL Test)
 information_2: >
-  This example segment lets you check your audio and visual equipment before the test. Click Start to hear a
-  short sound, then speak after the chime: you should see yourself on camera and see the sound wave move while you
-  speak. Click Finish attempt, then Play to hear your recording.
+  This segment is intended to test your audio and visual equipment prior to taking the full CCL test.
 
 results:
   # After submission (never during an attempt): show the source segment text next to the feedback.
