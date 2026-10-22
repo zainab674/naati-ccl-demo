@@ -1,8 +1,8 @@
 "use client";
 
-import { Loader2, X } from "lucide-react";
+import { Eye, EyeOff, Loader2, X } from "lucide-react";
 import Link from "next/link";
-import { type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect } from "react";
+import { type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect, useState } from "react";
 
 import { cx } from "./cx";
 
@@ -148,9 +148,24 @@ export function Field({ label, hint, className, ...props }: InputHTMLAttributes<
   return (
     <label className={cx("block", className)}>
       <span className="text-sm font-medium text-slate-700">{label}</span>
-      <input {...props} className={inputClass} />
+      {props.type === "password" ? <PasswordInput {...props} /> : <input {...props} className={inputClass} />}
       {hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
     </label>
+  );
+}
+
+/** Password input with an eye button to show or hide what was typed. */
+function PasswordInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  const [shown, setShown] = useState(false);
+  return (
+    <span className="relative mt-1 block">
+      <input {...props} type={shown ? "text" : "password"} className={cx(inputClass, "mt-0 pr-10")} />
+      <button type="button" onClick={(e) => { e.preventDefault(); setShown(!shown); }} disabled={props.disabled}
+        aria-label={shown ? "Hide password" : "Show password"} aria-pressed={shown} title={shown ? "Hide" : "Show"}
+        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-ink disabled:opacity-40">
+        {shown ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </button>
+    </span>
   );
 }
 

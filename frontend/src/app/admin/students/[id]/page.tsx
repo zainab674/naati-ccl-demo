@@ -171,7 +171,7 @@ function AccountCard({ s, onSaved }: { s: Student; onSaved: () => void }) {
       <Button size="sm" variant="secondary" loading={busy === "save"}
         onClick={() => act("save", base, { method: "PATCH", json: { first_name: first, last_name: last, language: language || null } }, "Saved.")}>Save details</Button>
       <div className="border-t border-slate-100 pt-3">
-        <Field label="Set a new password" type="text" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)}
+        <Field label="Set a new password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)}
           hint="For demo accounts. Signs the student out of other sessions." />
         <div className="mt-2 flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" disabled={password.length < 8} loading={busy === "pw"}

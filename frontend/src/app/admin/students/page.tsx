@@ -141,7 +141,7 @@ function AddStudent({ open, languages, onClose, onDone }:
           <label className="flex items-center gap-2"><input type="radio" className="accent-brand-600" checked={f.signin === "invite"} onChange={() => set({ signin: "invite" })} /> Email them a link to set their password</label>
           <label className="flex items-center gap-2"><input type="radio" className="accent-brand-600" checked={f.signin === "password"} onChange={() => set({ signin: "password" })} /> Set a password now (demo accounts; no email sent)</label>
         </fieldset>
-        {f.signin === "password" && <Field label="Password" type="text" autoComplete="off" value={f.password} minLength={8}
+        {f.signin === "password" && <Field label="Password" type="password" autoComplete="new-password" value={f.password} minLength={8}
           onChange={(e) => set({ password: e.target.value })} hint="At least 8 characters. Share it with the student yourself." />}
         {error && <ErrorNote>{error}</ErrorNote>}
         <div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={save} loading={busy}>Add student</Button></div>
