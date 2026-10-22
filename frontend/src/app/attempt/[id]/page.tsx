@@ -186,6 +186,47 @@ export default function Player() {
     return () => { cancelled = true; };
   }, [needsDevices, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** After the student changes the browser's camera / microphone setting (or comes back to the tab), turn the camera
+   * and microphone on straight away, without a reload. Never while the segment is playing or being recorded. */
+  const refreshDevices = async () => {
+    if (!needsDevices || submitted || phaseRef.current !== "idle") return;
+    const current = streamRef.current;
+    if (!current) { await requestDevices(); return; }
+    const wantCamera = st?.config.camera?.preview !== false;
+    if (!wantCamera || current.getVideoTracks().some((t) => t.readyState === "live")) return;
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: { width: 640, height: 480 } });
+      current.getTracks().forEach((t) => t.stop());
+      streamRef.current = s;
+      setStream(s);
+      setDeviceError("");
+      setDevicePrompt(null);
+    } catch { /* camera still blocked or missing: keep the microphone-only stream */ }
+  };
+
+  useEffect(() => {
+    if (!needsDevices || submitted) return;
+    const statuses: PermissionStatus[] = [];
+    const onChange = () => { refreshDevices(); };
+    (async () => {
+      try {
+        for (const name of ["camera", "microphone"] as PermissionName[]) {
+          const status = await navigator.permissions.query({ name });
+          status.addEventListener("change", onChange);
+          statuses.push(status);
+        }
+      } catch { /* no Permissions API for camera/mic here: the focus check below still works */ }
+    })();
+    const onFocus = () => { if (!document.hidden) refreshDevices(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      statuses.forEach((status) => status.removeEventListener("change", onChange));
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [needsDevices, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const startMeter = (s: MediaStream, onLevel?: (l: number) => void) => {
     ctxRef.current?.close().catch(() => {});
     const ctx = new AudioContext();
