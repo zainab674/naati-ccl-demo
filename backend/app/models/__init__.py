@@ -20,6 +20,7 @@ from .other import (  # noqa: F401
                     Subscription,
 )
 from .resources import Resource  # noqa: F401
+from .storage import StoredObject  # noqa: F401
 from .scoring import (  # noqa: F401
                     AccuracyCompletenessEvaluation,
                     AdminReview,

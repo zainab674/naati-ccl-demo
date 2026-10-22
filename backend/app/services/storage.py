@@ -121,9 +121,70 @@ class S3Storage(Storage):
                                        Delete={"Objects": [{"Key": k} for k in keys[i:i + 1000]]})
 
 
+class DbStorage(Storage):
+    """Files in Postgres (stored_objects). For serverless hosts without a disk or object storage; fine for audio
+    clips and recordings of a few MB. Use S3 for large volumes."""
+
+    def put(self, key, data, content_type=None):
+        from sqlalchemy.dialects.postgresql import insert
+
+        from ..db import SessionLocal
+        from ..models import StoredObject
+
+        ctype = content_type or mimetypes.guess_type(key)[0] or "application/octet-stream"
+        row = {"key": key, "data": data, "content_type": ctype, "size": len(data)}
+        with SessionLocal() as db:
+            db.execute(insert(StoredObject).values(**row).on_conflict_do_update(
+                index_elements=[StoredObject.key], set_={"data": data, "content_type": ctype, "size": len(data)}))
+            db.commit()
+
+    def get(self, key):
+        from sqlalchemy import select
+
+        from ..db import SessionLocal
+        from ..models import StoredObject
+
+        with SessionLocal() as db:
+            return db.scalar(select(StoredObject.data).where(StoredObject.key == key))
+
+    def list(self, prefix):
+        from sqlalchemy import select
+
+        from ..db import SessionLocal
+        from ..models import StoredObject
+
+        # Keys under "<prefix>/": LIKE with "!" as the escape so "_" and "%" in keys match literally.
+        like = prefix.rstrip("/").replace("!", "!!").replace("%", "!%").replace("_", "!_") + "/%"
+        with SessionLocal() as db:
+            return sorted(db.scalars(select(StoredObject.key).where(StoredObject.key.like(like, escape="!"))))
+
+    def delete(self, key):
+        from sqlalchemy import delete
+
+        from ..db import SessionLocal
+        from ..models import StoredObject
+
+        with SessionLocal() as db:
+            db.execute(delete(StoredObject).where(StoredObject.key == key))
+            db.commit()
+
+    def delete_prefix(self, prefix):
+        from sqlalchemy import delete
+
+        from ..db import SessionLocal
+        from ..models import StoredObject
+
+        keys = self.list(prefix)
+        with SessionLocal() as db:
+            db.execute(delete(StoredObject).where(StoredObject.key.in_(keys + [prefix])))
+            db.commit()
+
+
 @lru_cache
 def get_storage() -> Storage:
     s = get_settings()
     if s.storage_backend == "local":
         return LocalStorage(s.local_storage_dir)
+    if s.storage_backend == "db":
+        return DbStorage()
     return S3Storage()

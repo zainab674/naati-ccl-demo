@@ -17,6 +17,7 @@ import {
   InlineNext, KeyboardHint, MicWave, mmss, NextSegIcon, PlayIcon, PrevSegIcon, Rich, RoundBtn, RowIcon, SourceWave, StartButton, StopIcon,
   WebcamBox, XC,
 } from "@/components/exam";
+import { JobTicker } from "@/components/JobTicker";
 import { BrandName } from "@/components/Theme";
 import { Card, ErrorNote } from "@/components/ui";
 import { api, ApiError, type User } from "@/lib/api";
@@ -504,6 +505,7 @@ export default function Player() {
   if (submitted) {
     return (
       <div className="exam flex min-h-screen items-center justify-center bg-[#f6f7f7] p-4" style={{ color: "#282c2e" }}>
+        <JobTicker />
         <Card className="max-w-lg p-10 text-center">
           <CheckCircle2 className="mx-auto size-10" style={{ color: TEAL }} />
           <h1 className="mt-4 text-xl font-semibold">Submitted</h1>

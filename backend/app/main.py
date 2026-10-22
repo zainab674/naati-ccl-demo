@@ -5,13 +5,16 @@ from sqlalchemy import text
 
 from .db import SessionLocal
 from .middleware import SecurityMiddleware
-from .routers import (admin, admin_content, admin_enrolment, admin_imports, admin_students, auth, billing, courses, media,
-                      public, resources, settings, student)
+from .routers import (admin, admin_content, admin_enrolment, admin_imports, admin_students, auth, billing, courses, jobs,
+                      media, public, resources, settings, student)
 from .settings import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 _prod = get_settings().is_production
+if get_settings().auto_migrate:  # serverless hosts: no separate migrate/seed step
+    from .bootstrap import migrate_and_seed
+    migrate_and_seed()
 # Interactive API docs are for development only.
 app = FastAPI(title="CCL Platform API", docs_url=None if _prod else "/api/docs", redoc_url=None,
               openapi_url=None if _prod else "/api/openapi.json")
@@ -31,6 +34,7 @@ app.include_router(resources.router)
 app.include_router(resources.admin)
 app.include_router(settings.public)
 app.include_router(settings.admin)
+app.include_router(jobs.router)
 
 
 @app.get("/api/health")

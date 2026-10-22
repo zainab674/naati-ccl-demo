@@ -36,7 +36,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://ccl:ccl@localhost:5433/ccl"
     test_database_url: str = "postgresql+psycopg://ccl:ccl@localhost:5433/ccl_test"
 
-    storage_backend: str = "s3"  # s3 | local
+    storage_backend: str = "s3"  # s3 | local | db (files in Postgres: hosts without a disk, e.g. Vercel)
+    # Serverless hosts (Vercel): run migrations + seed when the app starts, and run queued jobs in short bursts
+    # (POST /api/jobs/tick from the site, GET /api/cron/jobs from the scheduler) instead of a worker process.
+    auto_migrate: bool = False
+    jobs_tick_seconds: int = 30
+    cron_secret: str = ""
     local_storage_dir: Path = BASE_DIR / "data" / "storage"
     s3_endpoint_url: str = ""
     s3_region: str = "ap-southeast-2"

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/main.py": {
+      "maxDuration": 60,
+      "includeFiles": "{config/**,alembic/**,alembic.ini,content/**}",
+      "excludeFiles": "{.venv/**,data/**,tests/**,.pytest_cache/**,**/__pycache__/**}"
+    }
+  },
+  "crons": [{ "path": "/api/cron/jobs", "schedule": "0 3 * * *" }]
+}

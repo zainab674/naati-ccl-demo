@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 
 import { api, type User } from "@/lib/api";
+import { JobTicker } from "./JobTicker";
 import { Logo } from "./Logo";
 import { cx, Spinner } from "./ui";
 
@@ -89,6 +90,7 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
 
   return (
     <UserCtx.Provider value={{ user, refresh: load }}>
+      <JobTicker />
       <div className="flex min-h-screen">
         <aside className="fixed inset-y-0 left-0 hidden w-60 lg:block">{sidebar}</aside>
         {open && (
