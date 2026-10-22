@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "same-origin" },
-          { key: "Permissions-Policy", value: "microphone=(self), camera=(), geolocation=()" },
+          { key: "Permissions-Policy", value: "microphone=(self), camera=(self), geolocation=()" },
         ],
       },
     ];

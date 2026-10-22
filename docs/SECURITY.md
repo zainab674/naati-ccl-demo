@@ -12,7 +12,7 @@
 | HTML | lesson HTML sanitised on write with an allow-list (nh3); links get `rel="noopener noreferrer nofollow"`; public copy is rendered as text | `app/services/html.py` |
 | Payments | Stripe Checkout (no card data touches our servers); webhook signature verified; events processed once by id | `app/services/billing.py` |
 | Secrets | all keys from `.env` (gitignored); production refuses to start with a short/default `SECRET_KEY`; a test scans tracked files for common key formats | `app/settings.py`, `tests/test_security.py` |
-| Transport / headers | Caddy: automatic HTTPS, HSTS; app: `X-Content-Type-Options`, `X-Frame-Options: DENY` (hub files: `SAMEORIGIN`, so a PDF can be shown inside the hub page), `Referrer-Policy`, `Cache-Control: no-store` on API responses; mic-only Permissions-Policy | `deploy/Caddyfile`, `app/middleware.py`, `frontend/next.config.ts` |
+| Transport / headers | Caddy: automatic HTTPS, HSTS; app: `X-Content-Type-Options`, `X-Frame-Options: DENY` (hub files: `SAMEORIGIN`, so a PDF can be shown inside the hub page), `Referrer-Policy`, `Cache-Control: no-store` on API responses; Permissions-Policy allows only this site's own pages to use the microphone and camera (camera = on-screen preview in the test, never recorded) | `deploy/Caddyfile`, `app/middleware.py`, `frontend/next.config.ts` |
 | API docs | `/api/docs` and the OpenAPI schema are disabled in production | `app/main.py` |
 | Open redirects | post-login `next` must be a same-site path | `frontend/src/lib/api.ts` |
 
