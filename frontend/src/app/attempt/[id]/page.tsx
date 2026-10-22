@@ -7,7 +7,7 @@
  * segment (limited per dialogue); only the last attempt's recording is kept and scored.
  */
 import Hls from "hls.js";
-import { CheckCircle2, Loader2, MicOff, Play } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, Lock, Mic, MicOff, Play } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from "react";
@@ -62,6 +62,9 @@ export default function Player() {
   const [tick, setTick] = useState(0);                 // redraws the mic trace
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [deviceError, setDeviceError] = useState("");
+  // Camera and microphone permission prompt: shown on the equipment check until the browser has granted access.
+  const [devicePrompt, setDevicePrompt] = useState<null | "ask" | "denied" | "nodevice">(null);
+  const [asking, setAsking] = useState(false);
   // Information 2 example segment
   const [example, setExample] = useState<{ attempts: number; blob: Blob | null; heard: boolean; playing: boolean }>({ attempts: 0, blob: null, heard: false, playing: false });
 
@@ -150,6 +153,39 @@ export default function Player() {
     return s;
   };
 
+  /** Ask the browser for camera + microphone (the browser shows its own permission request). */
+  const requestDevices = async () => {
+    setAsking(true);
+    try {
+      await getDevices();
+      setDevicePrompt(null);
+    } catch (e) {
+      const name = (e as DOMException)?.name;
+      setDevicePrompt(name === "NotFoundError" || name === "OverconstrainedError" ? "nodevice" : "denied");
+      api(`/attempts/${id}/integrity`, { method: "POST", json: { type: "mic_denied", detail: name } }).catch(() => {});
+    } finally {
+      setAsking(false);
+    }
+  };
+
+  const needsDevices = page?.kind === "info2" || page?.kind === "segment";
+  useEffect(() => {
+    if (!needsDevices || streamRef.current || submitted) return;
+    let cancelled = false;
+    (async () => {
+      let state: "granted" | "denied" | "prompt" = "prompt";
+      try {
+        const names = (st?.config.camera?.preview !== false ? ["microphone", "camera"] : ["microphone"]) as PermissionName[];
+        const results = await Promise.all(names.map((n) => navigator.permissions.query({ name: n })));
+        state = results.some((r) => r.state === "denied") ? "denied" : results.every((r) => r.state === "granted") ? "granted" : "prompt";
+      } catch { /* Permissions API not available for camera/mic in this browser: just ask */ }
+      if (cancelled) return;
+      if (state === "granted") requestDevices();
+      else setDevicePrompt(state === "denied" ? "denied" : "ask");
+    })();
+    return () => { cancelled = true; };
+  }, [needsDevices, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const startMeter = (s: MediaStream, onLevel?: (l: number) => void) => {
     ctxRef.current?.close().catch(() => {});
     const ctx = new AudioContext();
@@ -189,8 +225,7 @@ export default function Player() {
     setError("");
     let s: MediaStream;
     try { s = await getDevices(); } catch {
-      setDeviceError("Microphone access is blocked. Click the lock icon in the address bar, allow the microphone, then reload this page.");
-      api(`/attempts/${id}/integrity`, { method: "POST", json: { type: "mic_denied" } }).catch(() => {});
+      await requestDevices();
       return;
     }
     setExample((e) => ({ ...e, attempts: e.attempts + 1, blob: null }));
@@ -231,7 +266,7 @@ export default function Player() {
     if (!cur || !curDlg || !st) return;
     if (cur.attempts > 0 && !confirm(`Repeat segment ${cur.number}? This uses your segment repeat for this dialogue, and only your new attempt will be kept.`)) return;
     setError("");
-    try { await getDevices(); } catch { setDeviceError("Microphone access is blocked. Allow it in the address bar, then reload."); return; }
+    try { await getDevices(); } catch { await requestDevices(); return; }
     setPhase("loading");
     let url: string;
     try {
@@ -518,6 +553,37 @@ export default function Player() {
           </div>
         )}
       </ExamFrame>
+
+      <Modal open={!!devicePrompt} onClose={() => setDevicePrompt(null)}
+        title={devicePrompt === "denied" ? "Camera and microphone are blocked" : devicePrompt === "nodevice" ? "No microphone found" : "Allow camera and microphone"}>
+        <div className="space-y-4 text-sm text-slate-700">
+          <div className="flex justify-center gap-4 py-2">
+            <span className="flex size-14 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Mic className="size-6" /></span>
+            {st.config.camera?.preview !== false && <span className="flex size-14 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Camera className="size-6" /></span>}
+          </div>
+          {devicePrompt === "ask" && <>
+            <p>This test records your interpretation, so it needs your <b>microphone</b>.{st.config.camera?.preview !== false && <> Your <b>camera</b> is shown on screen like in the real exam; the video is not recorded or uploaded.</>}</p>
+            <p>Click the button below, then choose <b>Allow</b> when your browser asks.</p>
+            <Button className="w-full" loading={asking} onClick={requestDevices}><Mic className="size-4" /> Allow camera and microphone</Button>
+          </>}
+          {devicePrompt === "denied" && <>
+            <p>Your browser is blocking access, so it will not ask again until you change the setting:</p>
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>Click the <Lock className="inline size-3.5" /> lock (or settings) icon at the left of the address bar.</li>
+              <li>Set <b>Microphone</b>{st.config.camera?.preview !== false && <> and <b>Camera</b></>} to <b>Allow</b>.</li>
+              <li>Click <b>Try again</b> below (or reload the page).</li>
+            </ol>
+            <div className="flex gap-2">
+              <Button className="flex-1" loading={asking} onClick={requestDevices}>Try again</Button>
+              <Button variant="secondary" onClick={() => window.location.reload()}>Reload page</Button>
+            </div>
+          </>}
+          {devicePrompt === "nodevice" && <>
+            <p>We could not find a microphone. Plug in a headset or microphone, check it is not used by another app, then try again.</p>
+            <Button className="w-full" loading={asking} onClick={requestDevices}>Try again</Button>
+          </>}
+        </div>
+      </Modal>
 
       <Modal open={help} onClose={() => setHelp(false)} title="Help">
         <div className="space-y-3 text-sm text-slate-700">
