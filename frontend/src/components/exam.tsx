@@ -5,7 +5,7 @@
  * a breadcrumb bar with the page counter, a page title bar with Help, the page body, and a footer with a progress
  * strip and Previous / Next. Our own branding only; nothing here uses NAATI's name or logo.
  */
-import { ArrowLeft, ArrowRight, CameraOff, CircleHelp, Volume2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CameraOff, CircleHelp, VideoOff, Volume2 } from "lucide-react";
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 
 import { Logo } from "./Logo";
@@ -78,8 +78,8 @@ export function RecBadge() {
 }
 
 /** Live camera preview. The stream is only shown, never recorded or uploaded. */
-export function WebcamBox({ stream, recording, issue, onRetry }: {
-  stream: MediaStream | null; recording: boolean; issue?: string; onRetry?: () => void;
+export function WebcamBox({ stream, recording, issue, onRetry, onTurnOff }: {
+  stream: MediaStream | null; recording: boolean; issue?: string; onRetry?: () => void; onTurnOff?: () => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const hasVideo = !!stream?.getVideoTracks().length;
@@ -87,10 +87,18 @@ export function WebcamBox({ stream, recording, issue, onRetry }: {
     if (ref.current) ref.current.srcObject = hasVideo ? stream : null;
   }, [stream, hasVideo]);
   return (
-    <div className={cx("mx-auto flex aspect-[4/3] w-full max-w-64 items-center justify-center overflow-hidden rounded bg-slate-100 ring-2",
+    <div className={cx("relative mx-auto flex aspect-[4/3] w-full max-w-64 items-center justify-center overflow-hidden rounded bg-slate-100 ring-2",
       recording ? "ring-rose-500" : "ring-transparent")}>
       {hasVideo
-        ? <video ref={ref} autoPlay muted playsInline className="size-full -scale-x-100 object-cover" />
+        ? <>
+            <video ref={ref} autoPlay muted playsInline className="size-full -scale-x-100 object-cover" />
+            {onTurnOff && (
+              <button onClick={onTurnOff} aria-label="Turn camera off" title="Turn camera off"
+                className="absolute bottom-2 right-2 flex size-8 items-center justify-center rounded-full bg-black/55 text-white hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                <VideoOff className="size-4" />
+              </button>
+            )}
+          </>
         : <div className="flex flex-col items-center gap-1.5 px-4 text-center text-xs text-slate-500">
             <CameraOff className="size-6 text-slate-400" /> <span className="font-medium">Camera off</span>
             {issue && <span className="leading-snug">{issue}</span>}

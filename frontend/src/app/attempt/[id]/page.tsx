@@ -77,6 +77,7 @@ export default function Player() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [deviceError, setDeviceError] = useState("");
   const [cameraIssue, setCameraIssue] = useState("");  // why the camera is off, in plain words
+  const cameraOffByUser = useRef(false);  // the student switched the camera off: do not turn it back on by itself
   // Camera and microphone permission prompt: shown on the equipment check until the browser has granted access.
   const [devicePrompt, setDevicePrompt] = useState<null | "ask" | "denied" | "nodevice">(null);
   const [asking, setAsking] = useState(false);
@@ -207,6 +208,8 @@ export default function Player() {
    * and microphone on straight away, without a reload. Never while the segment is playing or being recorded. */
   const refreshDevices = async (manual = false) => {
     if ((!needsDevices && !manual) || submitted || phaseRef.current !== "idle") return;
+    if (cameraOffByUser.current && !manual) return;
+    cameraOffByUser.current = false;
     const current = streamRef.current;
     if (!current) { await requestDevices(); return; }
     const wantCamera = st?.config.camera?.preview !== false;
@@ -227,6 +230,18 @@ export default function Player() {
       setDeviceError("");
       setDevicePrompt(null);
     } catch { /* microphone lost too: the next Start asks again */ }
+  };
+
+  /** Camera off, microphone untouched (safe while recording). */
+  const turnCameraOff = () => {
+    const current = streamRef.current;
+    if (!current) return;
+    cameraOffByUser.current = true;
+    current.getVideoTracks().forEach((t) => t.stop());
+    const audioOnly = new MediaStream(current.getAudioTracks());
+    streamRef.current = audioOnly;
+    setStream(audioOnly);
+    setCameraIssue("You turned the camera off.");
   };
 
   useEffect(() => {
@@ -522,7 +537,7 @@ export default function Player() {
               </div>
             )}
             right={(
-              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} recording={phase === "recording"} progress={progress} waveformSrc={null}
+              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} onCameraOff={turnCameraOff} recording={phase === "recording"} progress={progress} waveformSrc={null}
                 samplesRef={samplesRef} capacity={(st.config.camera?.example_record_seconds ?? 10) * 1000 / SAMPLE_MS} tick={tick}
                 timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.camera?.example_record_seconds ?? 10)}` : mmss(st.config.camera?.example_record_seconds ?? 10)}>
                 <span className="text-sm text-slate-600">Attempts: {example.attempts}</span>
@@ -567,7 +582,7 @@ export default function Player() {
               </div>
             )}
             right={(
-              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} recording={phase === "recording"} progress={phase === "playing" ? progress : phase === "recording" || phase === "uploading" ? 1 : 0}
+              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} onCameraOff={turnCameraOff} recording={phase === "recording"} progress={phase === "playing" ? progress : phase === "recording" || phase === "uploading" ? 1 : 0}
                 waveformSrc={cur.has_waveform ? `/api/attempts/${id}/segments/${cur.segment_attempt_id}/waveform` : null}
                 samplesRef={samplesRef} capacity={(st.config.response_window_seconds * 1000) / SAMPLE_MS} tick={tick}
                 timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.response_window_seconds)}` : mmss(st.config.response_window_seconds)}>
@@ -673,13 +688,13 @@ function TwoColumns({ left, right, notes }: { left: ReactNode; right: ReactNode;
   );
 }
 
-function MediaPanel({ stream, recording, progress, waveformSrc, samplesRef, capacity, tick, timeLabel, cameraIssue, onCameraRetry, children }: {
-  stream: MediaStream | null; recording: boolean; cameraIssue?: string; onCameraRetry?: () => void; progress: number; waveformSrc: string | null;
+function MediaPanel({ stream, recording, progress, waveformSrc, samplesRef, capacity, tick, timeLabel, cameraIssue, onCameraRetry, onCameraOff, children }: {
+  stream: MediaStream | null; recording: boolean; cameraIssue?: string; onCameraRetry?: () => void; onCameraOff?: () => void; progress: number; waveformSrc: string | null;
   samplesRef: RefObject<number[]>; capacity: number; tick: number; timeLabel: string; children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <WebcamBox stream={stream} recording={recording} issue={cameraIssue} onRetry={onCameraRetry} />
+      <WebcamBox stream={stream} recording={recording} issue={cameraIssue} onRetry={onCameraRetry} onTurnOff={onCameraOff} />
       <div className="pt-2"><SourceWave src={waveformSrc} progress={progress} /></div>
       <MicWave samplesRef={samplesRef} capacity={capacity} recording={recording} tick={tick} />
       <div className="ml-6 flex justify-between text-xs tabular-nums text-slate-500"><span>0:00</span><span>{timeLabel}</span></div>
