@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     session_hours: int = 12
     app_timezone: str = "Australia/Sydney"  # business time zone: manual access ends at midnight here
     enrolment_invite_hours: int = 72  # "set your password" link for manually enrolled students
+    demo_password: str = "demo-pass-2026"  # demo students from `python -m app.demo_data` (development only)
     password_hash_iterations: int = 310_000
     cors_origins: str = ""  # extra origins allowed to POST (comma-separated); APP_URL is always allowed
 

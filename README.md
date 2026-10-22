@@ -75,6 +75,19 @@ Admin → Learning hub manages study resources; files (PDF, EPUB, Office, MP3/M4
 Admin → Students → Add student / Bulk enrol creates accounts without Stripe, with Trial/Active access and an optional
 end date; students get a set-password email, or the admin sets a password for demo accounts.
 
+## Demo data (development only)
+
+```bash
+cd backend && .venv/Scripts/python -m app.demo_data          # add DEMO content, students and scored attempts
+cd backend && .venv/Scripts/python -m app.demo_data --reset  # remove it again
+```
+
+Adds 9 practice dialogues across all seven languages (synthetic audio through the real encrypted-audio pipeline),
+2 mock tests, 2 courses with chapters, 4 learning-hub resources (one PDF) and 4 students (`demo.active`,
+`demo.trial`, `demo.free`, `demo.expired` @example.com; password `DEMO_PASSWORD` in `.env.example`) with attempts
+scored by the real pipeline using stand-ins for speech-to-text and the AI (no API calls). Everything is marked DEMO;
+the translations were not reviewed by a credentialed translator. Refuses to run when `ENVIRONMENT=production`.
+
 ## Tests and checks
 
 ```bash
