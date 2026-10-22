@@ -9,7 +9,7 @@
 import Hls from "hls.js";
 import { AlertTriangle, CheckCircle2, Loader2, Lock, MicOff } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -71,6 +71,7 @@ function buildPages(st: State): Page[] {
 
 export default function Player() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [st, setSt] = useState<State | null>(null);
   const [me, setMe] = useState<User | null>(null);
   const [idx, setIdx] = useState(0);
@@ -148,7 +149,11 @@ export default function Player() {
       // After a reload the equipment check runs again (the browser asks for the microphone again).
       setIdx(s.step === "info1" ? 0 : 1);
       if (s.step !== "info1") api(`/attempts/${id}/integrity`, { method: "POST", json: { type: "reload", detail: s.step } }).catch(() => {});
-    }).catch((e) => setFatal(e.message));
+    }).catch((e) => {
+      // Not this account's test (e.g. an old link kept by the sign-in page after switching accounts): go to the dashboard.
+      if (e instanceof ApiError && e.status === 404) router.replace("/dashboard");
+      else setFatal(e.message);
+    });
     return () => {
       hlsRef.current?.destroy();
       streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -156,7 +161,7 @@ export default function Player() {
       if (meterRef.current) clearInterval(meterRef.current);
       ctxRef.current?.close().catch(() => {});
     };
-  }, [id]);
+  }, [id, router]);
 
   useEffect(() => {
     const onVis = () => {
