@@ -27,14 +27,14 @@ timer:
   practice_minutes: 30
   mock_minutes: 60
 
-# First line of the Information pages of the player (folded: line breaks become spaces). The rest of the wording
+# First line of the Information pages of the player (folded: line breaks become spaces; **text** is bold). The rest of the wording
 # follows the NAATI practice test and is in the player.
 information_1: >
   The test includes 2 dialogues.
 information_1_practice: >
   The Practice Test includes 1 dialogue only (there will be 2 dialogues in your actual CCL Test)
 information_2: >
-  This segment is intended to test your audio and visual equipment prior to taking the full CCL test.
+  This segment is intended to **test your audio and visual equipment** prior to taking the full CCL test.
 
 results:
   # After submission (never during an attempt): show the source segment text next to the feedback.

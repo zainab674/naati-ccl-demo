@@ -171,6 +171,7 @@ def state(ref: AttemptRef) -> dict:
                 "target_language": sa.segment.target_language.name, "speaker_role": sa.segment.speaker_role,
                 "attempts": sa.play_count, "record_count": sa.record_count, "answered": bool(sa.audio_user),
                 "skipped": sa.skipped, "has_waveform": bool(sa.segment.waveform_image),
+                "duration_seconds": sa.segment.duration_seconds,
             } for sa in da.segment_attempts],
         } for da in ref.dialogue_attempts],
     }

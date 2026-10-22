@@ -13,17 +13,19 @@ import { useParams } from "next/navigation";
 import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  EXAM, ExamFrame, ExamHeading, ExamModal, ExamPill, ExamTextBtn, FinishButton, type FooterCell, hhmmss, InlineBtn, InlineFinish,
-  InlineNext, MicWave, mmss, PlayIcon, RoundBtn, RowIcon, SourceWave, StartButton, StopIcon, WebcamBox,
+  ExamFrame, ExamHeading, ExamLoading, ExamModal, ExamPill, ExamTextBtn, FinishButton, type FooterCell, hhmmss, InlineBtn, InlineFinish,
+  InlineNext, KeyboardHint, MicWave, mmss, NextSegIcon, PlayIcon, PrevSegIcon, Rich, RoundBtn, RowIcon, SourceWave, StartButton, StopIcon,
+  WebcamBox, XC,
 } from "@/components/exam";
 import { BrandName } from "@/components/Theme";
-import { Card, ErrorNote, Spinner } from "@/components/ui";
+import { Card, ErrorNote } from "@/components/ui";
 import { api, ApiError, type User } from "@/lib/api";
 import { ChunkUploader, pickMime, playTestSound } from "@/lib/recorder";
 
 type Seg = {
   segment_attempt_id: string; number: number; direction: string; source_language: string; target_language: string;
   speaker_role: string; attempts: number; record_count: number; answered: boolean; skipped: boolean; has_waveform: boolean;
+  duration_seconds: number | null;
 };
 type Dlg = {
   dialogue_attempt_id: string; position: number; title: string; description: string; instructions: string;
@@ -45,6 +47,7 @@ type Page = { kind: "info1" } | { kind: "info2" } | { kind: "segment"; d: number
 type Phase = "idle" | "loading" | "playing" | "recording" | "uploading";
 
 const SAMPLE_MS = 50; // one mic-level sample every 50 ms for the live trace
+const TEAL = "#008d7f";
 
 /** Why the camera could not start, in words a student can act on. */
 function cameraProblem(e: unknown): string {
@@ -113,6 +116,20 @@ export default function Player() {
   useEffect(() => {
     const t = setInterval(() => setClock((c) => (c === null ? c : c + 1)), 1000);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat) return;
+      const t = e.target as HTMLElement;
+      if (t.closest("input, textarea, select, [contenteditable], [role=dialog]")) return;
+      const btn = document.querySelector<HTMLButtonElement>("[data-space]:not(:disabled)");
+      if (!btn) return;
+      e.preventDefault();
+      btn.click();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   const loadState = useCallback(async () => {
@@ -218,8 +235,8 @@ export default function Player() {
         state = results.some((r) => r.state === "denied") ? "denied" : results.every((r) => r.state === "granted") ? "granted" : "prompt";
       } catch { /* Permissions API not available for camera/mic in this browser: just ask */ }
       if (cancelled) return;
-      if (state === "granted") requestDevices();
-      else setDevicePrompt(state === "denied" ? "denied" : "ask");
+      if (state === "denied") setDevicePrompt("denied");
+      else requestDevices();  // granted: on at once; otherwise the browser shows its own permission prompt
     })();
     return () => { cancelled = true; };
   }, [needsDevices, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -477,17 +494,17 @@ export default function Player() {
 
   // ---------------------------------------------------------------- render
   if (fatal) return <div className="mx-auto max-w-lg p-8"><ErrorNote>{fatal}</ErrorNote></div>;
-  if (!st) return <Spinner label="Loading test" />;
+  if (!st) return <ExamLoading />;
 
   if (submitted) {
     return (
-      <div className="exam flex min-h-screen items-center justify-center bg-[#f6f7f7] p-4" style={{ color: EXAM.text }}>
+      <div className="exam flex min-h-screen items-center justify-center bg-[#f6f7f7] p-4" style={{ color: "#282c2e" }}>
         <Card className="max-w-lg p-10 text-center">
-          <CheckCircle2 className="mx-auto size-10" style={{ color: EXAM.accent }} />
+          <CheckCircle2 className="mx-auto size-10" style={{ color: TEAL }} />
           <h1 className="mt-4 text-xl font-semibold">Submitted</h1>
           <p className="mt-2 text-sm text-slate-600">We are transcribing and scoring your answers. This usually takes a few minutes; we will email you when your results are ready.</p>
           <div className="mt-6 flex justify-center gap-3">
-            <Link href={`/results/${id}`} className="inline-flex h-10 items-center rounded-[20px] px-6 text-[13px] font-semibold text-white" style={{ background: EXAM.accent }}>View results</Link>
+            <Link href={`/results/${id}`} className="inline-flex h-10 items-center rounded-[20px] px-6 text-[13px] font-semibold text-white" style={{ background: TEAL }}>View results</Link>
             <Link href="/dashboard" className="inline-flex h-10 items-center rounded-[20px] px-6 text-[13px] font-semibold text-slate-600 hover:bg-slate-100">Dashboard</Link>
           </div>
         </Card>
@@ -531,127 +548,22 @@ export default function Player() {
         timer={timer} title={title} onHelp={() => setHelp(true)} cells={cells}
         onPrev={idx > 0 ? () => goTo(idx - 1) : undefined} prevDisabled={locked}
         onNext={page.kind !== "summary" ? next : undefined} nextDisabled={nextDisabled}
-        finish={page.kind === "summary" ? { onClick: () => setEndAsk(true) } : undefined}>
-
-        {page.kind === "info1" && (
-          <div className="max-w-4xl space-y-3 leading-[27px]">
-            <ExamHeading upper>Information for candidates</ExamHeading>
-            <div className="h-3" />
-            <p>{st.kind === "mock" ? st.config.information_1 : st.config.information_1_practice}</p>
-            <p>There are a number of segments in the dialogue{st.dialogues.length > 1 ? "s" : ""} which should be rendered from the source language to the target language.</p>
-            {maxRepeats > 0 && <p>If you would like to repeat a segment, click on <b>Finish attempt</b>, and the <b>Start</b> button again.</p>}
-            <p>{repeatRule}</p>
-            <div className="h-3" />
-            <p>Please click <b>Next</b> <InlineNext /> to start with the example segment.</p>
-          </div>
-        )}
-
-        {page.kind === "info2" && (
-          <TwoColumns
-            left={(
-              <div className="space-y-2.5 leading-[27px]">
-                <ExamHeading upper>Example segment</ExamHeading>
-                <div className="h-2" />
-                <p>{st.config.information_2}</p>
-                <p>Click on <b>Start</b> below the audio, to hear the segment and test your microphone and camera.</p>
-                <p>You should be able to see yourself, and notice soundwaves when you start speaking after the chime.</p>
-                <p>Click on <b>Finish attempt</b>, to upload.</p>
-                <p>Click the <b>Play</b> button after you have spoken and listen back to the audio to ensure your voice has been recorded.</p>
-                <p>(the Play button is only available on the example segment to test your microphone)</p>
-                <div className="h-4" />
-                {maxRepeats > 0 && <>
-                  <p><b>Repeat</b>:</p>
-                  <p>You are able to repeat any segment before you begin speaking (<b>{maxRepeats === 1 ? "one repeat" : `${maxRepeats} repeats`} per dialogue without penalty</b>) to do this:</p>
-                  <ul className="list-disc pl-5"><li>Click on the <b>Start</b> button again</li></ul>
-                  <div className="h-4" />
-                </>}
-                <p>Click <b>Next</b> <InlineNext /> to move on</p>
-                {st.step !== "info1" && st.step !== "info2" && <p className="rounded bg-amber-50 p-3 text-[13px] text-amber-800">Welcome back. Check your equipment again, then click Next to continue where you left off.</p>}
-              </div>
-            )}
-            right={(
-              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} onCameraOff={turnCameraOff}
-                recording={phase === "recording"} progress={progress} waveformSrc={null} volume={volume} onVolume={setVolume}
-                samplesRef={samplesRef} capacity={(st.config.camera?.example_record_seconds ?? 10) * 1000 / SAMPLE_MS} tick={tick}
-                timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.camera?.example_record_seconds ?? 10)}` : mmss(st.config.camera?.example_record_seconds ?? 10)}>
-                <span className="mr-2 text-[13px]" style={{ color: EXAM.muted }}>Attempts: {example.attempts}</span>
-                <RoundBtn onClick={examplePlay} disabled={!example.blob || phase !== "idle" || example.playing} label="Play"><PlayIcon /></RoundBtn>
-                <RoundBtn onClick={exampleStop} disabled={!example.playing} label="Stop"><StopIcon /></RoundBtn>
-                {phase === "recording" ? <FinishButton onClick={() => recRef.current?.state !== "inactive" && recRef.current?.stop()} />
-                  : <StartButton onClick={exampleStart} disabled={phase !== "idle"} />}
-              </MediaPanel>
-            )}
-            notes={deviceError && <div className="flex gap-2 rounded bg-amber-50 p-3 text-[13px] text-amber-800"><MicOff className="size-4 shrink-0" /> {deviceError}</div>}
-          />
-        )}
-
-        {page.kind === "segment" && cur && curDlg && (
-          <TwoColumns
-            left={(
-              <div className="leading-[27px]">
-                <ExamHeading>{curDlg.lote} CCL test</ExamHeading>
-                <p className="mt-10 font-bold">To hear the segment</p>
-                <ul className="mt-1 list-disc space-y-1 pl-5">
-                  <li>Click <InlineBtn>Start</InlineBtn> and speak after the chime</li>
-                  <li>Click <InlineBtn outline>Finish attempt</InlineBtn> to upload</li>
-                </ul>
-                {maxRepeats > 0 && <>
-                  <p className="mt-8 font-bold">To repeat a segment</p>
-                  <p className="mt-1" style={{ color: "#808283" }}>({maxRepeats === 1 ? "One" : maxRepeats} per dialogue without penalty)</p>
-                  <ul className="mt-1 list-disc pl-5"><li>Click <InlineBtn>Start</InlineBtn> again</li></ul>
-                </>}
-              </div>
-            )}
-            right={(
-              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} onCameraOff={turnCameraOff}
-                recording={phase === "recording"} progress={phase === "playing" ? progress : phase === "recording" || phase === "uploading" ? 1 : 0}
-                waveformSrc={cur.has_waveform ? `/api/attempts/${id}/segments/${cur.segment_attempt_id}/waveform` : null} volume={volume} onVolume={setVolume}
-                samplesRef={samplesRef} capacity={(st.config.response_window_seconds * 1000) / SAMPLE_MS} tick={tick}
-                timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.response_window_seconds)}` : mmss(st.config.response_window_seconds)}>
-                <span className="mr-2 text-[13px]" style={{ color: EXAM.muted }}>Attempts: {cur.attempts}</span>
-                {phase === "loading" && <Loader2 className="size-5 animate-spin text-slate-400" />}
-                {(phase === "playing" || phase === "recording") && <FinishButton onClick={finishAttempt} disabled={phase !== "recording"} />}
-                {phase === "idle" && <StartButton onClick={() => start()} disabled={!canStart} />}
-              </MediaPanel>
-            )}
-            notes={<>
-              {phase === "uploading" && (error
-                ? <div className="text-[13px]"><p className="text-rose-700">{error}</p><div className="mt-2"><ExamPill onClick={retryUpload}>Retry saving</ExamPill></div></div>
-                : <p className="flex items-center justify-center gap-2 text-[13px] text-slate-500"><Loader2 className="size-4 animate-spin" /> Uploading…</p>)}
-              {deviceError && <p className="text-[13px] text-amber-700">{deviceError}</p>}
-              {error && phase !== "uploading" && <ErrorNote>{error}</ErrorNote>}
-            </>}
-          />
-        )}
-
-        {page.kind === "summary" && (
-          <div className="max-w-4xl space-y-3 leading-[27px]">
-            <ExamHeading upper>{st.kind === "mock" ? "End of test" : "End of practice dialogue"}</ExamHeading>
-            <div className="h-8" />
-            <p className="text-[16px]">Please click on <InlineFinish /> at the bottom of the screen to end the {st.kind === "mock" ? "test" : "practice test"}.</p>
-            <p className="text-[16px]">You will be shown a list of the dialogue segments.</p>
-            <p className="text-[16px]">Please make sure every segment is marked &quot;Answered&quot;</p>
-            <p className="text-[16px]">If &quot;Not answered&quot;, you must click on the segment to properly complete it.</p>
-            <div className="h-3" />
-            <p className="text-[16px]">Once finished, please click &quot;OK&quot;.</p>
-            {error && <div className="pt-4"><ErrorNote>{error}</ErrorNote></div>}
-          </div>
-        )}
-      </ExamFrame>
+        finish={page.kind === "summary" ? { onClick: () => setEndAsk(true) } : undefined}
+        overlay={<>
 
       {/* Finish: the list of pages with their status, as in the online test. OK submits. */}
-      <ExamModal open={endAsk} onClose={() => setEndAsk(false)} wide
+      <ExamModal open={endAsk} onClose={() => setEndAsk(false)}
         title={(
-          <div className="flex items-center gap-8 border-b border-[#e3e4e4] px-8 py-6">
+          <div className="flex items-center gap-8 border-b border-[var(--x-border)] px-8 py-6">
             <div className="relative flex size-20 shrink-0 items-center justify-center">
               {unanswered > 0
                 ? <AlertTriangle className="size-9 fill-[#f5a623] text-white" strokeWidth={1.5} />
-                : <CheckCircle2 className="size-9" style={{ color: EXAM.accent }} />}
+                : <CheckCircle2 className="size-9" style={{ color: XC.accent }} />}
               {["left-1 top-1", "right-2 top-2", "left-0 bottom-3", "right-1 bottom-4"].map((pos) => <span key={pos} className={`absolute ${pos} size-1 rounded-full bg-[#f5a623]`} />)}
             </div>
             <div>
               <h2 className="text-[22px] font-light">{st.kind === "mock" ? "End of test" : "End of dialogue"}</h2>
-              <p className="text-[13px] text-slate-500">{unanswered > 0 ? <>You have <b className="text-[#282c2e]">{unanswered}</b> unanswered segment(s).</> : "All segments are answered."}</p>
+              <p className="text-[13px]" style={{ color: XC.muted }}>{unanswered > 0 ? <>You have <b style={{ color: XC.text }}>{unanswered}</b> unanswered segment(s).</> : "All segments are answered."}</p>
             </div>
           </div>
         )}
@@ -659,10 +571,10 @@ export default function Player() {
         <div className="-my-2 max-h-[260px] overflow-y-auto">
           {pages.slice(0, -1).map((p, i) => (
             <button key={i} onClick={() => { setEndAsk(false); goTo(i); }}
-              className="flex w-full items-center gap-3 border-b border-[#eceeee] px-9 py-3 text-left text-[13px] hover:bg-[#f6f7f7]">
+              className="flex w-full items-center gap-3 border-b border-[var(--x-border)] px-9 py-3 text-left text-[13px] hover:bg-[var(--x-hover)]">
               <RowIcon info={p.kind === "info1"} />
               <span className="flex-1">{p.kind === "info1" ? "Information page 1" : `Segment ${i + 1}`}</span>
-              <span className={rowStatus(p, i) === "Answered" ? "font-semibold" : ""} style={{ color: rowStatus(p, i) === "Answered" ? EXAM.accent : EXAM.muted }}>{rowStatus(p, i)}</span>
+              <span className={rowStatus(p, i) === "Answered" ? "font-semibold" : ""} style={{ color: rowStatus(p, i) === "Answered" ? XC.accent : XC.muted }}>{rowStatus(p, i)}</span>
             </button>
           ))}
         </div>
@@ -697,6 +609,116 @@ export default function Player() {
       <ExamModal open={help} onClose={() => setHelp(false)} title="Help" actions={<ExamPill onClick={() => setHelp(false)}>Close</ExamPill>}>
         <p>For help with any issues please contact <BrandName /> support.</p>
       </ExamModal>
+        </>}>
+
+        {page.kind === "info1" && (
+          <div className="max-w-4xl space-y-3 leading-[27px]">
+            <ExamHeading upper>Information for candidates</ExamHeading>
+            <div className="h-3" />
+            <p><Rich text={st.kind === "mock" ? st.config.information_1 : st.config.information_1_practice} /></p>
+            <div className="h-3" />
+            <p>There are a number of segments in the dialogue{st.dialogues.length > 1 ? "s" : ""} which should be rendered from the source language to the target language.</p>
+            {maxRepeats > 0 && <p>If you would like to repeat a segment, click on <b>Finish attempt</b>, and the <b>Start</b> button again.</p>}
+            <p>{maxRepeats === 0 ? repeatRule : <>You are permitted <b>{maxRepeats === 1 ? "one segment repeat" : `${maxRepeats} segment repeats`} per dialogue without penalty</b>.</>}</p>
+            <div className="h-3" />
+            <p>Please click <b>Next</b> <InlineNext /> to start with the <b>example segment.</b></p>
+          </div>
+        )}
+
+        {page.kind === "info2" && (
+          <TwoColumns
+            left={(
+              <div className="space-y-2.5 leading-[27px]">
+                <ExamHeading upper>Example segment</ExamHeading>
+                <div className="h-2" />
+                <p><Rich text={st.config.information_2} /></p>
+                <p>Click on <b>Start</b> below the audio, to hear the segment and test your microphone and camera.</p>
+                <p>You should be able to see yourself, and notice soundwaves when you start speaking after the chime.</p>
+                <p>Click on <b>Finish attempt</b>, to upload.</p>
+                <p>Click the <b>Play</b> button after you have spoken and listen back to the audio to ensure your voice has been recorded.</p>
+                <p>(the Play button is only available on the example segment to test your microphone)</p>
+                <div className="h-4" />
+                {maxRepeats > 0 && <>
+                  <p><b>Repeat</b>:</p>
+                  <p>You are able to repeat any segment before you begin speaking (<b>{maxRepeats === 1 ? "one repeat" : `${maxRepeats} repeats`} per dialogue without penalty</b>) to do this:</p>
+                  <ul className="list-disc pl-5"><li>Click on the <b>Start</b> button again</li></ul>
+                  <div className="h-4" />
+                </>}
+                <p>Click <b>Next</b> <InlineNext /> to move on</p>
+                {st.step !== "info1" && st.step !== "info2" && <p className="rounded bg-amber-50 p-3 text-[13px] text-amber-800">Welcome back. Check your equipment again, then click Next to continue where you left off.</p>}
+              </div>
+            )}
+            right={(
+              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} onCameraOff={turnCameraOff}
+                recording={phase === "recording"} progress={progress} waveformSrc={null} volume={volume} onVolume={setVolume}
+                samplesRef={samplesRef} capacity={(st.config.camera?.example_record_seconds ?? 10) * 1000 / SAMPLE_MS} tick={tick}
+                timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.camera?.example_record_seconds ?? 10)}` : mmss(st.config.camera?.example_record_seconds ?? 10)}>
+                <span className="mr-2 text-[13px]" style={{ color: XC.muted }}>Attempts: {example.attempts}</span>
+                <RoundBtn onClick={examplePlay} disabled={!example.blob || phase !== "idle" || example.playing} label="Play"><PlayIcon /></RoundBtn>
+                <RoundBtn onClick={exampleStop} disabled={!example.playing} label="Stop"><StopIcon /></RoundBtn>
+                <RoundBtn small label="Go to the previous segment"><PrevSegIcon /></RoundBtn>
+                <RoundBtn small label="Go to the next segment"><NextSegIcon /></RoundBtn>
+                {phase === "recording" ? <FinishButton onClick={() => recRef.current?.state !== "inactive" && recRef.current?.stop()} />
+                  : <StartButton onClick={exampleStart} disabled={phase !== "idle"} />}
+              </MediaPanel>
+            )}
+            notes={deviceError && <div className="flex gap-2 rounded bg-amber-50 p-3 text-[13px] text-amber-800"><MicOff className="size-4 shrink-0" /> {deviceError}</div>}
+          />
+        )}
+
+        {page.kind === "segment" && cur && curDlg && (
+          <TwoColumns
+            left={(
+              <div className="leading-[27px]">
+                <ExamHeading>{curDlg.lote} CCL test</ExamHeading>
+                <p className="mt-10 font-bold">To hear the segment</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  <li>Click <InlineBtn>Start</InlineBtn> and speak after the chime</li>
+                  <li>Click <InlineBtn outline>Finish attempt</InlineBtn> to upload</li>
+                </ul>
+                {maxRepeats > 0 && <>
+                  <p className="mt-8 font-bold">To repeat a segment</p>
+                  <p className="mt-1" style={{ color: XC.muted }}>({maxRepeats === 1 ? "One" : maxRepeats} per dialogue without penalty)</p>
+                  <ul className="mt-1 list-disc pl-5"><li>Click <InlineBtn>Start</InlineBtn> again</li></ul>
+                </>}
+              </div>
+            )}
+            right={(
+              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} onCameraOff={turnCameraOff}
+                recording={phase === "recording"} progress={phase === "playing" ? progress : phase === "recording" || phase === "uploading" ? 1 : 0}
+                waveformSrc={cur.has_waveform ? `/api/attempts/${id}/segments/${cur.segment_attempt_id}/waveform` : null} volume={volume} onVolume={setVolume}
+                samplesRef={samplesRef} capacity={(st.config.response_window_seconds * 1000) / SAMPLE_MS} tick={tick}
+                timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.response_window_seconds)}` : mmss(cur.duration_seconds ?? st.config.response_window_seconds)}>
+                <span className="mr-2 text-[13px]" style={{ color: XC.muted }}>Attempts: {cur.attempts}</span>
+                {phase === "loading" && <Loader2 className="size-5 animate-spin text-slate-400" />}
+                {(phase === "playing" || phase === "recording") && <FinishButton onClick={finishAttempt} disabled={phase !== "recording"} />}
+                {phase === "idle" && <StartButton onClick={() => start()} disabled={!canStart} />}
+              </MediaPanel>
+            )}
+            notes={<>
+              {phase === "uploading" && (error
+                ? <div className="text-[13px]"><p className="text-rose-700">{error}</p><div className="mt-2"><ExamPill onClick={retryUpload}>Retry saving</ExamPill></div></div>
+                : <p className="flex items-center justify-center gap-2 text-[13px] text-slate-500"><Loader2 className="size-4 animate-spin" /> Uploading…</p>)}
+              {deviceError && <p className="text-[13px] text-amber-700">{deviceError}</p>}
+              {error && phase !== "uploading" && <ErrorNote>{error}</ErrorNote>}
+            </>}
+          />
+        )}
+
+        {page.kind === "summary" && (
+          <div className="max-w-4xl space-y-3 leading-[27px]">
+            <ExamHeading upper>{st.kind === "mock" ? "End of test" : "End of practice dialogue"}</ExamHeading>
+            <div className="h-8" />
+            <p className="text-[16px]">Please click on <InlineFinish /> at the bottom of the screen to end the {st.kind === "mock" ? "test" : "practice test"}.</p>
+            <p className="text-[16px]">You will be shown a list of the dialogue segments.</p>
+            <p className="text-[16px]">Please make sure every segment is marked &quot;Answered&quot;</p>
+            <p className="text-[16px]">If &quot;Not answered&quot;, you must click on the segment to properly complete it.</p>
+            <div className="h-3" />
+            <p className="text-[16px]">Once finished, please click &quot;OK&quot;.</p>
+            {error && <div className="pt-4"><ErrorNote>{error}</ErrorNote></div>}
+          </div>
+        )}
+      </ExamFrame>
     </>
   );
 }
@@ -720,7 +742,10 @@ function MediaPanel({ stream, recording, progress, waveformSrc, volume, onVolume
       <div className="mt-5"><SourceWave src={waveformSrc} progress={progress} volume={volume} onVolume={onVolume} /></div>
       <div className="mt-1"><MicWave samplesRef={samplesRef} capacity={capacity} recording={recording} tick={tick} /></div>
       <div className="ml-6 mt-2 flex justify-between text-[13px] tabular-nums"><span>0:00</span><span>{timeLabel}</span></div>
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-3">{children}</div>
+      <div className="mt-2 flex items-center gap-3">
+        <div className="flex flex-1 flex-wrap items-center justify-center gap-3">{children}</div>
+        <KeyboardHint />
+      </div>
     </div>
   );
 }
