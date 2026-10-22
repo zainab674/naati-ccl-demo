@@ -78,7 +78,9 @@ export function RecBadge() {
 }
 
 /** Live camera preview. The stream is only shown, never recorded or uploaded. */
-export function WebcamBox({ stream, recording }: { stream: MediaStream | null; recording: boolean }) {
+export function WebcamBox({ stream, recording, issue, onRetry }: {
+  stream: MediaStream | null; recording: boolean; issue?: string; onRetry?: () => void;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
   const hasVideo = !!stream?.getVideoTracks().length;
   useEffect(() => {
@@ -89,7 +91,11 @@ export function WebcamBox({ stream, recording }: { stream: MediaStream | null; r
       recording ? "ring-rose-500" : "ring-transparent")}>
       {hasVideo
         ? <video ref={ref} autoPlay muted playsInline className="size-full -scale-x-100 object-cover" />
-        : <div className="flex flex-col items-center gap-1 text-xs text-slate-400"><CameraOff className="size-6" /> Camera off</div>}
+        : <div className="flex flex-col items-center gap-1.5 px-4 text-center text-xs text-slate-500">
+            <CameraOff className="size-6 text-slate-400" /> <span className="font-medium">Camera off</span>
+            {issue && <span className="leading-snug">{issue}</span>}
+            {onRetry && !recording && <button onClick={onRetry} className="mt-1 rounded-full bg-white px-3 py-1 font-medium text-ink ring-1 ring-slate-300 hover:bg-slate-50">Turn camera on</button>}
+          </div>}
     </div>
   );
 }

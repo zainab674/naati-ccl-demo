@@ -39,6 +39,20 @@ type Page = { kind: "info1" } | { kind: "info2" } | { kind: "segment"; d: number
 type Phase = "idle" | "loading" | "playing" | "recording" | "uploading";
 
 const SAMPLE_MS = 50; // one mic-level sample every 50 ms for the live trace
+
+/** Why the camera could not start, in words a student can act on. */
+function cameraProblem(e: unknown): string {
+  const err = e as DOMException;
+  if (err?.name === "NotReadableError" || err?.name === "TrackStartError" || err?.name === "AbortError") {
+    return "The camera is being used by another app or tab (for example Zoom, Teams or the Camera app). Close it, then try again.";
+  }
+  if (err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError") return "No camera was found on this device.";
+  if (err?.name === "NotAllowedError" && /system/i.test(err.message || "")) {
+    return "Your computer is blocking the camera. In Windows: Settings > Privacy & security > Camera, turn on camera access for apps and desktop apps.";
+  }
+  if (err?.name === "NotAllowedError") return "The camera is blocked for this site. Allow it from the lock icon in the address bar.";
+  return "The camera could not start. Try again, or continue without it.";
+}
 const nowMs = () => Date.now();
 
 function buildPages(st: State): Page[] {
@@ -62,6 +76,7 @@ export default function Player() {
   const [tick, setTick] = useState(0);                 // redraws the mic trace
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [deviceError, setDeviceError] = useState("");
+  const [cameraIssue, setCameraIssue] = useState("");  // why the camera is off, in plain words
   // Camera and microphone permission prompt: shown on the equipment check until the browser has granted access.
   const [devicePrompt, setDevicePrompt] = useState<null | "ask" | "denied" | "nodevice">(null);
   const [asking, setAsking] = useState(false);
@@ -140,13 +155,15 @@ export default function Player() {
     const wantCamera = st?.config.camera?.preview !== false;
     let s: MediaStream;
     try {
-      s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: wantCamera ? { width: 640, height: 480 } : false });
+      s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: wantCamera });
+      setCameraIssue("");
     } catch (e) {
       if (!wantCamera) throw e;
+      setCameraIssue(cameraProblem(e));
       // No camera (or camera refused): carry on with the microphone only, unless the camera is required.
       s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-      setDeviceError(st?.config.camera?.required ? "A camera is required for this test. Allow the camera and reload." : "Camera not available. You can continue without it.");
-      api(`/attempts/${id}/integrity`, { method: "POST", json: { type: "camera_unavailable" } }).catch(() => {});
+      if (st?.config.camera?.required) setDeviceError("A camera is required for this test. Allow the camera and reload.");
+      api(`/attempts/${id}/integrity`, { method: "POST", json: { type: "camera_unavailable", detail: (e as DOMException)?.name } }).catch(() => {});
     }
     streamRef.current = s;
     setStream(s);
@@ -188,20 +205,28 @@ export default function Player() {
 
   /** After the student changes the browser's camera / microphone setting (or comes back to the tab), turn the camera
    * and microphone on straight away, without a reload. Never while the segment is playing or being recorded. */
-  const refreshDevices = async () => {
-    if (!needsDevices || submitted || phaseRef.current !== "idle") return;
+  const refreshDevices = async (manual = false) => {
+    if ((!needsDevices && !manual) || submitted || phaseRef.current !== "idle") return;
     const current = streamRef.current;
     if (!current) { await requestDevices(); return; }
     const wantCamera = st?.config.camera?.preview !== false;
     if (!wantCamera || current.getVideoTracks().some((t) => t.readyState === "live")) return;
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: { width: 640, height: 480 } });
+      // Free the old tracks first: some cameras/drivers refuse a second open while the microphone stream is held.
       current.getTracks().forEach((t) => t.stop());
+      let s: MediaStream;
+      try {
+        s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: true });
+        setCameraIssue("");
+      } catch (e) {
+        if (manual) setCameraIssue(cameraProblem(e));
+        s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      }
       streamRef.current = s;
       setStream(s);
       setDeviceError("");
       setDevicePrompt(null);
-    } catch { /* camera still blocked or missing: keep the microphone-only stream */ }
+    } catch { /* microphone lost too: the next Start asks again */ }
   };
 
   useEffect(() => {
@@ -497,7 +522,7 @@ export default function Player() {
               </div>
             )}
             right={(
-              <MediaPanel stream={stream} recording={phase === "recording"} progress={progress} waveformSrc={null}
+              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} recording={phase === "recording"} progress={progress} waveformSrc={null}
                 samplesRef={samplesRef} capacity={(st.config.camera?.example_record_seconds ?? 10) * 1000 / SAMPLE_MS} tick={tick}
                 timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.camera?.example_record_seconds ?? 10)}` : mmss(st.config.camera?.example_record_seconds ?? 10)}>
                 <span className="text-sm text-slate-600">Attempts: {example.attempts}</span>
@@ -542,7 +567,7 @@ export default function Player() {
               </div>
             )}
             right={(
-              <MediaPanel stream={stream} recording={phase === "recording"} progress={phase === "playing" ? progress : phase === "recording" || phase === "uploading" ? 1 : 0}
+              <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} recording={phase === "recording"} progress={phase === "playing" ? progress : phase === "recording" || phase === "uploading" ? 1 : 0}
                 waveformSrc={cur.has_waveform ? `/api/attempts/${id}/segments/${cur.segment_attempt_id}/waveform` : null}
                 samplesRef={samplesRef} capacity={(st.config.response_window_seconds * 1000) / SAMPLE_MS} tick={tick}
                 timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.response_window_seconds)}` : mmss(st.config.response_window_seconds)}>
@@ -648,13 +673,13 @@ function TwoColumns({ left, right, notes }: { left: ReactNode; right: ReactNode;
   );
 }
 
-function MediaPanel({ stream, recording, progress, waveformSrc, samplesRef, capacity, tick, timeLabel, children }: {
-  stream: MediaStream | null; recording: boolean; progress: number; waveformSrc: string | null;
+function MediaPanel({ stream, recording, progress, waveformSrc, samplesRef, capacity, tick, timeLabel, cameraIssue, onCameraRetry, children }: {
+  stream: MediaStream | null; recording: boolean; cameraIssue?: string; onCameraRetry?: () => void; progress: number; waveformSrc: string | null;
   samplesRef: RefObject<number[]>; capacity: number; tick: number; timeLabel: string; children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <WebcamBox stream={stream} recording={recording} />
+      <WebcamBox stream={stream} recording={recording} issue={cameraIssue} onRetry={onCameraRetry} />
       <div className="pt-2"><SourceWave src={waveformSrc} progress={progress} /></div>
       <MicWave samplesRef={samplesRef} capacity={capacity} recording={recording} tick={tick} />
       <div className="ml-6 flex justify-between text-xs tabular-nums text-slate-500"><span>0:00</span><span>{timeLabel}</span></div>
