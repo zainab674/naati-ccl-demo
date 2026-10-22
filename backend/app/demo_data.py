@@ -26,6 +26,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from . import demo_content as C
+from .demo_voice import speak
 from .db import SessionLocal, utcnow
 from .models import (ContentStatus, Course, CourseChapter, Dialogue, DialogueAttempt, Difficulty, Job, Lesson, MeaningUnit,
                      MockTest, MockTestAttempt, MockTestDialogue, Resource, ResourceType, Segment, SegmentAttempt,
@@ -87,11 +88,12 @@ def _nice(ref: str) -> str:
     return ref
 
 
-def _package(db: Session, seg: Segment, text: str, seed: int) -> None:
+def _package(db: Session, seg: Segment, text: str, seed: int, lang: str, female: bool) -> None:
     storage = get_storage()
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp) / "source.wav"
-        speech_like_wav(src, _words(text), pitch=130 if seg.segment_number % 2 else 190, seed=seed)
+        if speak(src, [text], lang, female) is None:  # offline: synthetic tones instead of speech
+            speech_like_wav(src, _words(text), pitch=130 if seg.segment_number % 2 else 190, seed=seed)
         out = Path(tmp) / "hls"
         duration = media_pipeline.package_hls(src, out)
         prefix = f"media/{seg.id}/demo"
@@ -101,7 +103,7 @@ def _package(db: Session, seg: Segment, text: str, seed: int) -> None:
         media_pipeline.waveform_png(src, png)
         storage.put(f"waveforms/{seg.id}.png", png.read_bytes(), "image/png")
     seg.audio_file, seg.waveform_image, seg.duration_seconds = prefix, f"waveforms/{seg.id}.png", duration
-    seg.media_status, seg.source_audio_url = "ready", "demo://synthetic"
+    seg.media_status, seg.source_audio_url = "ready", "demo://tts"
 
 
 def load_dialogues(db: Session) -> None:
@@ -128,7 +130,10 @@ def load_dialogues(db: Session) -> None:
             for m, mu in enumerate(mus, start=1):
                 db.add(MeaningUnit(segment_id=seg.id, meaning_unit_number=m, meaning=mu[0],
                                    reference_interpretation=_nice(mu[1]), reference_language_id=tgt.id))
-            _package(db, seg, transcript, seed=i * 10 + n)
+            # The professional speaks English, the client the LOTE; voices alternate by dialogue.
+            english = direction == C.EN
+            _package(db, seg, transcript, seed=i * 10 + n, lang="en" if english else spec["lote"],
+                     female=(i % 2 == 0) == english)
         d.estimated_duration = int(sum(s.duration_seconds or 0 for s in d.segments))
         db.commit()
         log.info("dialogue %s", spec["key"])
@@ -279,8 +284,15 @@ def _record(sa, quality: str, seg_index: int, seed: int) -> None:
         wav = Path(tmp) / "answer.wav"
         lead = 6.5 if seg_index in timing.get("delay", set()) else 0.8
         pause = 3.8 if seg_index in timing.get("pause", set()) else 0.0
-        duration = speech_like_wav(wav, _words(text), lead=lead, pause_at=0.5 if pause else None, pause=pause,
-                                   pitch=170, seed=seed)
+        # The student speaks the target language; a long pause is real silence between two halves of the answer.
+        lang = sa.segment.target_language.code
+        lang = "en" if lang == "en" else sa.segment.dialogue.language_pair.lote.code
+        words = text.split()
+        parts = [" ".join(words[: len(words) // 2]), " ".join(words[len(words) // 2:])] if pause and len(words) > 3 else [text]
+        duration = speak(wav, parts, lang, female=seed % 2 == 0, lead=lead, pause=pause)
+        if duration is None:  # offline: synthetic tones
+            duration = speech_like_wav(wav, _words(text), lead=lead, pause_at=0.5 if pause else None, pause=pause,
+                                       pitch=170, seed=seed)
         key = f"recordings/{sa.id}/try1.wav"
         get_storage().put(key, wav.read_bytes(), "audio/wav")
     start = int(utcnow().timestamp() * 1000)

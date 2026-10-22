@@ -1,3 +1,6 @@
 -r requirements.txt
 pytest>=8.4
 ruff>=0.12
+# Demo data voices (python -m app.demo_data): Microsoft neural voices, and Google's for Punjabi
+edge-tts>=7.3.1
+gTTS>=2.5
