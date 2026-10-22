@@ -24,6 +24,12 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    given = config.attributes.get("connection")  # app.bootstrap migrates on its own (locked) connection
+    if given is not None:
+        context.configure(connection=given, target_metadata=target_metadata, compare_type=True)
+        with context.begin_transaction():
+            context.run_migrations()
+        return
     connectable = engine_from_config(config.get_section(config.config_ini_section, {}), prefix="sqlalchemy.",
                                      poolclass=pool.NullPool)
     with connectable.connect() as connection:
