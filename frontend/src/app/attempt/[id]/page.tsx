@@ -49,6 +49,9 @@ type Phase = "idle" | "loading" | "playing" | "recording" | "uploading";
 
 const SAMPLE_MS = 50; // one mic-level sample every 50 ms for the live trace
 const TEAL = "#008d7f";
+// Example segment on the equipment check: spoken sentence + chime (built by backend/scripts/make_example_segment.py).
+const EXAMPLE_AUDIO = "/exam/example-segment.mp3";
+const EXAMPLE_WAVEFORM = "/exam/example-waveform.png";
 
 /** Why the camera could not start, in words a student can act on. */
 function cameraProblem(e: unknown): string {
@@ -355,10 +358,7 @@ export default function Player() {
     setExample((e) => ({ ...e, attempts: e.attempts + 1, blob: null }));
     setPhase("playing");
     setProgress(0);
-    const t0 = nowMs();
-    const anim = setInterval(() => setProgress(Math.min(1, (nowMs() - t0) / 1600)), 100);
-    await playTestSound();
-    clearInterval(anim);
+    await playExample();
     setProgress(1);
     const mime = pickMime();
     const rec = new MediaRecorder(new MediaStream(s.getAudioTracks()), mime ? { mimeType: mime } : undefined);
@@ -376,6 +376,16 @@ export default function Player() {
     setPhase("recording");
     startTimer(st?.config.camera?.example_record_seconds ?? 10, () => rec.state !== "inactive" && rec.stop());
   };
+
+  /** The spoken example clip (ends with the chime), with the playhead moving across its waveform. Falls back to a
+   * short test tone if the clip cannot play. */
+  const playExample = () => new Promise<void>((resolve) => {
+    const a = new Audio(EXAMPLE_AUDIO);
+    a.volume = volume;
+    a.ontimeupdate = () => setProgress(a.duration ? a.currentTime / a.duration : 0);
+    a.onended = () => resolve();
+    a.play().catch(() => playTestSound().then(resolve));
+  });
 
   const examplePlay = () => {
     if (!example.blob) return;
@@ -657,7 +667,7 @@ export default function Player() {
             )}
             right={(
               <MediaPanel stream={stream} cameraIssue={cameraIssue} onCameraRetry={stream ? () => refreshDevices(true) : undefined} onCameraOff={turnCameraOff}
-                recording={phase === "recording"} progress={progress} waveformSrc={null} volume={volume} onVolume={setVolume}
+                recording={phase === "recording"} progress={progress} waveformSrc={EXAMPLE_WAVEFORM} volume={volume} onVolume={setVolume}
                 samplesRef={samplesRef} capacity={(st.config.camera?.example_record_seconds ?? 10) * 1000 / SAMPLE_MS} tick={tick}
                 timeLabel={phase === "recording" ? `${mmss(elapsed)} / ${mmss(st.config.camera?.example_record_seconds ?? 10)}` : mmss(st.config.camera?.example_record_seconds ?? 10)}>
                 <span className="mr-2 text-[13px]" style={{ color: XC.muted }}>Attempts: {example.attempts}</span>
