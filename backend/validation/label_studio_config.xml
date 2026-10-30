@@ -1,0 +1,43 @@
+<!-- Label Studio labeling config for CCL examiner error marking (docs/validation/ANNOTATION_GUIDE.md).
+     One task = one recorded segment answer. Mark one region per error; per region fill MU (for omission/distortion),
+     your deduction, and the student's words if useful. Tick "No errors" when the answer has none. -->
+<View>
+  <Header value="$direction"/>
+  <View style="display:flex; gap:24px">
+    <View style="flex:1">
+      <Header value="Source segment" size="5"/>
+      <Text name="source" value="$source_text"/>
+    </View>
+    <View style="flex:1">
+      <Header value="Meaning Units" size="5"/>
+      <Text name="mus" value="$meaning_units"/>
+    </View>
+  </View>
+  <Header value="Student interpretation" size="5"/>
+  <Labels name="error" toName="audio" choice="single">
+    <Label value="omission" background="#d62728" hint="Accuracy: a Meaning Unit (or an important part) is missing"/>
+    <Label value="distortion" background="#ff7f0e" hint="Accuracy: a Meaning Unit was attempted but its meaning changed"/>
+    <Label value="insertion" background="#bcbd22" hint="Accuracy: information added that the source did not contain"/>
+    <Label value="grammar" background="#1f77b4"/>
+    <Label value="unidiomatic_usage" background="#17becf"/>
+    <Label value="register" background="#9467bd"/>
+    <Label value="sentence_structure" background="#8c564b"/>
+    <Label value="pronunciation" background="#e377c2"/>
+    <Label value="indirect_speech" background="#7f7f7f" hint="Reported speech ('he says that...') instead of first person"/>
+    <Label value="other_language" background="#aec7e8" hint="Words in the wrong language beyond accepted usage (e.g. English numerals where the language policy penalises them)"/>
+    <Label value="pause" background="#2ca02c" hint="Pause longer than 3 s while interpreting"/>
+    <Label value="start_delay" background="#98df8a" hint="Started more than 5 s after the chime"/>
+    <Label value="hesitation" background="#ffbb78"/>
+    <Label value="self_correction" background="#c5b0d5"/>
+  </Labels>
+  <Audio name="audio" value="$audio" hotkey="space"/>
+  <TextArea name="mu_no" toName="audio" perRegion="true" editable="true" maxSubmissions="1" rows="1"
+            placeholder="MU number (omission/distortion only), e.g. 3"/>
+  <TextArea name="deduction" toName="audio" perRegion="true" editable="true" maxSubmissions="1" rows="1"
+            placeholder="Your deduction for this error, e.g. 1 or 0.5"/>
+  <TextArea name="quote" toName="audio" perRegion="true" editable="true" maxSubmissions="1" rows="2"
+            placeholder="Student's words (optional)"/>
+  <Choices name="no_errors" toName="audio" choice="single-radio">
+    <Choice value="No errors in this answer"/>
+  </Choices>
+</View>

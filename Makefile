@@ -10,10 +10,10 @@ check: backend-check frontend-check
 backend-check: lint test
 
 lint:
-	cd backend && $(PY_ABS) -m ruff check app tests scripts
+	cd backend && $(PY_ABS) -m ruff check app tests scripts validation
 
 test:
-	cd backend && $(PY_ABS) -m pytest
+	cd backend && $(PY_ABS) -m pytest && $(PY_ABS) -m validation check
 
 frontend-check:
 	cd frontend && npm run lint && npm run build

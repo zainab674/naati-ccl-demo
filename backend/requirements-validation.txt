@@ -1,0 +1,4 @@
+# Scoring validation study only (python -m validation; docs/SCORING_VALIDATION.md). Not needed by the running app.
+numpy>=2.1
+scipy>=1.14
+jiwer>=3.0

@@ -98,10 +98,17 @@ def segment_totals(items: list[Item], cfg: dict) -> tuple[Totals, list[ItemResul
     return t, results
 
 
-def dialogue_score(segments: list[Totals], maximum: float, passing: float, cfg: dict) -> DialogueScore:
+def dialogue_score(segments: list[Totals], maximum: float, passing: float, cfg: dict,
+                   meaning_units: int | None = None) -> DialogueScore:
     total = Totals()
     for s in segments:
         total = total.add(s)
+    norm = cfg.get("accuracy_normalisation") or {}
+    if norm.get("enabled") and meaning_units:
+        # Same accuracy budget whatever the number of Meaning Units the dialogue was split into (docs/AUDIT.md 4.4):
+        # each MU error costs reference/meaning_units marks instead of 1.
+        factor = float(norm["reference_meaning_units"]) / meaning_units
+        total = Totals(round(total.accuracy * factor, 2), total.language, total.fluency)
     score = maximum - total.total
     if cfg.get("floor_at_zero", True):
         score = max(0.0, score)

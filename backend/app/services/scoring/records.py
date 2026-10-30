@@ -135,7 +135,8 @@ def recalc_dialogue(db: Session, da: DialogueAttempt) -> engine.DialogueScore:
     db.refresh(da, ["segment_attempts"])
     segs = [engine.Totals(s.accuracy_completeness_deduction, s.language_quality_deduction, s.fluency_deduction)
             for s in da.segment_attempts]
-    score = engine.dialogue_score(segs, da.maximum_score, da.passing_score, cfg)
+    mus = sum(1 for seg in da.dialogue.segments if seg.active for mu in seg.meaning_units if mu.active)
+    score = engine.dialogue_score(segs, da.maximum_score, da.passing_score, cfg, meaning_units=mus)
     da.accuracy_completeness_deduction = score.deductions.accuracy
     da.language_quality_deduction = score.deductions.language
     da.fluency_deduction = score.deductions.fluency

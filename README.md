@@ -97,13 +97,15 @@ make check            # or: bash scripts/check.sh   (ruff + pytest, eslint + nex
 Backend tests run against a real PostgreSQL database (`TEST_DATABASE_URL`, migrated once per run) and real ffmpeg;
 AI, STT, Stripe and email providers are stubbed. `tests/test_e2e.py` walks the whole student journey.
 
-Comparing AI scoring with teacher marking (the 10-sample check):
+Scoring validation (is the estimated score what NAATI examiners would give?): `docs/SCORING_VALIDATION.md`. Students
+see a language's scores only after it passes that study (`backend/config/validated_languages.yaml`); until then they
+get practice feedback without a score. The study's tools are in `backend/validation/` (`python -m validation --help`).
+
+A quick comparison on a handful of teacher-marked answers, outside the study:
 
 ```bash
 cd backend && .venv/bin/python -m scripts.eval_against_teacher samples.csv --out report.csv
 ```
-
-See `scripts/teacher_samples_template.csv` for the input format.
 
 ## Deploy
 

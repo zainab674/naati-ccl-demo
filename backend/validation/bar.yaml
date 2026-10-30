@@ -1,0 +1,26 @@
+# Acceptance bar for showing a language's scores to students. PROPOSED values: they must be agreed with Benchmark
+# BEFORE the held-out set is scored, then agreed_with_benchmark is set to true in the same commit that records who
+# agreed and when. A held-out report can only pass while this is true.
+agreed_with_benchmark: false
+agreed_by: ""        # e.g. "Nipun (Benchmark), email of 2026-11-..."
+
+# AI-vs-examiner ICC(A,1) on dialogue totals must be at least the examiner-vs-examiner ICC minus this margin.
+icc_margin: 0.05
+
+# Share of examiner-Fail two-dialogue tests that the AI would call Pass (1 - specificity). Proposed: 5%.
+false_pass_rate_max: 0.05
+
+# Every quote in an AI-reported error must appear in the transcript it was judged on.
+quote_share_min: 1.0
+
+# Every AI timing event (speech start, pause boundaries) within this many seconds of the hand-marked timing.
+timing_within_s: 0.5
+timing_within_share_min: 1.0
+
+# Without enough data a check is "not enough data", which is not a pass. With fewer units the confidence interval
+# on the ICC is wider than the margin being tested (+/-0.15 or more), and a false-pass rate needs failed tests.
+min_dialogue_units: 40     # dialogue attempts (about 560 segments of 14), all double-marked
+min_failed_tests: 15       # two-dialogue tests the examiners failed
+
+# Errors without a Meaning Unit (insertions, language, fluency) match when their times overlap within this window.
+error_match_tolerance_s: 1.0

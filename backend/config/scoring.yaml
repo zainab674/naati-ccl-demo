@@ -31,6 +31,13 @@ penalties:
     self_correction: 0.5
   repeat: 0.0                 # repeats are tracked (RepeatEvent) but the brief sets no penalty
 
+# Meaning-Unit-count adjustment (proposed, docs/SCORING_VALIDATION.md; off until Benchmark agrees). With -1 per MU, a
+# dialogue split into 80 MUs is far harder to pass than the same dialogue split into 36 (docs/AUDIT.md 4.4). When
+# enabled, a dialogue's accuracy deduction is scaled by reference_meaning_units / the dialogue's active MU count.
+accuracy_normalisation:
+  enabled: false
+  reference_meaning_units: 40
+
 # Pronunciation is judged from audio, not the transcript. MVP: flag for admin review, do not deduct.
 pronunciation_auto_deduct: false
 
