@@ -1,7 +1,7 @@
 """Admin content management: dialogues (segments, meaning units), mock tests, courses and lessons."""
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -13,10 +13,10 @@ from ..jobs import enqueue
 from ..models import (ContentStatus, Course, CourseChapter, Dialogue, Difficulty, LanguagePair, Lesson, MeaningUnit, MockTest,
                       MockTestDialogue, Segment, Topic)
 from ..services import courses as outline_svc
-from ..services import languages, media_ingest
+from ..services import languages, lesson_pdf, media_ingest
 from ..services.html import sanitize
 from ..services.storage import get_storage
-from ..settings import ccl_config
+from ..settings import ccl_config, get_settings
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -295,7 +295,7 @@ def lesson_dict(lesson: Lesson, number: str | None = None) -> dict:
     return {"id": str(lesson.id), "lesson_number": lesson.lesson_number, "title": lesson.title,
             "video_url": lesson.video_url, "html_content": lesson.html_content, "is_free": lesson.is_free,
             "status": lesson.status.value, "chapter_id": str(lesson.chapter_id) if lesson.chapter_id else None,
-            "number": number}
+            "number": number, "pdf": lesson_pdf.as_dict(lesson, f"/api/admin/lessons/{lesson.id}/pdf")}
 
 
 def course_dict(c: Course, lessons: bool = False) -> dict:
@@ -407,6 +407,36 @@ def update_lesson(lesson_id: uuid.UUID, body: LessonIn, db: Session = Depends(ge
     _apply_lesson(db, lesson, body)
     db.commit()
     return lesson_dict(lesson)
+
+
+@router.post("/lessons/{lesson_id}/pdf")
+async def upload_lesson_pdf(lesson_id: uuid.UUID, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    lesson = _get(db, Lesson, lesson_id)
+    limit = get_settings().resource_max_mb * 1024 * 1024
+    data = await file.read(limit + 1)
+    if len(data) > limit:
+        raise HTTPException(413, f"The file is larger than {get_settings().resource_max_mb} MB")
+    try:
+        lesson_pdf.store(lesson, file.filename or "lesson.pdf", data)
+    except lesson_pdf.LessonPdfError as e:
+        raise HTTPException(400, str(e)) from e
+    lesson.pdf_source_url = ""
+    db.commit()
+    return lesson_dict(lesson)
+
+
+@router.delete("/lessons/{lesson_id}/pdf")
+def remove_lesson_pdf(lesson_id: uuid.UUID, db: Session = Depends(get_db)):
+    lesson = _get(db, Lesson, lesson_id)
+    lesson_pdf.remove(lesson)
+    db.commit()
+    return lesson_dict(lesson)
+
+
+@router.get("/lessons/{lesson_id}/pdf")
+def admin_lesson_pdf(lesson_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Admin preview, including draft lessons."""
+    return lesson_pdf.response(_get(db, Lesson, lesson_id))
 
 
 # ------------------------------------------------------------------ chapters

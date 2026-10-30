@@ -9,12 +9,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...models import ContentStatus, Course, CourseChapter, Lesson
+from .. import lesson_pdf
 from ..html import sanitize
 from ..languages import english, get_or_create_pair, lotes_by_code
 from .common import Report, parse_bool, read_csv, valid_url
 
 REQUIRED = ["course_key", "course_title", "lesson_no", "lesson_title"]
-OPTIONAL = ["course_description", "video_url", "html_content", "is_free", "lote_language", "chapter_no", "chapter_title"]
+OPTIONAL = ["course_description", "video_url", "html_content", "is_free", "lote_language", "chapter_no", "chapter_title",
+            "pdf_url"]
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,118}$")
 
 
@@ -26,6 +28,7 @@ class L:
     html: str
     is_free: bool
     chapter: int | None = None
+    pdf_url: str = ""  # fetched into the lesson by a job on commit; empty leaves an uploaded PDF in place
 
 
 @dataclass
@@ -74,6 +77,10 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
         if video and not valid_url(video):
             report.error(r, "video_url", "Not a valid http(s) URL")
             continue
+        pdf_url = row.get("pdf_url", "")
+        if pdf_url and not valid_url(pdf_url):
+            report.error(r, "pdf_url", "Not a valid http(s) URL")
+            continue
         lote = row.get("lote_language", "").lower()
         if lote and lote not in lotes:
             report.error(r, "lote_language", f"Unknown language code '{lote}' (use one of: {', '.join(sorted(lotes))})")
@@ -116,7 +123,7 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
                 report.error(r, "chapter_title", f"Chapter {chapter} is already called '{known}'")
                 continue
         courses[key].lessons[number] = L(number=number, title=row["lesson_title"], video_url=video, html=html,
-                                         is_free=is_free, chapter=chapter)
+                                         is_free=is_free, chapter=chapter, pdf_url=pdf_url)
     existing = set(db.scalars(select(Course.key).where(Course.key.in_(list(courses)))))
     report.summary = {"rows": len(rows), "courses": len(courses),
                       "new_courses": len([k for k in courses if k not in existing]),
@@ -128,7 +135,8 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
 
 def commit(db: Session, courses: list[C], created_by=None) -> dict:
     counts = {"courses_created": 0, "courses_updated": 0, "lessons_created": 0, "lessons_updated": 0,
-              "lessons_archived": 0}
+              "lessons_archived": 0, "pdfs_queued": 0}
+    fetch: list[tuple[Lesson, str]] = []
     lotes = lotes_by_code(db)
     for c in courses:
         pair_id = get_or_create_pair(db, english(db), lotes[c.lote]).id if c.lote else None
@@ -177,9 +185,15 @@ def commit(db: Session, courses: list[C], created_by=None) -> dict:
                 for k, v in values.items():
                     setattr(lesson, k, v)
                 counts["lessons_updated"] += 1
+            if item.pdf_url and item.pdf_url != lesson.pdf_source_url:
+                fetch.append((lesson, item.pdf_url))
         for number, lesson in existing.items():
             if number not in c.lessons and lesson.status != ContentStatus.ARCHIVED:
                 lesson.status = ContentStatus.ARCHIVED
                 counts["lessons_archived"] += 1
+    db.flush()
+    for lesson, url in fetch:  # a re-import with the same pdf_url does not download it again
+        lesson_pdf.enqueue_fetch(db, lesson, url)
+    counts["pdfs_queued"] = len(fetch)
     db.commit()
     return counts

@@ -48,6 +48,11 @@ class Lesson(IdMixin, Base):
     title: Mapped[str] = mapped_column(String(200))
     video_url: Mapped[str] = mapped_column(String(1000), default="")
     html_content: Mapped[str] = mapped_column(Text, default="")  # sanitised on write
+    # Optional PDF handout, stored privately and served only through /api/lessons/{id}/pdf (same access as the lesson).
+    pdf_key: Mapped[str] = mapped_column(String(400), default="")
+    pdf_name: Mapped[str] = mapped_column(String(255), default="")
+    pdf_size: Mapped[int] = mapped_column(Integer, default=0)
+    pdf_source_url: Mapped[str] = mapped_column(String(1000), default="")  # courses.csv pdf_url it was fetched from
     is_free: Mapped[bool] = mapped_column(default=False)
     status: Mapped[ContentStatus] = mapped_column(enum_col(ContentStatus), default=ContentStatus.PUBLISHED)
     chapter_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("course_chapters.id", ondelete="SET NULL"),

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle2, ChevronLeft, ListTree, Lock, PanelLeftOpen } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronLeft, ExternalLink, FileText, ListTree, Lock, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,10 +8,12 @@ import { useEffect, useState } from "react";
 import CourseOutline, { type CourseOutlineData } from "@/components/CourseOutline";
 import { Button, Card, cx, ErrorNote, Spinner } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { fileSize } from "@/lib/resources";
 
 type Lesson = {
   id: string; course_id: string; course_title: string; lesson_number: number; number: string; title: string;
   chapter: { number: number; title: string } | null; video_url: string; html_content: string; completed: boolean;
+  pdf: { name: string; size: number; url: string } | null;
   next: { id: string; title: string; locked: boolean } | null; previous: { id: string; title: string } | null;
 };
 
@@ -114,6 +116,17 @@ export default function LessonPage() {
           <h1 className="mt-1 text-xl font-semibold tracking-tight">Lesson {l.number}: {l.title}</h1>
           {/* html_content is sanitised by the server (allow-list) when it is saved */}
           {l.html_content && <div className="lesson-html mt-4 text-slate-700" dangerouslySetInnerHTML={{ __html: l.html_content }} />}
+          {l.pdf && (
+            <div className="mt-6 overflow-hidden rounded-xl ring-1 ring-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-4 py-2.5 text-sm">
+                <span className="inline-flex items-center gap-2 font-medium"><FileText className="size-4 text-brand-600" /> {l.pdf.name}
+                  <span className="font-normal text-slate-500">{fileSize(l.pdf.size)}</span></span>
+                <a href={l.pdf.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline">
+                  Open in a new tab <ExternalLink className="size-3.5" /></a>
+              </div>
+              <iframe src={l.pdf.url} title={l.pdf.name} className="hidden h-[70vh] w-full border-0 sm:block" />
+            </div>
+          )}
           <div className="mt-6 border-t border-slate-100 pt-5">
             <Button variant={l.completed ? "secondary" : "primary"} size="sm" onClick={toggleComplete} loading={busy}>
               <CheckCircle2 className="size-4" /> {l.completed ? "Completed" : "Mark as complete"}

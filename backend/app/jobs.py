@@ -112,6 +112,6 @@ def _register_handlers() -> None:
     """Import the modules that define handlers (kept lazy to avoid import cycles)."""
     global _registered
     if not _registered:
-        from .services import media_ingest, messages  # noqa: F401
+        from .services import lesson_pdf, media_ingest, messages  # noqa: F401
         from .services.scoring import pipeline  # noqa: F401
         _registered = True

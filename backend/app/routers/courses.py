@@ -9,7 +9,7 @@ from ..db import get_db
 from ..deps import CurrentUser, current_user, ensure_access, is_locked
 from ..models import ContentStatus, Course, Lesson, LessonProgress
 from ..services import courses as outline_svc
-from ..services import activity, languages
+from ..services import activity, languages, lesson_pdf
 
 router = APIRouter(prefix="/api", tags=["courses"])
 
@@ -90,9 +90,16 @@ def lesson(lesson_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Se
             "number": outline_svc.display_numbers(c)[les.id],
             "chapter": {"number": les.chapter.number, "title": les.chapter.title} if les.chapter else None,
             "title": les.title, "video_url": les.video_url, "html_content": les.html_content,  # sanitised on write
+            "pdf": lesson_pdf.as_dict(les, f"/api/lessons/{les.id}/pdf"),
             "completed": les.id in _done(db, cu.id),
             "next": {"id": str(nxt.id), "title": nxt.title, "locked": is_locked(cu.user, _lesson_free(c, nxt))} if nxt else None,
             "previous": {"id": str(prev.id), "title": prev.title} if prev else None}
+
+
+@router.get("/lessons/{lesson_id}/pdf")
+def pdf(lesson_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+    lesson(lesson_id, cu, db)  # same visibility and access checks
+    return lesson_pdf.response(db.get(Lesson, lesson_id))
 
 
 @router.post("/lessons/{lesson_id}/complete")

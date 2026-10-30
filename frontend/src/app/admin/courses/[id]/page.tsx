@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, FolderPlus, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, FileText, FolderPlus, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -8,9 +8,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, cx, ErrorNote, Field, inputClass, PageHeader, Spinner, SuccessNote } from "@/components/ui";
 import { statusTone } from "@/lib/admin";
 import { api, fetchLanguages, type Language } from "@/lib/api";
+import { fileSize } from "@/lib/resources";
 
 type Lesson = { id: string; lesson_number: number; title: string; video_url: string; html_content: string; is_free: boolean; status: string;
-  chapter_id: string | null; number: string | null };
+  chapter_id: string | null; number: string | null; pdf: { name: string; size: number; url: string } | null };
 type Chapter = { id: string; number: number; title: string };
 type Course = { id: string; key: string; title: string; description: string; status: string; is_free: boolean; sort_order: number; language: string | null; chapters: Chapter[]; lessons: Lesson[] };
 
@@ -121,6 +122,49 @@ export default function CourseEditor() {
   );
 }
 
+/** The lesson's PDF handout: saved as soon as it is chosen (separately from the lesson's Save button). */
+function LessonPdf({ lesson, onSaved }: { lesson: Lesson; onSaved: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setError("");
+    const fd = new FormData();
+    fd.append("file", file);
+    try { await api(`/admin/lessons/${lesson.id}/pdf`, { method: "POST", body: fd }); onSaved(); }
+    catch (e) { setError((e as Error).message); }
+    setBusy(false);
+  };
+  const remove = async () => {
+    if (!confirm("Remove this lesson's PDF?")) return;
+    setBusy(true);
+    try { await api(`/admin/lessons/${lesson.id}/pdf`, { method: "DELETE" }); onSaved(); }
+    catch (e) { setError((e as Error).message); }
+    setBusy(false);
+  };
+  return (
+    <div className="rounded-lg border border-slate-200 p-4 text-sm">
+      <div className="font-medium text-slate-700">PDF handout (optional)</div>
+      {lesson.pdf ? (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <a href={lesson.pdf.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-brand-600 hover:underline">
+            <FileText className="size-4" /> {lesson.pdf.name}</a>
+          <span className="text-slate-500">{fileSize(lesson.pdf.size)}</span>
+          <label className="cursor-pointer text-brand-600 hover:underline">Replace
+            <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={busy} onChange={(e) => upload(e.target.files?.[0])} /></label>
+          <Button size="sm" variant="ghost" onClick={remove} loading={busy}>Remove</Button>
+        </div>
+      ) : (
+        <input type="file" accept="application/pdf,.pdf" disabled={busy} onChange={(e) => upload(e.target.files?.[0])}
+          className="mt-2 block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200" />
+      )}
+      <p className="mt-2 text-xs text-slate-500">Shown under the lesson text, with the same access as the lesson. Or add a <code>pdf_url</code> column to courses.csv.</p>
+      {error && <div className="mt-2"><ErrorNote>{error}</ErrorNote></div>}
+    </div>
+  );
+}
+
 function LessonEditor({ lesson, chapters, onSaved }: { lesson: Lesson; chapters: Chapter[]; onSaved: () => void }) {
   const [f, setF] = useState(lesson);
   const [preview, setPreview] = useState(lesson.html_content);
@@ -139,7 +183,7 @@ function LessonEditor({ lesson, chapters, onSaved }: { lesson: Lesson; chapters:
     setBusy(true);
     setMsg({});
     try {
-      const { id, number: _display, ...body } = f;  // eslint-disable-line @typescript-eslint/no-unused-vars
+      const { id, number: _display, pdf: _pdf, ...body } = f;  // eslint-disable-line @typescript-eslint/no-unused-vars
       await api(`/admin/lessons/${id}`, { method: "PATCH", json: body });
       setMsg({ ok: "Lesson saved." });
       onSaved();
@@ -165,6 +209,7 @@ function LessonEditor({ lesson, chapters, onSaved }: { lesson: Lesson; chapters:
         <div><span className="text-sm font-medium text-slate-700">Preview (sanitised)</span>
           <div className="lesson-html mt-1 h-72 overflow-auto rounded-lg border border-slate-200 p-3 text-sm" dangerouslySetInnerHTML={{ __html: preview }} /></div>
       </div>
+      <LessonPdf lesson={lesson} onSaved={onSaved} />
       <div className="flex flex-wrap items-center gap-6 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" checked={f.is_free} onChange={(e) => setF({ ...f, is_free: e.target.checked })} className="accent-brand-600" /> Free lesson</label>
         <label className="flex items-center gap-2">Status

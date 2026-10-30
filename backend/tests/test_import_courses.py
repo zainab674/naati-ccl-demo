@@ -56,7 +56,7 @@ def test_course_commit_sanitises_and_is_idempotent(admin_client, db):
 
     again = commit(admin_client, upload(admin_client, text))
     assert again["counts"] == {"courses_created": 0, "courses_updated": 0, "lessons_created": 0,
-                               "lessons_updated": 0, "lessons_archived": 0}
+                               "lessons_updated": 0, "lessons_archived": 0, "pdfs_queued": 0}
 
     shorter = "\n".join([H, "ccl-prep,Exam Preparation,Prep course,1,Overview v2,,<p>New</p>,true"]) + "\n"
     third = commit(admin_client, upload(admin_client, shorter))
