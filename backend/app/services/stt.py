@@ -82,7 +82,8 @@ class GroqProvider(STTProvider):
 # Whisper's verbose_json reports a language name; store the ISO code we send as the hint (Language.stt_code).
 WHISPER_LANGUAGE_CODES = {"english": "en", "tagalog": "tl", "filipino": "tl", "hindi": "hi", "chinese": "zh",
                           "mandarin": "zh", "punjabi": "pa", "panjabi": "pa", "arabic": "ar", "nepali": "ne",
-                          "vietnamese": "vi"}
+                          "vietnamese": "vi", "urdu": "ur", "gujarati": "gu", "malayalam": "ml", "japanese": "ja",
+                          "portuguese": "pt", "spanish": "es", "castilian": "es"}
 
 
 def parse_verbose_json(data: dict, provider: str, model: str) -> Transcript:

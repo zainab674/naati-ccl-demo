@@ -9,7 +9,9 @@ from .conftest import signup
 from .factories import make_course, make_dialogue, make_mock
 
 NEW = {"hi": ("Hindi", "hi"), "zh": ("Mandarin", "zh"), "pa": ("Punjabi", "pa"), "ar": ("Arabic", "ar"),
-       "ne": ("Nepali", "ne"), "vi": ("Vietnamese", "vi")}
+       "ne": ("Nepali", "ne"), "vi": ("Vietnamese", "vi"), "ur": ("Urdu", "ur"),
+       "gu": ("Gujarati", "gu"), "ml": ("Malayalam", "ml"), "ja": ("Japanese", "ja"), "pt": ("Portuguese", "pt"),
+       "es": ("Spanish", "es")}
 
 
 def test_seed_adds_each_language_with_pair_and_guidance(client, db):
@@ -21,7 +23,7 @@ def test_seed_adds_each_language_with_pair_and_guidance(client, db):
         assert cfg.grammar_guidelines and cfg.register_guidelines and cfg.hesitation_markers
         assert cfg.pronunciation_config == {"auto_deduct": False, "review_only": True}
     public = client.get("/api/public/languages").json()
-    assert [x["name"] for x in public] == sorted(x["name"] for x in public) and len(public) == 7
+    assert [x["name"] for x in public] == sorted(x["name"] for x in public) and len(public) == 13
 
 
 def test_language_chosen_at_signup_and_changed_in_account(client):
@@ -96,7 +98,8 @@ def test_course_csv_language_column(admin_client, db):
 
 def test_whisper_language_names_map_to_codes():
     for name, code in [("hindi", "hi"), ("chinese", "zh"), ("punjabi", "pa"), ("arabic", "ar"), ("nepali", "ne"),
-                       ("vietnamese", "vi"), ("tagalog", "tl")]:
+                       ("vietnamese", "vi"), ("tagalog", "tl"), ("urdu", "ur"), ("gujarati", "gu"),
+                       ("malayalam", "ml"), ("japanese", "ja"), ("portuguese", "pt"), ("spanish", "es")]:
         assert stt.parse_verbose_json({"text": "x", "language": name}, "groq", "m").language == code
 
 
@@ -111,6 +114,12 @@ def test_fillers_keep_vowel_signs_and_find_chinese_markers():
     assert sorted(f["text"] for f in zh) == ["嗯", "那个", "那个"]
     # Arabic.
     assert [f["text"] for f in timing.filler_candidates([], "يعني الموعد يوم الثلاثاء", ["يعني"])] == ["يعني"]
+    # Japanese: kana fillers inside unspaced text.
+    ja = timing.filler_candidates([], "えっと、予約は火曜日です。あの、十時です。", ["えっと", "あの", "まあ"])
+    assert sorted(f["text"] for f in ja) == ["あの", "えっと"]
+    # Malayalam vowel signs survive normalisation; Spanish multi-word marker.
+    assert [f["text"] for f in timing.filler_candidates([], "പിന്നെ ഡോക്ടർ", ["പിന്നെ"])] == ["പിന്നെ"]
+    assert [f["text"] for f in timing.filler_candidates([], "La cita, o sea, es el martes", ["o sea"])] == ["o sea"]
 
 
 def test_evaluator_prompt_uses_the_segment_language_and_its_guidance(db):

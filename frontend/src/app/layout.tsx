@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: `${name} | NAATI CCL Practice`, template: `%s | ${name}` },
     description:
-      "NAATI CCL practice dialogues and mock tests in English and Filipino, Hindi, Mandarin, Punjabi, Arabic, Nepali or Vietnamese, with detailed feedback on every deduction.",
+      "NAATI CCL practice dialogues and mock tests in English and Filipino, Hindi, Mandarin, Punjabi, Arabic, Nepali, Vietnamese, Urdu, Gujarati, Malayalam, Japanese, Portuguese or Spanish, with detailed feedback on every deduction.",
   };
 }
 

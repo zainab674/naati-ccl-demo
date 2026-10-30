@@ -139,13 +139,14 @@ def _norm(text: str) -> str:
 
 
 def _unspaced(text: str) -> bool:
-    """Scripts written without spaces between words (Chinese), where markers are found as substrings."""
-    return any("\u3400" <= ch <= "\u9fff" or "\uf900" <= ch <= "\ufaff" for ch in text)
+    """Scripts written without spaces between words (Chinese, Japanese), where markers are found as substrings."""
+    return any("\u3040" <= ch <= "\u30ff" or "\u3400" <= ch <= "\u9fff" or "\uf900" <= ch <= "\ufaff"
+               for ch in text)
 
 
 def filler_candidates(words: list[dict], transcript: str, markers: list[str]) -> list[dict]:
     """Hesitation-marker words with their times. Multi-word markers ("ano ba") are matched as token sequences;
-    Chinese markers ("那个") as substrings, since Chinese is written without spaces."""
+    Chinese and Japanese markers ("那个", "えっと") as substrings, since both are written without spaces."""
     markers = [_norm(m).strip() for m in markers if m.strip()]
     single = {m for m in markers if " " not in m and not _unspaced(m)}
     found = []
