@@ -135,9 +135,25 @@ Admin > Settings, two tabs:
   settings override the server's .env; passwords and keys are encrypted and never shown again. "Send test email"
   reports the provider's exact error.
 
+## 17. Additions from the client's "CCL Project 2026" document (added 2026-10-30)
+- Languages: Urdu, Gujarati, Malayalam, Japanese, Portuguese and Spanish join the 7 above (13 LOTEs), same setup as 14.
+- Teacher role: Admin / Teacher / Student. Teachers see the overview, students (incl. enrolment), the review queue and
+  attempt review with overrides; not content, imports, announcements, settings or the team. Admins manage the team
+  (add with an invite, change role, deactivate, remove) on Admin > Team.
+- Email one or many students from the student list or a student's page (plain text, {first_name}/{name}, sender's
+  name appended). Account and course messages only; marketing campaigns stay a later phase.
+- Student activity log on the student's admin page: sign-ups, sign-ins, attempts started/submitted, lessons completed,
+  hub files opened, emails, payments and access changes.
+- Dashboard: averages over the last 5 scored attempts (ccl.yaml dashboard.average_last_attempts) and an announcements
+  carousel (live sessions, 1-on-1 classes, news; optional time, link, show/hide window, language), managed on
+  Admin > Announcements.
+- Lesson PDF: each lesson can hold a PDF handout (upload in the course editor or courses.csv pdf_url), served with the
+  lesson's access.
+- Launch courses "Introduction to CCL Test" (free) and "Exam Preparation (Filipino to English)" are seeded as empty
+  drafts with course_key intro-to-ccl and exam-prep-fil.
+
 ## Not in the MVP (later phases)
-Webinars; 1-on-1 coaching booking + Zoom; email marketing campaigns; messaging students; coupons; sales/revenue
-dashboard. Design the data model so these can be added without rework.
+Webinars; 1-on-1 coaching booking + Zoom; email marketing campaigns; coupons; sales/revenue dashboard. Design the data model so these can be added without rework.
 
 ## CSV formats
 
@@ -159,6 +175,7 @@ dashboard. Design the data model so these can be added without rework.
 | mu_weight | optional, default 1 |
 
 ### courses.csv (one row per lesson)
-`course_key, course_title, course_description, lesson_no, lesson_title, video_url, html_content, is_free`
+`course_key, course_title, course_description, lesson_no, lesson_title, video_url, html_content, is_free,
+lote_language, chapter_no, chapter_title, pdf_url` (pdf_url: a PDF downloaded into the lesson on commit)
 
 Provide downloadable template CSVs and a sample with 1 dialogue in the admin import page.

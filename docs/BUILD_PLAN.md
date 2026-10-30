@@ -87,8 +87,19 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 6.3 Learning hub (module 15): Resource model + migration, private file upload/serving, admin CRUD, student hub
       with type/language filters and free/paid gating.
 
+## M7. Gaps against the client's "CCL Project 2026" document (2026-10-30)
+- [x] 7.1 Languages from the MVP scope page: Urdu, Gujarati, Malayalam, Japanese, Portuguese, Spanish (+ guidance).
+- [x] 7.2 Teacher role (students, enrolment, review only) and Admin > Team.
+- [x] 7.3 Email one or many students (queued per student, logged in EmailLog).
+- [x] 7.4 Student activity log in the admin.
+- [x] 7.5 Dashboard: average of the last 5 attempts; announcements carousel + Admin > Announcements.
+- [x] 7.6 Fluency penalty: kept at the brief's 0.5, conflict noted in scoring.yaml and Open questions.
+- [x] 7.7 Launch course shells (Introduction to CCL Test, Exam Preparation (Filipino to English)) as empty drafts.
+- [x] 7.8 PDF handout per lesson (editor upload, courses.csv pdf_url, protected serving).
+- [x] 7.9 Launch-size import check: 50 dialogues x 14 segments in one CSV.
+
 ## Deferred (from the client brief "CCL Platform", parked 2026-10-20 at the user's request)
-- [ ] PDF attachment per course lesson (brief: each lesson holds a video, text and a PDF).
+- [x] PDF attachment per course lesson (done in 7.8).
 - [ ] Admin dashboard: new accounts and revenue (and "leads", once defined).
 - [ ] Score each segment as soon as it is answered in practice mode (brief: after one segment or the whole dialogue).
 - [ ] Show courses (and later webinars) inside the learning hub.
@@ -122,8 +133,8 @@ Milestones map to client payments. Keep the app runnable after every task.
 - A play that fails to load still uses up the repeat. Keep (exam strictness) or refund the play?
 
 Scope additions (2026-10-20), questions for Nipun:
-- Teachers: is "teacher" the same as admin (full access, as built), or a separate role that can only enrol students and
-  review attempts (no content editing)?
+- Teachers: BUILT 2026-10-30 as a separate role (students, enrolment, review; no content/settings), per the client's
+  document listing Admin, Student and Teacher. Confirm that split.
 - Manual access: Trial and Active unlock the same content. Should a teacher-granted Trial be limited (e.g. a number of
   mock tests)? Should an end date be required for manual grants?
 - Bulk enrolment skips existing emails. Should a re-upload instead update their access (e.g. extend a whole class)?
@@ -140,6 +151,15 @@ Scope additions (2026-10-20), questions for Nipun:
 - Learning hub: which ebooks/resources exist, and may students download them, or should they be view-only (a
   view-only PDF can still be saved by a determined user; watermarking with the student's email is possible later)?
   Which resources are free? Max file size is 50 MB (RESOURCE_MAX_MB).
+
+Questions from the client's "CCL Project 2026" document (2026-10-30):
+- Fluency penalty: the Scoring Brief says -0.5 per occurrence, the "MVP Scope" page says -0.2. Built with 0.5 (the
+  brief); switching is four values in backend/config/scoring.yaml. Which is right?
+- Launch languages: the MVP scope page lists 13 LOTEs, the Q&A says Filipino only for Phase 1 and 6 more in Phase 2.
+  All 13 are seeded; which should be advertised and sold at launch?
+- "Leads" on the admin dashboard and the revenue dashboard are still deferred: what counts as a lead?
+- Student emails are sent by the worker (or the site's job tick on Vercel); a deployment without a running worker
+  queues them until it starts.
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
@@ -189,3 +209,4 @@ Scope additions (2026-10-20), questions for Nipun:
 - 2026-10-21 course chapters (client mockup): CourseChapter + Lesson.chapter_id (migration); one outline order (chapters, then chapterless lessons) for the course page, lesson sidebar and Previous/Next, numbered 1.1/2.1; admin editor groups lessons by chapter with add/rename/reorder/delete and a chapter picker per lesson; courses.csv chapter_no/chapter_title (upserted; chapters dropped from the file are removed, their lessons kept); lesson page rebuilt with a collapsible Course Content sidebar (remembered), video, text, Mark as complete, Previous/Next; course overview grouped by chapter with progress and Start/Continue. 6 tests. Checked in the browser on the dev course (chapters left in place as a demo).
 - 2026-10-22 demo data: `python -m app.demo_data` (dev only, refuses production; `--reset` removes it): 9 DEMO dialogues in all 7 languages with synthetic speech-like audio packaged through the real HLS pipeline, Filipino and Hindi mock tests, 2 courses with chapters, 4 hub resources incl. a PDF, 4 demo students (Active, Trial, free, expired trial) with attempts scored by the real pipeline using a demo stand-in evaluator that plants omissions, distortions, a grammar slip and a hesitation, plus start delays and pauses measured from the audio. Demo jobs are held back from a running worker. Translations unreviewed (marked). 4 tests; loaded into the dev DB and checked in the browser.
 - 2026-10-23 Vercel deploy: naati-ccl-web.vercel.app (Next.js) + naati-ccl-api (FastAPI) on a Neon Postgres; files in Postgres (STORAGE_BACKEND=db), migrate+seed on start (AUTO_MIGRATE), queued jobs run via /api/jobs/tick from the site and a daily cron. AI keys not set yet, so transcription and scoring use the mock providers.
+- 2026-10-30 7.1-7.9 (gaps against the client's "CCL Project 2026" doc): 6 more languages (13 LOTEs) with draft guidance and Japanese kana filler matching; Teacher role (require_staff vs require_admin, Admin > Team with invites/roles/deactivate, trimmed staff nav); email one or many students (queued jobs, {first_name}, EmailLog); ActivityEvent log merged with emails/payments/access on the student page; dashboard last-5 averages + announcements carousel (Admin > Announcements); fluency -0.5 vs -0.2 noted; launch course drafts seeded; lesson PDF (upload, courses.csv pdf_url job, protected inline serving, Caddy route); 50-dialogue import test (~3 s). 3 migrations. 347 backend tests, lint and frontend build pass. Checked in the browser with dev QA accounts (since deactivated): announcement form + carousel (desktop and phone), Team page, email from a student page landing in the activity log, lesson PDF inline, teacher redirected from admin-only pages. Not clicked: bulk "Email selected", Team add/role change, courses.csv pdf_url against a real URL.
