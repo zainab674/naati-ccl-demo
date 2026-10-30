@@ -78,7 +78,7 @@ def test_courses_and_lessons(admin_client, db):
     assert r.status_code == 400
     assert admin_client.patch(f"/api/admin/courses/{cid}", json={"status": "Published"}).json()["status"] == "Published"
     make_course(db, key="other")
-    assert len(admin_client.get("/api/admin/courses").json()) == 2
+    assert len(admin_client.get("/api/admin/courses").json()) == 4  # + the two seeded launch drafts
     preview = admin_client.post("/api/admin/sanitize-html", json={"html": '<b onclick="x">b</b>'}).json()
     assert preview["html"] == "<b>b</b>"
 

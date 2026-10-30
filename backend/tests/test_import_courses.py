@@ -36,7 +36,7 @@ def test_course_validation_errors(admin_client, db):
     cols = {(e["row"], e["column"]) for e in job["report"]["errors"]}
     assert {(3, "lesson_no"), (4, "lesson_no"), (5, "course_title"), (6, "video_url"), (7, "is_free"),
             (8, "course_key")} <= cols
-    assert db.query(Course).count() == 0
+    assert db.query(Course).count() == 2  # only the seeded launch drafts: nothing was imported
 
 
 def test_course_commit_sanitises_and_is_idempotent(admin_client, db):

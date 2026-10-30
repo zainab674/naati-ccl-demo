@@ -157,7 +157,8 @@ def state(ref: AttemptRef) -> dict:
         "current": current,
         # Seconds since the attempt began, from the server clock (the player's countdown does not trust the device).
         "elapsed_seconds": int((utcnow() - started).total_seconds()) if started else 0,
-        "config": {"time_limit_minutes": timer.get("mock_minutes" if ref.mock else "practice_minutes", 0),"max_repeats_per_dialogue": seg_cfg["max_repeats_per_dialogue"],
+        "config": {"time_limit_minutes": timer.get("mock_minutes" if ref.mock else "practice_minutes", 0),
+                   "max_repeats_per_dialogue": seg_cfg["max_repeats_per_dialogue"],
                    "response_window_seconds": seg_cfg["response_window_seconds"],
                    "chime_seconds": seg_cfg.get("chime_seconds", 0.6), "camera": cfg.get("camera", {}),
                    "information_1": cfg["information_1"].strip(), "information_2": cfg["information_2"].strip(),

@@ -1,7 +1,8 @@
 import pytest
 from sqlalchemy import select
 
-from app.models import Language, LanguagePair, LanguageScoringConfig, LanguageType, Plan, Topic, User, UserRole
+from app.models import (ContentStatus, Course, Language, LanguagePair, LanguageScoringConfig, LanguageType, Plan, Topic,
+                        User, UserRole)
 from app.seed import seed
 from app.services.languages import LanguageRuleError, validate_pair
 from app.settings import ccl_config, scoring_config
@@ -16,10 +17,15 @@ def test_health(client):
 def test_seed_is_idempotent(db):
     seed(db)
     seed(db)
-    # English + Filipino, Hindi, Mandarin, Punjabi, Arabic, Nepali, Vietnamese; one English pair each
-    assert db.query(Language).count() == 8
-    assert db.query(LanguagePair).count() == 7
-    assert db.query(LanguageScoringConfig).count() == 7
+    # English + 13 LOTEs (Filipino ... Spanish); one English pair each
+    assert db.query(Language).count() == 14
+    assert db.query(LanguagePair).count() == 13
+    assert db.query(LanguageScoringConfig).count() == 13
+    # The two launch courses, as empty drafts, created once
+    courses = db.scalars(select(Course).order_by(Course.sort_order)).all()
+    assert [(c.key, c.status, len(c.lessons)) for c in courses] == [
+        ("intro-to-ccl", ContentStatus.DRAFT, 0), ("exam-prep-fil", ContentStatus.DRAFT, 0)]
+    assert courses[0].is_free and courses[0].language_pair_id is None and courses[1].language_pair.lote.code == "fil"
     assert db.query(Topic).count() >= 5
     assert db.query(Plan).count() == 2
     admin = db.scalar(select(User).where(User.email == "admin@example.com"))

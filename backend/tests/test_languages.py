@@ -90,7 +90,7 @@ def test_course_csv_language_column(admin_client, db):
     assert job["report"]["ok"], job["report"]
     admin_client.post(f"/api/admin/imports/{job['id']}/commit")
     by_key = {c["key"]: c["language"] for c in admin_client.get("/api/admin/courses").json()}
-    assert by_key == {"exam-ar": "ar", "intro": None}
+    assert by_key == {"exam-ar": "ar", "intro": None, "intro-to-ccl": None, "exam-prep-fil": "fil"}
     bad = b"course_key,course_title,lesson_no,lesson_title,lote_language\nx-1,X,1,L,klingon\n"
     rep = admin_client.post("/api/admin/imports/courses", files={"file": ("c.csv", bad, "text/csv")}).json()["report"]
     assert [e["column"] for e in rep["errors"]] == ["lote_language"]

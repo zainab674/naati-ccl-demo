@@ -1,4 +1,5 @@
-"""Idempotent base data: languages, their English pairs and scoring guidance, topics, plans, first admin.
+"""Idempotent base data: languages, their English pairs and scoring guidance, topics, plans, the launch course shells,
+first admin.
 
     python -m app.seed
 
@@ -11,7 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal
-from .models import Language, LanguageScoringConfig, LanguageType, Plan, SiteContent, Topic, User, UserRole
+from .models import (ContentStatus, Course, Language, LanguageScoringConfig, LanguageType, Plan, SiteContent, Topic, User,
+                     UserRole)
 from .seed_languages import LANGUAGES, SCORING
 from .security import hash_password, verify_password
 from .services.languages import get_or_create_pair
@@ -22,6 +24,14 @@ log = logging.getLogger("seed")
 # Common CCL dialogue domains.
 TOPICS = ["Health", "Legal", "Financial", "Education", "Community", "Consumer Affairs", "Immigration",
           "Employment", "Housing", "Social Services", "Business", "Insurance"]
+
+# The two MVP courses named in the client brief, created once as empty Drafts so admins only add lessons (in the
+# course editor, or courses.csv with these course_key values). Titles only: Benchmark supplies the lessons.
+LAUNCH_COURSES = [
+    {"key": "intro-to-ccl", "title": "Introduction to CCL Test", "is_free": True, "lote": None, "sort_order": 1},
+    {"key": "exam-prep-fil", "title": "Exam Preparation (Filipino to English)", "is_free": False, "lote": "fil",
+     "sort_order": 2},
+]
 
 PLANS = [
     {"key": "self-study", "name": "Self-Study", "sort_order": 1, "contact_only": False},
@@ -50,6 +60,13 @@ def seed(db: Session) -> None:
     for i, name in enumerate(TOPICS):
         if not db.scalar(select(Topic).where(Topic.name == name)):
             db.add(Topic(name=name, sort_order=i))
+
+    for spec in LAUNCH_COURSES:
+        if not db.scalar(select(Course.id).where(Course.key == spec["key"])):
+            pair = get_or_create_pair(db, langs["en"], langs[spec["lote"]]) if spec["lote"] else None
+            db.add(Course(key=spec["key"], title=spec["title"], is_free=spec["is_free"], sort_order=spec["sort_order"],
+                          status=ContentStatus.DRAFT, language_pair_id=pair.id if pair else None))
+            log.info("created draft course %s", spec["key"])
 
     prices = {"self-study": s.stripe_price_self_study, "coaching": s.stripe_price_coaching}
     for spec in PLANS:

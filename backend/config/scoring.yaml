@@ -22,6 +22,8 @@ penalties:
     register: 0.5
     sentence_structure: 0.5
     pronunciation: 0.5
+  # The Scoring Brief says -0.5 per fluency occurrence; the client's "MVP Scope" page says -0.2. 0.5 follows the
+  # brief until Benchmark confirms (BUILD_PLAN open questions). To use -0.2, set these four values to 0.2.
   fluency:                    # per occurrence
     pause: 0.5
     start_delay: 0.5
