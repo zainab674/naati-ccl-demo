@@ -6,11 +6,13 @@ import { type ReactNode, useState } from "react";
 import { LABELS, type SegmentResult } from "@/lib/results";
 import { Badge, Card, cx } from "./ui";
 
-export function fmtDed(n: number) {
+/** null = not shown (the language's scoring is not validated yet). */
+export function fmtDed(n: number | null) {
+  if (n === null) return "";
   return n ? `−${Number(n.toFixed(2))}` : "0";
 }
 
-function Row({ label, tone, deduction, children, extra }: { label: string; tone: "red" | "amber" | "slate" | "green"; deduction: number; children: ReactNode; extra?: ReactNode }) {
+function Row({ label, tone, deduction, children, extra }: { label: string; tone: "red" | "amber" | "slate" | "green"; deduction: number | null; children: ReactNode; extra?: ReactNode }) {
   return (
     <li className="flex gap-3 py-3">
       <div className="w-36 shrink-0"><Badge tone={tone}>{label}</Badge></div>
@@ -22,7 +24,7 @@ function Row({ label, tone, deduction, children, extra }: { label: string; tone:
 
 /** One segment's feedback. `actions` lets the admin screen add override controls per item. */
 export default function SegmentResultCard({ seg, recordingUrl, defaultOpen, actions }:
-  { seg: SegmentResult; recordingUrl?: string; defaultOpen?: boolean; actions?: (kind: string, item: { id: string; deduction: number }) => ReactNode }) {
+  { seg: SegmentResult; recordingUrl?: string; defaultOpen?: boolean; actions?: (kind: string, item: { id: string; deduction: number | null }) => ReactNode }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const errors = seg.accuracy.filter((a) => a.result !== "Correct").length + seg.insertions.length + seg.language.length + seg.fluency.length;
   return (
@@ -95,7 +97,7 @@ export default function SegmentResultCard({ seg, recordingUrl, defaultOpen, acti
   );
 }
 
-function Section({ title, total, children, empty }: { title: string; total: number; children: ReactNode; empty?: string }) {
+function Section({ title, total, children, empty }: { title: string; total: number | null; children: ReactNode; empty?: string }) {
   const items = Array.isArray(children) ? children.flat().filter(Boolean) : children ? [children] : [];
   return (
     <div>

@@ -1,0 +1,6 @@
+# Languages whose scores students may see (the estimated /90 or /45, criterion totals, deductions and Pass/Fail).
+# Every other language shows "Practice feedback, score not validated" with the errors found but no score.
+# Entries are added only by `python -m validation approve <code> --by "<name>"`, which refuses unless the committed
+# held-out report docs/validation/reports/<code>-heldout.json passed the agreed bar (docs/SCORING_VALIDATION.md).
+# make check fails if a listed language's report no longer matches the current prompt or scoring config.
+languages: {}

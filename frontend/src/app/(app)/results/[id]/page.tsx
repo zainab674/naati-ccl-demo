@@ -36,6 +36,8 @@ export default function ResultsPage() {
   if (!r) return <Spinner />;
   const scoring = SCORING.includes(r.scoring_status);
   const done = r.total_score !== null && !scoring;
+  // Students: no score until the language's scoring is validated against examiners. Staff see it, labelled.
+  const practiceOnly = !r.score_validated && r.total_score === null && !scoring;
   const totalSegs = r.dialogues.reduce((n, d) => n + d.segments.length, 0);
 
   return (
@@ -49,11 +51,28 @@ export default function ResultsPage() {
         </div>
       )}
 
+      {!r.score_validated && !practiceOnly && !scoring && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200">
+          <Info className="size-4 shrink-0" /> Staff view: this language&apos;s scoring is not validated, so students see the feedback below without this score.
+        </div>
+      )}
+
       {scoring ? (
         <Card className="flex items-center gap-4 p-6">
           <Loader2 className="size-6 animate-spin text-brand-500" />
           <div><div className="font-semibold">Scoring your answers…</div>
             <div className="text-sm text-slate-500">{totalSegs - r.pending_segments} of {totalSegs} segments done. We will also email you when your results are ready.</div></div>
+        </Card>
+      ) : practiceOnly ? (
+        <Card className="p-6">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 size-5 shrink-0 text-brand-600" />
+            <div>
+              <div className="font-semibold">Practice feedback</div>
+              <p className="mt-1 text-sm text-slate-600">{r.score_notice}</p>
+              <p className="mt-2 text-sm text-slate-600">Open each segment to see what we heard, each error with an explanation, and a suggested version.</p>
+            </div>
+          </div>
         </Card>
       ) : (
         <Card className="p-6">
@@ -115,7 +134,7 @@ export default function ResultsPage() {
               <li key={h.id}>
                 <Link href={`/results/${h.id}`} className="flex items-center justify-between px-5 py-3 text-sm hover:bg-slate-50">
                   <span>{h.submitted_at ? fmtDate(h.submitted_at) : ""}{h.id === r.id && <span className="ml-2 text-slate-400">(this attempt)</span>}</span>
-                  <span className="flex items-center gap-2 tabular-nums">{h.total_score !== null ? `${h.total_score}/${h.maximum_score}` : "Scoring…"}{h.result && <Badge tone={h.result === "Pass" ? "green" : "red"}>{h.result}</Badge>}</span>
+                  <span className="flex items-center gap-2 tabular-nums">{h.total_score !== null ? `${h.total_score}/${h.maximum_score}` : practiceOnly ? "Feedback" : "Scoring…"}{h.result && <Badge tone={h.result === "Pass" ? "green" : "red"}>{h.result}</Badge>}</span>
                 </Link>
               </li>
             ))}

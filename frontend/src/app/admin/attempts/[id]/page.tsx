@@ -64,7 +64,7 @@ export default function AdminAttempt() {
                 <SegmentResultCard seg={s} defaultOpen={s.needs_review && !s.reviewed}
                   recordingUrl={`/api/attempts/${a.id}/segments/${s.segment_attempt_id}/recording`}
                   actions={(kind, item) => (
-                    <button onClick={() => setTarget({ seg: s.segment_attempt_id, t: { kind, id: item.id, deduction: item.deduction } })}
+                    <button onClick={() => setTarget({ seg: s.segment_attempt_id, t: { kind, id: item.id, deduction: item.deduction ?? 0 } })}
                       className="text-xs font-medium text-brand-600 hover:underline">Override</button>
                   )} />
                 <AdminSegmentTools seg={s} onAction={action} onRuns={() => setRunsFor(s.segment_attempt_id)} />

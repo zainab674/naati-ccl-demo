@@ -95,7 +95,7 @@ def student(user_id: uuid.UUID, db: Session = Depends(get_db)):
                            "cancel_at_period_end": s.cancel_at_period_end} for s in subs],
         "payments": [{"amount": p.amount, "currency": p.currency, "status": p.status, "receipt_url": p.receipt_url,
                       "created_at": p.created_at.isoformat()} for p in payments],
-        "attempts": [attempt_summary(db, r) for r in _my_attempts(db, u.id)],
+        "attempts": [attempt_summary(db, r, staff=True) for r in _my_attempts(db, u.id)],
     }
 
 

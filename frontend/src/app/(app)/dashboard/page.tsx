@@ -31,11 +31,12 @@ export default function DashboardPage() {
   if (!d) return <Spinner />;
   // "last 5" when the student has at least that many scored attempts; otherwise just "out of".
   const over = (counted: number) => (d.average_over && counted >= d.average_over ? `last ${d.average_over} · ` : "");
+  const hidden = "shown once scoring for your language is validated";
   const stats = [
     { label: "Average mock test score", value: d.average_mock_score !== null ? `${d.average_mock_score}` : "–",
-      sub: `${over(d.mock_scores_counted)}out of ${d.mock_max}` },
+      sub: d.scores_shown ? `${over(d.mock_scores_counted)}out of ${d.mock_max}` : hidden },
     { label: "Average dialogue score", value: d.average_dialogue_score !== null ? `${d.average_dialogue_score}` : "–",
-      sub: `${over(d.dialogue_scores_counted)}out of ${d.dialogue_max}` },
+      sub: d.scores_shown ? `${over(d.dialogue_scores_counted)}out of ${d.dialogue_max}` : hidden },
     { label: "Dialogues available", value: `${d.dialogues_available}`, sub: `of ${d.dialogues_total} in the library` },
     { label: "Mock tests available", value: `${d.mock_tests_available}`, sub: "two dialogues each" },
   ];

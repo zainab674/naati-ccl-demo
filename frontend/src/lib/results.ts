@@ -1,6 +1,7 @@
-export type Deductions = { accuracy: number; language: number; fluency: number; total: number };
+// Deductions are null for students when their language's scoring is not validated yet (score_validated false).
+export type Deductions = { accuracy: number | null; language: number | null; fluency: number | null; total: number | null };
 
-type ItemBase = { id: string; deduction: number; explanation: string; confidence: number | null; overridden: boolean };
+type ItemBase = { id: string; deduction: number | null; explanation: string; confidence: number | null; overridden: boolean };
 export type AccuracyItem = ItemBase & { result: string; meaning_unit?: number; source_meaning: string; student_meaning: string; suggested_version: string };
 export type LanguageItem = ItemBase & { type: string; student_text: string; suggested_version: string; needs_review: boolean; detection_method: string };
 export type FluencyItem = ItemBase & { type: string; transcript_excerpt: string; timestamp_seconds: number | null; duration_seconds: number | null; detection_method: string };
@@ -27,6 +28,7 @@ export type Results = {
   total_score: number | null; maximum_score: number; result: "Pass" | "Fail" | null; reasons: string[]; submitted_at: string | null;
   pass_rules: { pass_total: number; pass_min_per_dialogue: number; dialogue_max: number; total_max: number };
   demo_scoring: boolean; deductions: Deductions; dialogues: DialogueResult[];
+  score_validated: boolean; score_notice?: string;
   history: { id: string; total_score: number | null; maximum_score: number; result: string | null; submitted_at: string | null }[];
 };
 

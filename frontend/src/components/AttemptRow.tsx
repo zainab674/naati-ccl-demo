@@ -25,7 +25,8 @@ export default function AttemptRow({ a }: { a: AttemptSummary }) {
               <span className="text-sm font-semibold tabular-nums">{a.total_score}/{a.maximum_score}</span>
               {a.result && <Badge tone={a.result === "Pass" ? "green" : "red"}>{a.result}</Badge>}
             </>
-          ) : <Badge tone={a.scoring_status === "Failed" ? "red" : "slate"}>{a.scoring_status === "Failed" ? "Scoring failed" : "Scoring…"}</Badge>}
+          ) : a.score_validated === false && a.scoring_status === "Completed" ? <Badge tone="brand">Feedback ready</Badge>
+          : <Badge tone={a.scoring_status === "Failed" ? "red" : "slate"}>{a.scoring_status === "Failed" ? "Scoring failed" : "Scoring…"}</Badge>}
       </div>
     </Link>
   );

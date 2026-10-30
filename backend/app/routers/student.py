@@ -15,6 +15,7 @@ from ..models import (AttemptStatus, ContentStatus, Dialogue, DialogueAttempt, L
                       RecordStatus, ScoringStatus, Topic)
 from ..services import attempts as svc
 from ..services import languages, protection, ratelimit
+from ..services import score_visibility as gate
 from . import announcements
 from ..services.storage import get_storage
 from ..settings import ccl_config, get_settings, scoring_config
@@ -38,25 +39,31 @@ def _dialogue_progress(db: Session, user_id) -> dict:
                 p["in_progress_id"] = str(da.id)
         elif da.status == AttemptStatus.COMPLETED and p["status"] != "in_progress":
             p["status"] = "completed"
+        if not gate.is_validated(gate.pair_code(da.dialogue.language_pair)):
+            continue  # scores for this language are not validated: no best score shown
         if da.total_score is not None and (p["best_score"] is None or da.total_score > p["best_score"]):
             p["best_score"] = da.total_score
     return out
 
 
-def attempt_summary(db: Session, ref: svc.AttemptRef) -> dict:
+def attempt_summary(db: Session, ref: svc.AttemptRef, staff: bool = False) -> dict:
+    """staff=True: admin views, which show scores whether or not the language is validated."""
     das = ref.dialogue_attempts
     scored = ref.mock.total_score if ref.mock else das[0].total_score
     max_score = ref.mock.maximum_score if ref.mock else das[0].maximum_score
     result = (ref.mock.result if ref.mock else das[0].result)
     scoring = ref.mock.scoring_status if ref.mock else das[0].scoring_status
     started = ref.mock.started_at if ref.mock else das[0].started_at
+    validated = gate.is_validated(gate.pair_code(das[0].dialogue.language_pair))
+    if not validated and not staff:
+        scored, result = None, None
     answered = sum(1 for da in das for sa in da.segment_attempts if sa.audio_user)
     total = sum(len(da.segment_attempts) for da in das)
     return {"id": str(ref.id), "kind": ref.kind, "title": ref.mock.mock_test.title if ref.mock else das[0].dialogue.title,
             "dialogues": [da.dialogue.title for da in das], "status": ref.status.value,
             "scoring_status": scoring.value, "total_score": scored, "maximum_score": max_score,
             "result": result.value if result else None, "answered": answered, "segments": total,
-            "started_at": started.isoformat() if started else None}
+            "started_at": started.isoformat() if started else None, "score_validated": validated}
 
 
 def _my_attempts(db: Session, user_id) -> list[svc.AttemptRef]:
@@ -118,8 +125,10 @@ def mock_tests(language: str = "", cu: CurrentUser = Depends(current_user), db: 
                                                             MockTestAttempt.mock_test_id == m.id)
                               .order_by(MockTestAttempt.started_at.desc())).all()
         in_progress = next((a for a in attempts if a.status == AttemptStatus.IN_PROGRESS), None)
-        best = max((a.total_score for a in attempts if a.total_score is not None), default=None)
         lote = db.get(LanguagePair, m.language_pair_id).lote
+        best = None
+        if gate.is_validated(lote.code):
+            best = max((a.total_score for a in attempts if a.total_score is not None), default=None)
         out.append({"id": str(m.id), "title": m.title, "is_free": m.is_free, "locked": is_locked(cu.user, m.is_free),
                     "language": lote.code, "language_name": lote.name,
                     "dialogues": [{"title": md.dialogue.title, "topic": md.dialogue.topic.name if md.dialogue.topic else None,
@@ -138,7 +147,8 @@ def dashboard(cu: CurrentUser = Depends(current_user), db: Session = Depends(get
     # refs are newest first, so the first N scores are the last N attempts (ccl.yaml dashboard.average_last_attempts).
     last_n = int(ccl_config().get("dashboard", {}).get("average_last_attempts", 5)) or None
     mock_scores = [s["total_score"] for s in summaries if s["kind"] == "mock" and s["total_score"] is not None][:last_n]
-    dialogue_scores = [da.total_score for r in refs for da in r.dialogue_attempts if da.total_score is not None][:last_n]
+    dialogue_scores = [da.total_score for r in refs for da in r.dialogue_attempts if da.total_score is not None
+                       and gate.is_validated(gate.pair_code(da.dialogue.language_pair))][:last_n]
     unfinished = [s for s in summaries if s["status"] == AttemptStatus.IN_PROGRESS.value]
     library = dialogues("", "", "", cu, db)  # in the student's own language
     available = [d for d in library if not d["locked"]]
@@ -150,6 +160,9 @@ def dashboard(cu: CurrentUser = Depends(current_user), db: Session = Depends(get
                  "days_to_exam": (exam - date.today()).days if exam else None},
         "average_mock_score": round(sum(mock_scores) / len(mock_scores), 1) if mock_scores else None,
         "average_dialogue_score": round(sum(dialogue_scores) / len(dialogue_scores), 1) if dialogue_scores else None,
+        # False: averages stay empty because the student's language is not validated yet (score gate).
+        "scores_shown": gate.is_validated(cu.user.preferred_language.code) if cu.user.preferred_language
+        else bool(gate.validated_languages()),
         "average_over": last_n, "mock_scores_counted": len(mock_scores), "dialogue_scores_counted": len(dialogue_scores),
         "mock_max": scoring_config()["total_max"], "dialogue_max": scoring_config()["dialogue_max"],
         "dialogues_available": len(available), "dialogues_total": len(library),
@@ -343,7 +356,11 @@ def results(attempt_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: 
     ref = svc.resolve(db, attempt_id, cu.user, allow_admin=True)
     if ref.status == AttemptStatus.IN_PROGRESS:
         raise HTTPException(409, "This attempt has not been submitted yet")
-    return attempt_results(db, ref)
+    payload = attempt_results(db, ref)
+    payload["score_validated"] = gate.is_validated(gate.pair_code(ref.dialogue_attempts[0].dialogue.language_pair))
+    if not payload["score_validated"] and not cu.user.is_staff:
+        gate.redact_results(payload)
+    return payload
 
 
 @router.post("/attempts/{attempt_id}/submit")

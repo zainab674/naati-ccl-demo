@@ -14,14 +14,14 @@ export type MockItem = {
 export type AttemptSummary = {
   id: string; kind: "mock" | "practice"; title: string; dialogues: string[]; status: string; scoring_status: string;
   total_score: number | null; maximum_score: number; result: "Pass" | "Fail" | null; answered: number; segments: number;
-  started_at: string | null;
+  started_at: string | null; score_validated?: boolean;
 };
 
 export type Dashboard = {
   user: { first_name: string; has_active_plan: boolean; target_exam_date: string | null; days_to_exam: number | null };
   average_mock_score: number | null; average_dialogue_score: number | null; mock_max: number; dialogue_max: number;
   dialogues_available: number; dialogues_total: number; mock_tests_available: number;
-  average_over: number | null; mock_scores_counted: number; dialogue_scores_counted: number;
+  average_over: number | null; scores_shown: boolean; mock_scores_counted: number; dialogue_scores_counted: number;
   unfinished: AttemptSummary[]; recent: AttemptSummary[]; quick_start: DialogueItem | null;
   announcements: Announcement[];
 };

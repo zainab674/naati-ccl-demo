@@ -156,7 +156,8 @@ def finalize(segment_attempt_id: uuid.UUID) -> None:
         db.commit()
         if da.mock_test_attempt_id is None:
             if da.scoring_status == ScoringStatus.COMPLETED and not da.results_emailed_at:
-                _results_email(db, da.user, da.dialogue.title, da.total_score, da.maximum_score, da.result, da.id)
+                _results_email(db, da.user, da.dialogue.title, da.total_score, da.maximum_score, da.result, da.id,
+                               da.dialogue.language_pair)
                 da.results_emailed_at = utcnow()
                 db.commit()
             return
@@ -175,12 +176,16 @@ def finalize(segment_attempt_id: uuid.UUID) -> None:
         ma.finished_at = utcnow()
         db.commit()
         if not failed and not ma.results_emailed_at:
-            _results_email(db, ma.user, ma.mock_test.title, ma.total_score, ma.maximum_score, ma.result, ma.id)
+            _results_email(db, ma.user, ma.mock_test.title, ma.total_score, ma.maximum_score, ma.result, ma.id,
+                           ma.dialogue_attempts[0].dialogue.language_pair)
             ma.results_emailed_at = utcnow()
             db.commit()
 
 
-def _results_email(db: Session, user, title, total, maximum, result, attempt_id) -> None:
+def _results_email(db: Session, user, title, total, maximum, result, attempt_id, language_pair=None) -> None:
+    from ..score_visibility import is_validated, pair_code
+    if not is_validated(pair_code(language_pair)):
+        total, result = None, None  # the email links to practice feedback; no unvalidated score in the inbox
     send_template(db, "results_ready", user.email, {
         "first_name": user.first_name, "title": title, "total": total, "max": maximum,
         "result": result.value if result else "", "results_url": f"{get_settings().app_url}/results/{attempt_id}"},

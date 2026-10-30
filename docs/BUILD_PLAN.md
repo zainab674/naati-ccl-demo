@@ -98,6 +98,19 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 7.8 PDF handout per lesson (editor upload, courses.csv pdf_url, protected serving).
 - [x] 7.9 Launch-size import check: 50 dialogues x 14 segments in one CSV.
 
+## M8. Scoring validation (2026-10-30): prove the estimated score agrees with NAATI examiners
+- [x] 8.1 Read NAATI's published CCL test and marking information directly; differences from the Scoring Brief recorded.
+- [x] 8.2 Annotation guide, Label Studio labeling config, task generator and export converter.
+- [x] 8.3 Evaluation harness: ICC(A,1), weighted kappa, Bland-Altman, error precision/recall vs examiners and the
+      examiner ceiling, Pass/Fail at 29/63 with false-pass rate and calibration, WER (jiwer), timing, quotes, real
+      exam results; student-cluster bootstrap CIs; rubric fidelity kept separate from error identification.
+- [x] 8.4 Many-facet Rasch (student x rater x MU, AI as a rater) + FACETS/TAM exports; MU-count adjustment (off) with
+      simulation evidence.
+- [x] 8.5 Frozen by-student held-out split with checksum, held-out run ledger; acceptance bar (proposed).
+- [x] 8.6 Per-language score gate: students see practice feedback without scores until a held-out report passes;
+      `make check` fails when a validated language's report no longer matches the prompt/scoring config.
+- [ ] 8.7 Run the study on real data: blocked on Benchmark (docs/validation/DATA_REQUEST.md).
+
 ## Deferred (from the client brief "CCL Platform", parked 2026-10-20 at the user's request)
 - [x] PDF attachment per course lesson (done in 7.8).
 - [ ] Admin dashboard: new accounts and revenue (and "leads", once defined).
@@ -161,6 +174,16 @@ Questions from the client's "CCL Project 2026" document (2026-10-30):
 - Student emails are sent by the worker (or the site's job tick on Vercel); a deployment without a running worker
   queues them until it starts.
 
+Scoring validation (2026-10-30), for Benchmark (docs/validation/DATA_REQUEST.md):
+- Recordings with consent (40+ dialogue attempts), 2-3 certified examiners marking each independently, ~40 human
+  transcripts with hand-marked timings, real NAATI results where students agree.
+- Agree the acceptance bar in backend/validation/bar.yaml (proposed: ICC within 0.05 of examiners, false-pass rate
+  <= 5%, quotes and timings 100%) before the held-out run.
+- MU-count rule: splitting guideline, or turn on accuracy_normalisation (scoring.yaml)?
+- Until a language passes, students see no estimated score in any language (this already applies to the live demo).
+- NAATI gaps to test on the development set: indirect speech (no error type yet), English numerals penalised in
+  Hindi/Gujarati/Malayalam/Punjabi by NAATI's language policy but not in our draft guidance.
+
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
 - 2026-10-19 0.2: docker-compose.yml (postgres:17, minio, backend, worker, frontend) + root .env.example. Validated with `docker compose config`; could not run the stack here (Docker Desktop's WSL VM would not start), dev/tests used a local Postgres on :5433 instead.
@@ -210,3 +233,4 @@ Questions from the client's "CCL Project 2026" document (2026-10-30):
 - 2026-10-22 demo data: `python -m app.demo_data` (dev only, refuses production; `--reset` removes it): 9 DEMO dialogues in all 7 languages with synthetic speech-like audio packaged through the real HLS pipeline, Filipino and Hindi mock tests, 2 courses with chapters, 4 hub resources incl. a PDF, 4 demo students (Active, Trial, free, expired trial) with attempts scored by the real pipeline using a demo stand-in evaluator that plants omissions, distortions, a grammar slip and a hesitation, plus start delays and pauses measured from the audio. Demo jobs are held back from a running worker. Translations unreviewed (marked). 4 tests; loaded into the dev DB and checked in the browser.
 - 2026-10-23 Vercel deploy: naati-ccl-web.vercel.app (Next.js) + naati-ccl-api (FastAPI) on a Neon Postgres; files in Postgres (STORAGE_BACKEND=db), migrate+seed on start (AUTO_MIGRATE), queued jobs run via /api/jobs/tick from the site and a daily cron. AI keys not set yet, so transcription and scoring use the mock providers.
 - 2026-10-30 7.1-7.9 (gaps against the client's "CCL Project 2026" doc): 6 more languages (13 LOTEs) with draft guidance and Japanese kana filler matching; Teacher role (require_staff vs require_admin, Admin > Team with invites/roles/deactivate, trimmed staff nav); email one or many students (queued jobs, {first_name}, EmailLog); ActivityEvent log merged with emails/payments/access on the student page; dashboard last-5 averages + announcements carousel (Admin > Announcements); fluency -0.5 vs -0.2 noted; launch course drafts seeded; lesson PDF (upload, courses.csv pdf_url job, protected inline serving, Caddy route); 50-dialogue import test (~3 s). 3 migrations. 347 backend tests, lint and frontend build pass. Checked in the browser with dev QA accounts (since deactivated): announcement form + carousel (desktop and phone), Team page, email from a student page landing in the activity log, lesson PDF inline, teacher redirected from admin-only pages. Not clicked: bulk "Email selected", Team add/role change, courses.csv pdf_url against a real URL.
+- 2026-10-30 M8 scoring validation: NAATI pages read (no published point values; deductions by impact; indirect speech and English numerals policies noted); backend/validation/ (dataset, AI runs cached by prompt/model/config key, metrics with student-cluster bootstrap, report with examiner ceiling and rubric-fidelity split, many-facet Rasch + FACETS/TAM export, frozen by-student held-out split + ledger, gate + approve + check), Label Studio config + annotation guide, data request, MU-count adjustment (off) + simulation, per-language score gate (students: practice feedback only; staff unchanged; email/dashboard/library/attempts redacted). No real data: nothing measured, docs/SCORING_VALIDATION.md says so. 364 backend tests (validation harness on synthetic data, gate), lint and frontend build pass.

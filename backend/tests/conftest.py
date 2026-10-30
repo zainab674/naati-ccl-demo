@@ -97,3 +97,17 @@ def student_client(client):
 def admin_client(client):
     login(client, "admin@example.com", "admin-pass-123")
     return client
+
+
+@pytest.fixture(autouse=True)
+def all_languages_score_validated(request, monkeypatch):
+    """Most tests check scoring itself, so every language counts as validated. Tests marked score_gate use the real
+    config/validated_languages.yaml (no language validated until a held-out report passes)."""
+    if request.node.get_closest_marker("score_gate"):
+        return
+    from app.services import score_visibility
+
+    class _All(frozenset):
+        def __contains__(self, item):
+            return True
+    monkeypatch.setattr(score_visibility, "validated_languages", lambda: _All())
