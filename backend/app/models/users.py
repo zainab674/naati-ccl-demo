@@ -38,6 +38,11 @@ class User(IdMixin, Base):
     def is_admin(self) -> bool:
         return self.role == UserRole.ADMIN
 
+    @property
+    def is_staff(self) -> bool:
+        """Admins and teachers: can open the staff area, every student's attempts and all content."""
+        return self.role in (UserRole.ADMIN, UserRole.TEACHER)
+
 
 class PasswordResetToken(IdMixin, Base):
     __tablename__ = "password_reset_tokens"

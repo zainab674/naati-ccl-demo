@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useUser } from "@/components/AppShell";
 import { Badge, Card, ErrorNote, LinkButton, PageHeader, Spinner } from "@/components/ui";
 import { api, fmtDateTime } from "@/lib/api";
 
@@ -14,6 +15,8 @@ type Overview = {
 };
 
 export default function AdminOverview() {
+  const { user } = useUser();
+  const teacher = user.role === "teacher";
   const [o, setO] = useState<Overview | null>(null);
   const [error, setError] = useState("");
   useEffect(() => { api<Overview>("/admin/overview").then(setO).catch((e) => setError(e.message)); }, []);
@@ -22,13 +25,13 @@ export default function AdminOverview() {
 
   const stats = [
     { label: "Students", value: o.students, sub: `${o.active_students} with an active plan`, href: "/admin/students" },
-    { label: "Dialogues", value: o.dialogues_published, sub: `${o.dialogues_total} in total`, href: "/admin/dialogues" },
+    { label: "Dialogues", value: o.dialogues_published, sub: `${o.dialogues_total} in total`, href: "/admin/dialogues", adminOnly: true },
     { label: "Dialogue attempts", value: o.attempts, sub: "all time", href: "/admin/students" },
     { label: "Segments to review", value: o.segments_needing_review, sub: "flagged by scoring", href: "/admin/review" },
-  ];
+  ].filter((s) => !(teacher && s.adminOnly));
   return (
     <>
-      <PageHeader title="Admin" subtitle="Content, students and scoring review." />
+      <PageHeader title={teacher ? "Teacher" : "Admin"} subtitle={teacher ? "Students, enrolment and scoring review." : "Content, students and scoring review."} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Link key={s.label} href={s.href}>
@@ -40,8 +43,8 @@ export default function AdminOverview() {
           </Link>
         ))}
       </div>
-      {o.emails_failed > 0 && <div className="mt-6"><ErrorNote>{o.emails_failed} email(s) failed to send. Check the email provider settings.</ErrorNote></div>}
-      <Card className="mt-8 p-6">
+      {!teacher && o.emails_failed > 0 && <div className="mt-6"><ErrorNote>{o.emails_failed} email(s) failed to send. Check the email provider settings.</ErrorNote></div>}
+      {!teacher && <Card className="mt-8 p-6">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Recent imports</h2>
           <LinkButton href="/admin/imports" variant="secondary"><Upload className="size-4" /> Import CSV</LinkButton>
@@ -58,7 +61,7 @@ export default function AdminOverview() {
             ))}
           </ul>
         )}
-      </Card>
+      </Card>}
     </>
   );
 }

@@ -53,6 +53,13 @@ def require_admin(cu: CurrentUser = Depends(current_user)) -> CurrentUser:
     return cu
 
 
+def require_staff(cu: CurrentUser = Depends(current_user)) -> CurrentUser:
+    """Admins and teachers (students, enrolment, attempt review)."""
+    if not cu.user.is_staff:
+        raise HTTPException(403, "Admins and teachers only")
+    return cu
+
+
 def effective_status(user: User) -> SubscriptionStatus:
     """The stored status, except that a manual grant past its end date counts as Expired."""
     if (user.subscription_status in ACTIVE_PLAN_STATUSES and user.access_expires_at is not None
@@ -62,7 +69,7 @@ def effective_status(user: User) -> SubscriptionStatus:
 
 
 def has_active_plan(user: User) -> bool:
-    return user.is_admin or effective_status(user) in ACTIVE_PLAN_STATUSES
+    return user.is_staff or effective_status(user) in ACTIVE_PLAN_STATUSES
 
 
 def requires_active_plan(cu: CurrentUser = Depends(current_user)) -> CurrentUser:

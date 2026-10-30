@@ -1,14 +1,15 @@
-"""Admin overview. Every route in admin_* routers depends on require_admin."""
+"""Admin overview (admins and teachers). Content, import and settings routers require_admin; the student,
+enrolment and review routers require_staff, which teachers pass too."""
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..deps import ACTIVE_PLAN_STATUSES, require_admin
+from ..deps import ACTIVE_PLAN_STATUSES, require_staff
 from ..models import (ContentStatus, Course, Dialogue, DialogueAttempt, EmailLog, ImportJob, SegmentAttempt, User,
                       UserRole)
 
-router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_staff)])
 
 
 @router.get("/overview")

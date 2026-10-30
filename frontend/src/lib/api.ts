@@ -48,7 +48,7 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
 // ---------- types
 
 export type User = {
-  id: string; email: string; first_name: string; last_name: string; name: string; role: "student" | "admin";
+  id: string; email: string; first_name: string; last_name: string; name: string; role: "student" | "teacher" | "admin";
   subscription_status: "Active" | "Trial" | "Expired" | "Inactive"; has_active_plan: boolean;
   target_exam_date: string | null; access_expires_at: string | null; language: string | null;
 };
@@ -61,6 +61,9 @@ export function fetchLanguages() {
   languagesCache ??= api<Language[]>("/public/languages").catch((e) => { languagesCache = null; throw e; });
   return languagesCache;
 }
+
+/** Admins and teachers open the staff area (/admin); teachers only see its student and review screens. */
+export const isStaff = (u: Pick<User, "role">) => u.role === "admin" || u.role === "teacher";
 
 // ---------- formatting
 

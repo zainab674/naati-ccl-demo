@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  BookOpen, ClipboardCheck, Eye, Flag, GraduationCap, History, LayoutDashboard, Library, LogOut, Menu, Settings, Shield, Upload, Users, X,
+  BookOpen, ClipboardCheck, Eye, Flag, GraduationCap, History, LayoutDashboard, Library, LogOut, Menu, Settings, Shield, Upload, UserCog, Users, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 
-import { api, type User } from "@/lib/api";
+import { api, isStaff, type User } from "@/lib/api";
 import { JobTicker } from "./JobTicker";
 import { Logo } from "./Logo";
 import { cx, Spinner } from "./ui";
@@ -17,7 +17,7 @@ export { Logo };
 const UserCtx = createContext<{ user: User; refresh: () => Promise<unknown> } | null>(null);
 export const useUser = () => useContext(UserCtx)!;
 
-type NavItem = { href: string; label: string; icon: typeof BookOpen };
+type NavItem = { href: string; label: string; icon: typeof BookOpen; adminOnly?: boolean };
 
 const STUDENT_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -32,13 +32,19 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/students", label: "Students", icon: Users },
   { href: "/admin/review", label: "Review queue", icon: Flag },
-  { href: "/admin/dialogues", label: "Dialogues", icon: BookOpen },
-  { href: "/admin/mock-tests", label: "Mock tests", icon: ClipboardCheck },
-  { href: "/admin/courses", label: "Courses", icon: GraduationCap },
-  { href: "/admin/resources", label: "Learning hub", icon: Library },
-  { href: "/admin/imports", label: "CSV import", icon: Upload },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/dialogues", label: "Dialogues", icon: BookOpen, adminOnly: true },
+  { href: "/admin/mock-tests", label: "Mock tests", icon: ClipboardCheck, adminOnly: true },
+  { href: "/admin/courses", label: "Courses", icon: GraduationCap, adminOnly: true },
+  { href: "/admin/resources", label: "Learning hub", icon: Library, adminOnly: true },
+  { href: "/admin/imports", label: "CSV import", icon: Upload, adminOnly: true },
+  { href: "/admin/team", label: "Team", icon: UserCog, adminOnly: true },
+  { href: "/admin/settings", label: "Settings", icon: Settings, adminOnly: true },
 ];
+
+// Pages under /admin a teacher may open (the API enforces the same split).
+const TEACHER_PATHS = ["/admin", "/admin/students", "/admin/review", "/admin/attempts"];
+const teacherMayOpen = (path: string) =>
+  TEACHER_PATHS.some((p) => path === p || (p !== "/admin" && path.startsWith(p + "/")));
 
 export default function AppShell({ children, admin }: { children: ReactNode; admin?: boolean }) {
   const [user, setUser] = useState<User | null>(null);
@@ -47,13 +53,15 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
   const router = useRouter();
 
   const load = useCallback(() => api<User>("/me").then((u) => {
-    if (admin && u.role !== "admin") { router.replace("/dashboard"); return; }
+    if (admin && !isStaff(u)) { router.replace("/dashboard"); return; }
     setUser(u);
   }), [admin, router]);
+  const blocked = !!(admin && user?.role === "teacher" && !teacherMayOpen(pathname));
+  useEffect(() => { if (blocked) router.replace("/admin"); }, [blocked, router]);
   useEffect(() => { load().catch(() => {}); }, [load]);
 
-  if (!user) return <Spinner />;
-  const nav = admin ? ADMIN_NAV : STUDENT_NAV;
+  if (!user || blocked) return <Spinner />;
+  const nav = admin ? ADMIN_NAV.filter((item) => user.role === "admin" || !item.adminOnly) : STUDENT_NAV;
 
   const logout = async () => {
     await api("/auth/logout", { method: "POST" });
@@ -102,15 +110,15 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
         <div className="min-w-0 flex-1 lg:pl-60">
           {/* Top bar: menu on phones; for admins, the switch between the admin area and the student view (top right). */}
           <header className={cx("sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-8",
-            user.role !== "admin" && "lg:hidden")}>
+            !isStaff(user) && "lg:hidden")}>
             <button onClick={() => setOpen(!open)} aria-label="Menu" className="rounded p-1.5 hover:bg-slate-100 lg:hidden">
               {open ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>
             <div className="lg:hidden"><Logo /></div>
-            {user.role === "admin" && (
+            {isStaff(user) && (
               <Link href={admin ? "/dashboard" : "/admin"}
                 className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-sm font-medium text-ink shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
-                {admin ? <><Eye className="size-4" /> Student view</> : <><Shield className="size-4" /> Admin</>}
+                {admin ? <><Eye className="size-4" /> Student view</> : <><Shield className="size-4" /> {user.role === "admin" ? "Admin" : "Teacher"}</>}
               </Link>
             )}
           </header>

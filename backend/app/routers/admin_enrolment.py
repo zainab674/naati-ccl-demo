@@ -8,14 +8,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..deps import CurrentUser, require_admin
+from ..deps import CurrentUser, require_staff
 from ..models import User, UserRole
 from ..security import hash_password
 from ..services import enrolment, languages
 from ..services.enrolment import EnrolmentError, NewStudent
 from ..services.imports.common import MAX_CSV_BYTES
 
-router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_staff)])
 
 MIN_PASSWORD = 8
 TEMPLATE_CSV = "first_name,last_name,email,language,access,access_until,target_exam_date,note\n"
@@ -56,7 +56,7 @@ class CreateIn(BaseModel):
 
 
 @router.post("/students", status_code=201)
-def create_student(body: CreateIn, cu: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+def create_student(body: CreateIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     if not body.password and not body.send_invite:
         raise HTTPException(400, "Set a password or send an invite, otherwise the student cannot sign in")
     try:
@@ -108,7 +108,7 @@ class AccessIn(BaseModel):
 
 
 @router.post("/students/{user_id}/access")
-def set_access(user_id: uuid.UUID, body: AccessIn, cu: CurrentUser = Depends(require_admin),
+def set_access(user_id: uuid.UUID, body: AccessIn, cu: CurrentUser = Depends(require_staff),
                db: Session = Depends(get_db)):
     u = _student(db, user_id)
     try:
@@ -158,7 +158,7 @@ def bulk_example():
 
 @router.post("/students-import")
 async def bulk_enrol(file: UploadFile = File(...), commit: bool = Form(False), send_invites: bool = Form(True),
-                     cu: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+                     cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     """Dry run by default (commit=false): returns the validation report. With commit=true, creates the valid rows."""
     data = await file.read(MAX_CSV_BYTES + 1)
     specs, report = enrolment.parse_bulk(db, data)

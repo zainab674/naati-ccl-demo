@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..db import utcnow
-from ..deps import ACTIVE_PLAN_STATUSES, CurrentUser, effective_status, require_admin
+from ..deps import ACTIVE_PLAN_STATUSES, CurrentUser, effective_status, require_staff
 from ..models import (AccuracyCompletenessEvaluation, AccuracyResult, AIScoringRun, DetectionMethod, DialogueAttempt,
                       EvaluationType, FluencyError, FluencyType, LanguageQualityError, LanguageQualityType,
                       LessonProgress, Payment, ScoringStatus, SegmentAttempt, Subscription,
@@ -20,7 +20,7 @@ from ..services.scoring import records
 from ..services.scoring.pipeline import finalize, rescore_segment
 from .student import _my_attempts, attempt_summary
 
-router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_staff)])
 
 
 # ------------------------------------------------------------------ students
@@ -120,7 +120,7 @@ def review_queue(db: Session = Depends(get_db)):
 
 
 @router.get("/attempts/{attempt_id}")
-def attempt_detail(attempt_id: uuid.UUID, cu: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+def attempt_detail(attempt_id: uuid.UUID, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     ref = svc.resolve(db, attempt_id, cu.user, allow_admin=True)
     owner = db.get(User, ref.user_id)
     data = attempt_results(db, ref, admin=True) if ref.status.value != "In Progress" else {
@@ -159,7 +159,7 @@ class OverrideIn(BaseModel):
 
 
 @router.post("/segment-attempts/{sa_id}/override")
-def override(sa_id: uuid.UUID, body: OverrideIn, cu: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+def override(sa_id: uuid.UUID, body: OverrideIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     sa = _segment_or_404(db, sa_id)
     item = db.get(ITEM_MODELS[body.target_type], body.target_id)
     if not item or item.segment_attempt_id != sa.id:
@@ -180,7 +180,7 @@ class ManualItemIn(BaseModel):
 
 
 @router.post("/segment-attempts/{sa_id}/items")
-def add_item(sa_id: uuid.UUID, body: ManualItemIn, cu: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+def add_item(sa_id: uuid.UUID, body: ManualItemIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     """A teacher adds an error the AI missed. Its deduction comes from config like any other item."""
     sa = _segment_or_404(db, sa_id)
     try:
@@ -214,7 +214,7 @@ class ReviewedIn(BaseModel):
 
 
 @router.post("/segment-attempts/{sa_id}/reviewed")
-def mark_reviewed(sa_id: uuid.UUID, body: ReviewedIn, cu: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+def mark_reviewed(sa_id: uuid.UUID, body: ReviewedIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     sa = _segment_or_404(db, sa_id)
     records.add_review(db, sa, cu.id, "segment", None, sa.total_deduction, sa.total_deduction, body.notes or "Reviewed")
     for e in sa.language_quality_errors:

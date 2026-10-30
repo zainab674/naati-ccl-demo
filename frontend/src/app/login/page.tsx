@@ -6,7 +6,7 @@ import { type FormEvent, Suspense, useState } from "react";
 
 import AuthLayout from "@/components/AuthLayout";
 import { Button, ErrorNote, Field } from "@/components/ui";
-import { api, safeNext, type User } from "@/lib/api";
+import { api, isStaff, safeNext, type User } from "@/lib/api";
 
 function LoginForm() {
   const router = useRouter();
@@ -22,7 +22,7 @@ function LoginForm() {
     setError("");
     try {
       const u = await api<User>("/auth/login", { method: "POST", json: { email, password } });
-      router.replace(safeNext(params.get("next"), u.role === "admin" ? "/admin" : "/dashboard"));
+      router.replace(safeNext(params.get("next"), isStaff(u) ? "/admin" : "/dashboard"));
     } catch (err) {
       setError((err as Error).message);
       setLoading(false);

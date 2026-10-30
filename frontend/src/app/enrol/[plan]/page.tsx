@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 import { Logo } from "@/components/Logo";
 import { ErrorNote } from "@/components/ui";
-import { api, ApiError, type User } from "@/lib/api";
+import { api, ApiError, isStaff, type User } from "@/lib/api";
 
 /** Enrol button target: signed-out visitors sign up first, then go straight to Stripe Checkout. */
 export default function EnrolPage() {
@@ -19,7 +19,7 @@ export default function EnrolPage() {
     (async () => {
       try {
         const me = await api<User>("/me", { noAuthRedirect: true });
-        if (me.has_active_plan && me.role !== "admin") { router.replace("/dashboard"); return; }
+        if (me.has_active_plan && !isStaff(me)) { router.replace("/dashboard"); return; }
       } catch (e) {
         if (e instanceof ApiError && e.status === 401) {
           router.replace(`/signup?next=${encodeURIComponent(`/enrol/${plan}`)}`);

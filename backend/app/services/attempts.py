@@ -115,7 +115,7 @@ def resolve(db: Session, attempt_id: uuid.UUID, user: User, allow_admin: bool = 
         da = db.get(DialogueAttempt, attempt_id)
         if da and da.mock_test_attempt_id is None:
             ref = AttemptRef("practice", None, [da])
-    if not ref or (ref.user_id != user.id and not (allow_admin and user.is_admin)):
+    if not ref or (ref.user_id != user.id and not (allow_admin and user.is_staff)):
         raise HTTPException(404, "Attempt not found")
     return ref
 

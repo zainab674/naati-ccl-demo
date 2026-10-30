@@ -6,7 +6,7 @@ import { type FormEvent, Suspense, useState } from "react";
 
 import AuthLayout from "@/components/AuthLayout";
 import { Button, ErrorNote, Field } from "@/components/ui";
-import { api, type User } from "@/lib/api";
+import { api, isStaff, type User } from "@/lib/api";
 
 function ResetForm() {
   const router = useRouter();
@@ -23,7 +23,7 @@ function ResetForm() {
     setError("");
     try {
       const u = await api<User>("/auth/reset-password", { method: "POST", json: { token, password } });
-      router.replace(u.role === "admin" ? "/admin" : "/dashboard");
+      router.replace(isStaff(u) ? "/admin" : "/dashboard");
     } catch (err) {
       setError((err as Error).message);
       setLoading(false);
