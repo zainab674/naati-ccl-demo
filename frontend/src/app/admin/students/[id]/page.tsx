@@ -1,9 +1,11 @@
 "use client";
 
+import { Mail } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import MessageStudents from "@/components/MessageStudents";
 import { Badge, Button, Card, ErrorNote, Field, inputClass, PageHeader, Spinner, SuccessNote } from "@/components/ui";
 import { subTone } from "@/lib/admin";
 import { api, fetchLanguages, fmtDate, fmtDateTime, type Language } from "@/lib/api";
@@ -28,13 +30,19 @@ export default function AdminStudent() {
   const { id } = useParams<{ id: string }>();
   const [s, setS] = useState<Student | null>(null);
   const [error, setError] = useState("");
+  const [emailing, setEmailing] = useState(false);
+  const [notice, setNotice] = useState("");
   const load = useCallback(() => api<Student>(`/admin/students/${id}`).then(setS).catch((e) => setError(e.message)), [id]);
   useEffect(() => { load(); }, [load]);
   if (error && !s) return <ErrorNote>{error}</ErrorNote>;
   if (!s) return <Spinner />;
   return (
     <>
-      <PageHeader title={s.name} subtitle={<>{s.email} · <Link href="/admin/students" className="text-brand-600 hover:underline">All students</Link></>} />
+      <PageHeader title={s.name} subtitle={<>{s.email} · <Link href="/admin/students" className="text-brand-600 hover:underline">All students</Link></>}
+        actions={<Button variant="secondary" onClick={() => setEmailing(true)} disabled={!s.is_active}><Mail className="size-4" /> Email student</Button>} />
+      {notice && <div className="mb-4"><SuccessNote>{notice}</SuccessNote></div>}
+      <MessageStudents open={emailing} recipients={[{ id: s.id, email: s.email }]} onClose={() => setEmailing(false)}
+        onSent={(msg) => { setEmailing(false); setNotice(msg); load(); }} />
       <div className="grid gap-6 lg:grid-cols-[1fr_1.6fr]">
         <div className="space-y-6">
           <Card className="space-y-2 p-6 text-sm">

@@ -1,12 +1,13 @@
 "use client";
 
-import { Upload, UserPlus } from "lucide-react";
+import { Mail, Upload, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import CsvFormatButtons from "@/components/CsvFormatButtons";
 import ImportReport, { type ImportJob } from "@/components/ImportReport";
+import MessageStudents from "@/components/MessageStudents";
 import { Badge, Button, Card, ErrorNote, Field, inputClass, Modal, PageHeader, Spinner, SuccessNote } from "@/components/ui";
 import { subTone } from "@/lib/admin";
 import { api, fetchLanguages, fmtDate, type Language } from "@/lib/api";
@@ -33,6 +34,8 @@ export default function AdminStudents() {
   const [bulk, setBulk] = useState(false);
   const [notice, setNotice] = useState("");
   const [languages, setLanguages] = useState<Language[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [emailing, setEmailing] = useState(false);
 
   const load = useCallback(() => api<Row[]>(`/admin/students?q=${encodeURIComponent(q)}&status=${status}`)
     .then(setRows).catch((e) => setError(e.message)), [q, status]);
@@ -46,6 +49,8 @@ export default function AdminStudents() {
     <>
       <PageHeader title="Students" subtitle="Profiles, access, attempts and scores. Add students by hand for demo accounts or offline payments."
         actions={<div className="flex gap-2">
+          <Button variant="secondary" disabled={!selected.size} onClick={() => setEmailing(true)}>
+            <Mail className="size-4" /> Email{selected.size ? ` ${selected.size}` : ""} selected</Button>
           <Button variant="secondary" onClick={() => setBulk(true)}><Upload className="size-4" /> Bulk enrol</Button>
           <Button onClick={() => setAdding(true)}><UserPlus className="size-4" /> Add student</Button>
         </div>} />
@@ -61,11 +66,21 @@ export default function AdminStudents() {
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr className="[&>th]:pr-4"><th className="px-5 py-3">Student</th><th>Language</th><th>Access</th><th>Attempts</th><th>Avg dialogue</th><th>Last attempt</th><th>Joined</th></tr>
+              <tr className="[&>th]:pr-4"><th className="w-10 pl-5"><input type="checkbox" aria-label="Select all shown" className="accent-brand-600"
+                checked={rows.length > 0 && rows.every((r) => selected.has(r.id))}
+                onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())} /></th>
+                <th className="px-5 py-3">Student</th><th>Language</th><th>Access</th><th>Attempts</th><th>Avg dialogue</th><th>Last attempt</th><th>Joined</th></tr>
             </thead>
             <tbody>
               {rows.map((s) => (
                 <tr key={s.id} onClick={() => router.push(`/admin/students/${s.id}`)} className="cursor-pointer border-t border-slate-100 hover:bg-slate-50">
+                  <td className="pl-5" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" aria-label={`Select ${s.email}`} className="accent-brand-600" checked={selected.has(s.id)}
+                      onChange={(e) => {
+                        const next = new Set(selected);
+                        if (e.target.checked) next.add(s.id); else next.delete(s.id);
+                        setSelected(next);
+                      }} /></td>
                   <td className="px-5 py-3"><Link href={`/admin/students/${s.id}`} className="font-medium hover:underline">{s.name}</Link>
                     <div className="text-xs text-slate-500">{s.email}
                       {s.flagged && <Badge tone="red" className="ml-2">Flagged</Badge>}
@@ -80,13 +95,15 @@ export default function AdminStudents() {
                   <td>{fmtDate(s.created_at)}</td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={7} className="px-5 py-6 text-slate-500">No students found.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={8} className="px-5 py-6 text-slate-500">No students found.</td></tr>}
             </tbody>
           </table>
         </Card>
       )}
       <AddStudent open={adding} languages={languages} onClose={() => setAdding(false)}
         onDone={(msg) => { setAdding(false); setNotice(msg); load(); }} />
+      <MessageStudents open={emailing} recipients={(rows ?? []).filter((r) => selected.has(r.id))}
+        onClose={() => setEmailing(false)} onSent={(msg) => { setEmailing(false); setSelected(new Set()); setNotice(msg); }} />
       <BulkEnrol open={bulk} onClose={() => { setBulk(false); load(); }} />
     </>
   );

@@ -10,11 +10,11 @@ from ..db import get_db
 from ..db import utcnow
 from ..deps import ACTIVE_PLAN_STATUSES, CurrentUser, effective_status, require_staff
 from ..models import (AccuracyCompletenessEvaluation, AccuracyResult, AIScoringRun, DetectionMethod, DialogueAttempt,
-                      EvaluationType, FluencyError, FluencyType, LanguageQualityError, LanguageQualityType,
+                      EmailLog, EvaluationType, FluencyError, FluencyType, LanguageQualityError, LanguageQualityType,
                       LessonProgress, Payment, ScoringStatus, SegmentAttempt, Subscription,
                       SubscriptionStatus, User, UserRole)
 from ..services import attempts as svc
-from ..services import enrolment
+from ..services import enrolment, messages
 from ..services.results import attempt_results, segment_result
 from ..services.scoring import records
 from ..services.scoring.pipeline import finalize, rescore_segment
@@ -96,7 +96,27 @@ def student(user_id: uuid.UUID, db: Session = Depends(get_db)):
         "payments": [{"amount": p.amount, "currency": p.currency, "status": p.status, "receipt_url": p.receipt_url,
                       "created_at": p.created_at.isoformat()} for p in payments],
         "attempts": [attempt_summary(db, r) for r in _my_attempts(db, u.id)],
+        "emails": [{"template": e.template, "subject": e.subject, "status": e.status.value, "error": e.error,
+                    "created_at": e.created_at.isoformat()}
+                   for e in db.scalars(select(EmailLog).where(EmailLog.user_id == u.id)
+                                       .order_by(EmailLog.created_at.desc()).limit(50))],
     }
+
+
+class MessageIn(BaseModel):
+    user_ids: list[uuid.UUID] = Field(max_length=messages.MAX_RECIPIENTS)
+    subject: str = Field(max_length=200)
+    body: str = Field(max_length=10000)
+
+
+@router.post("/students/message")
+def message_students(body: MessageIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
+    """Email one or many students. {first_name} and {name} in the subject or message are filled in per student."""
+    try:
+        queued = messages.queue_message(db, body.user_ids, body.subject, body.body, cu.user)
+    except messages.MessageError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"queued": queued, "skipped": len(set(body.user_ids)) - queued}
 
 
 # ------------------------------------------------------------------ review queue and attempt detail

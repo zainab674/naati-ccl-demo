@@ -110,8 +110,23 @@ def _results_ready(c: dict) -> tuple[str, str, str]:
     return subject, html, text
 
 
+def _message(c: dict) -> tuple[str, str, str]:
+    """A message written by an admin or teacher. Plain text; blank lines start new paragraphs."""
+    body = c.get("body", "").replace("\r\n", "\n").strip()
+    paras = [p for p in body.split("\n\n") if p.strip()]
+    html_body = "".join(f"<p>{escape(p.strip()).replace('\n', '<br>')}</p>" for p in paras)
+    sender = c.get("sender", "")
+    if sender:
+        html_body += f"<p style='color:#64748b'>From {escape(sender)}</p>"
+    cta = ("Open your dashboard", c["dashboard_url"]) if c.get("dashboard_url") else None
+    html = _layout(c["subject"], html_body, cta)
+    text = body + (f"\n\nFrom {sender}" if sender else "") + (f"\n\n{c['dashboard_url']}" if cta else "") + "\n"
+    return c["subject"], html, text
+
+
 TEMPLATES = {
     "welcome": _welcome,
+    "message": _message,
     "password_reset": _password_reset,
     "enrolment_invite": _enrolment_invite,
     "receipt": _receipt,
