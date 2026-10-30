@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import CurrentUser, current_user, ensure_access, is_locked, require_admin
 from ..models import ContentStatus, Resource, ResourceType, Topic
-from ..services import languages, ratelimit
+from ..services import activity, languages, ratelimit
 from ..services import resources as svc
 from ..services.html import sanitize
 from ..services.storage import get_storage
@@ -86,6 +86,8 @@ def resource_file(resource_id: uuid.UUID, cu: CurrentUser = Depends(current_user
     data = get_storage().get(r.file_key) if r.file_key else None
     if data is None:
         raise HTTPException(404, "File not found")
+    activity.record(db, cu.user, "resource_opened", f"Opened {r.title}", resource_id=r.id)
+    db.commit()
     return Response(data, media_type=r.content_type, headers=_file_headers(r))
 
 

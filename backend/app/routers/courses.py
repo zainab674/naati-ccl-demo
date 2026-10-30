@@ -9,7 +9,7 @@ from ..db import get_db
 from ..deps import CurrentUser, current_user, ensure_access, is_locked
 from ..models import ContentStatus, Course, Lesson, LessonProgress
 from ..services import courses as outline_svc
-from ..services import languages
+from ..services import activity, languages
 
 router = APIRouter(prefix="/api", tags=["courses"])
 
@@ -100,6 +100,9 @@ def complete(lesson_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: 
     lesson(lesson_id, cu, db)  # same visibility and access checks
     if not db.scalar(select(LessonProgress).where(LessonProgress.user_id == cu.id, LessonProgress.lesson_id == lesson_id)):
         db.add(LessonProgress(user_id=cu.id, lesson_id=lesson_id))
+        les = db.get(Lesson, lesson_id)
+        activity.record(db, cu.user, "lesson_completed", f"Completed lesson: {les.title}", lesson_id=lesson_id,
+                        course_id=les.course_id)
         db.commit()
     return {"completed": True}
 

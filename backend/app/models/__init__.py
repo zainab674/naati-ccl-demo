@@ -29,4 +29,4 @@ from .scoring import (  # noqa: F401
                     LanguageQualityError,
                     LanguageScoringConfig,
 )
-from .users import PasswordResetToken, User  # noqa: F401
+from .users import ActivityEvent, PasswordResetToken, User  # noqa: F401

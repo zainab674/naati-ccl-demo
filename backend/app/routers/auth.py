@@ -10,7 +10,7 @@ from ..db import get_db, utcnow
 from ..deps import CurrentUser, client_ip, current_user, effective_status, has_active_plan
 from ..models import PasswordResetToken, User, UserRole
 from ..security import COOKIE_NAME, hash_password, hash_token, issue_session_token, new_reset_token, verify_password
-from ..services import languages, ratelimit
+from ..services import activity, languages, ratelimit
 from ..services.email import send_template
 from ..settings import get_settings
 
@@ -68,6 +68,8 @@ def signup(body: SignupIn, request: Request, response: Response, db: Session = D
                 preferred_language_id=lote.id if lote else None,
                 target_exam_date=body.target_exam_date, last_login_at=utcnow())
     db.add(user)
+    db.flush()
+    activity.record(db, user, "signup", "Created an account")
     db.commit()
     _set_session(response, user)
     send_template(db, "welcome", user.email,
@@ -90,6 +92,7 @@ def login(body: LoginIn, request: Request, response: Response, db: Session = Dep
     if not user or not user.is_active or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Email or password is incorrect")
     user.last_login_at = utcnow()
+    activity.record(db, user, "login", "Signed in")
     db.commit()
     _set_session(response, user)
     return user_dict(user)
@@ -137,6 +140,7 @@ def reset_password(body: ResetIn, request: Request, response: Response, db: Sess
     user.session_version += 1  # signs out every existing session
     db.execute(update(PasswordResetToken).where(PasswordResetToken.user_id == user.id,
                                                 PasswordResetToken.used_at.is_(None)).values(used_at=utcnow()))
+    activity.record(db, user, "password_set", "Set a new password")
     db.commit()
     _set_session(response, user)
     return user_dict(user)

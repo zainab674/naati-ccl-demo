@@ -16,6 +16,7 @@ from ..db import utcnow
 from ..models import (AttemptStatus, ContentStatus, Dialogue, DialogueAttempt, MockTest, MockTestAttempt, RepeatEvent,
                       ScoringStatus, SegmentAttempt, User)
 from ..settings import ccl_config, scoring_config
+from . import activity
 from .storage import get_storage
 
 STEPS = ("info1", "info2", "segment", "summary")
@@ -81,6 +82,7 @@ def start_practice(db: Session, user: User, dialogue: Dialogue) -> AttemptRef:
     if existing:
         return AttemptRef("practice", None, [existing])
     da = _new_dialogue_attempt(db, user, dialogue)
+    activity.record(db, user, "attempt_started", f"Started practice dialogue: {dialogue.title}", attempt_id=da.id)
     db.commit()
     return AttemptRef("practice", None, [db.get(DialogueAttempt, da.id)])
 
@@ -101,6 +103,7 @@ def start_mock(db: Session, user: User, mock: MockTest) -> AttemptRef:
     db.flush()
     for md in mock.dialogues:
         _new_dialogue_attempt(db, user, md.dialogue, ma, md.position)
+    activity.record(db, user, "attempt_started", f"Started mock test: {mock.title}", attempt_id=ma.id)
     db.commit()
     ma = db.get(MockTestAttempt, ma.id)
     return AttemptRef("mock", ma, list(ma.dialogue_attempts))
@@ -290,5 +293,10 @@ def submit(db: Session, ref: AttemptRef) -> None:
     if ref.mock:
         ref.mock.status, ref.mock.submitted_at = AttemptStatus.COMPLETED, now
         ref.mock.scoring_status, ref.mock.current_step = ScoringStatus.PENDING, "summary"
+    answered = sum(1 for da in ref.dialogue_attempts for sa in da.segment_attempts if not sa.skipped)
+    total = sum(len(da.segment_attempts) for da in ref.dialogue_attempts)
+    title = ref.mock.mock_test.title if ref.mock else ref.dialogue_attempts[0].dialogue.title
+    activity.record(db, ref.user_id, "attempt_submitted", f"Submitted {title} ({answered} of {total} segments answered)",
+                    attempt_id=ref.id)
     from .scoring_jobs import enqueue_attempt  # scoring runs in the worker
     enqueue_attempt(db, ref)

@@ -78,6 +78,7 @@ export default function AdminStudent() {
           </Card>
           <AccountCard s={s} onSaved={load} />
         </div>
+        <div className="space-y-6">
         <Card className="h-fit overflow-hidden">
           <div className="px-5 py-4 font-semibold">Attempts</div>
           <ul className="divide-y divide-slate-100 border-t border-slate-100">
@@ -95,8 +96,51 @@ export default function AdminStudent() {
             {!s.attempts.length && <li className="px-5 py-4 text-sm text-slate-500">No attempts yet.</li>}
           </ul>
         </Card>
+        <ActivityCard id={s.id} version={s} />
+        </div>
       </div>
     </>
+  );
+}
+
+type Activity = { kind: string; summary: string; data: Record<string, string>; at: string };
+
+const KIND_TONE: Record<string, "slate" | "green" | "red" | "amber" | "violet" | "brand"> = {
+  signup: "green", login: "slate", password_set: "slate", attempt_started: "brand", attempt_submitted: "brand",
+  lesson_completed: "green", resource_opened: "slate", email: "violet", payment: "green", access: "amber",
+};
+const KIND_LABEL: Record<string, string> = {
+  signup: "Account", login: "Sign-in", password_set: "Password", attempt_started: "Attempt", attempt_submitted: "Attempt",
+  lesson_completed: "Lesson", resource_opened: "Hub", email: "Email", payment: "Payment", access: "Access",
+};
+
+/** Newest first; reloads when the student record changes (e.g. after sending an email). */
+function ActivityCard({ id, version }: { id: string; version: unknown }) {
+  const [rows, setRows] = useState<Activity[] | null>(null);
+  const [all, setAll] = useState(false);
+  useEffect(() => { api<Activity[]>(`/admin/students/${id}/activity`).then(setRows).catch(() => setRows([])); }, [id, version]);
+  const shown = rows ? (all ? rows : rows.slice(0, 15)) : [];
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-5 py-4 font-semibold">Activity</div>
+      {!rows ? <div className="px-5 pb-4"><Spinner /></div> : (
+        <ul className="divide-y divide-slate-100 border-t border-slate-100 text-sm">
+          {shown.map((e, i) => (
+            <li key={i} className="flex items-start gap-3 px-5 py-2.5">
+              <Badge tone={KIND_TONE[e.kind] ?? "slate"} className="mt-0.5 shrink-0">{KIND_LABEL[e.kind] ?? e.kind}</Badge>
+              <span className="min-w-0 flex-1">
+                {e.data.attempt_id ? <Link href={`/admin/attempts/${e.data.attempt_id}`} className="hover:underline">{e.summary}</Link> : e.summary}
+                {e.data.status === "failed" && <span className="ml-2 text-xs text-red-600">failed to send{e.data.error && `: ${e.data.error}`}</span>}
+              </span>
+              <span className="shrink-0 text-xs text-slate-400">{fmtDateTime(e.at)}</span>
+            </li>
+          ))}
+          {!rows.length && <li className="px-5 py-4 text-slate-500">No activity yet.</li>}
+          {rows.length > 15 && !all && <li className="px-5 py-2"><button onClick={() => setAll(true)} className="text-sm text-brand-600 hover:underline">
+            Show all {rows.length}</button></li>}
+        </ul>
+      )}
+    </Card>
   );
 }
 

@@ -31,8 +31,8 @@ def test_message_many_students_personalised_and_logged(client, db):
     assert "From " in sent["a@example.com"].text
     logs = db.scalars(select(EmailLog).where(EmailLog.template == "message")).all()
     assert len(logs) == 2 and all(e.user_id for e in logs)
-    detail = client.get(f"/api/admin/students/{ids['a@example.com']}").json()
-    assert detail["emails"][0]["subject"] == "Mock test tips for Sam"
+    log = client.get(f"/api/admin/students/{ids['a@example.com']}/activity").json()
+    assert log[0]["kind"] == "email" and log[0]["summary"] == "Message: Mock test tips for Sam"
 
 
 def test_message_escapes_html_and_skips_inactive(client, db):

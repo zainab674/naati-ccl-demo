@@ -10,11 +10,11 @@ from ..db import get_db
 from ..db import utcnow
 from ..deps import ACTIVE_PLAN_STATUSES, CurrentUser, effective_status, require_staff
 from ..models import (AccuracyCompletenessEvaluation, AccuracyResult, AIScoringRun, DetectionMethod, DialogueAttempt,
-                      EmailLog, EvaluationType, FluencyError, FluencyType, LanguageQualityError, LanguageQualityType,
+                      EvaluationType, FluencyError, FluencyType, LanguageQualityError, LanguageQualityType,
                       LessonProgress, Payment, ScoringStatus, SegmentAttempt, Subscription,
                       SubscriptionStatus, User, UserRole)
 from ..services import attempts as svc
-from ..services import enrolment, messages
+from ..services import activity, enrolment, messages
 from ..services.results import attempt_results, segment_result
 from ..services.scoring import records
 from ..services.scoring.pipeline import finalize, rescore_segment
@@ -96,11 +96,15 @@ def student(user_id: uuid.UUID, db: Session = Depends(get_db)):
         "payments": [{"amount": p.amount, "currency": p.currency, "status": p.status, "receipt_url": p.receipt_url,
                       "created_at": p.created_at.isoformat()} for p in payments],
         "attempts": [attempt_summary(db, r) for r in _my_attempts(db, u.id)],
-        "emails": [{"template": e.template, "subject": e.subject, "status": e.status.value, "error": e.error,
-                    "created_at": e.created_at.isoformat()}
-                   for e in db.scalars(select(EmailLog).where(EmailLog.user_id == u.id)
-                                       .order_by(EmailLog.created_at.desc()).limit(50))],
     }
+
+
+@router.get("/students/{user_id}/activity")
+def student_activity(user_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Sign-ups, sign-ins, attempts, lessons, resources, emails, payments and access changes, newest first."""
+    if not db.get(User, user_id):
+        raise HTTPException(404, "Student not found")
+    return activity.timeline(db, user_id)
 
 
 class MessageIn(BaseModel):

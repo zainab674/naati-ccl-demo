@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import JSON, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base, IdMixin
@@ -50,3 +50,13 @@ class PasswordResetToken(IdMixin, Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)  # sha256 of the emailed token
     expires_at: Mapped[datetime]
     used_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+
+class ActivityEvent(IdMixin, Base):
+    """What a student did (sign-ups, sign-ins, attempts, lessons, resources), for the admin activity log.
+    Emails, payments and access grants are already stored elsewhere and are merged in when the log is read."""
+    __tablename__ = "activity_events"
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(40))
+    summary: Mapped[str] = mapped_column(String(300), default="")
+    data: Mapped[dict] = mapped_column(JSON, default=dict)  # ids for links, e.g. {"attempt_id": ...}
