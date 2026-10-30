@@ -114,3 +114,20 @@ def test_commit_and_idempotent_reimport(admin_client, db):
 def test_import_requires_admin(student_client):
     r = student_client.post("/api/admin/imports/dialogues", files={"file": ("d.csv", csv(row()), "text/csv")})
     assert r.status_code == 403
+
+
+def test_launch_size_import_50_dialogues_in_one_file(admin_client, db):
+    """The client plans 50 practice dialogues of about 14 segments each; one CSV holds them all."""
+    import time
+
+    rows = [row(key=f"fil-{d:02d}", title=f"Dialogue {d}", seg=s, mu=m, direction="EN>LOTE" if s % 2 else "LOTE>EN",
+                audio=f"https://cdn.example.com/ok/fil-{d:02d}/seg{s:02d}.mp3", meaning=f"Meaning {m}")
+            for d in range(1, 51) for s in range(1, 15) for m in range(1, 4)]
+    started = time.monotonic()
+    job = upload(admin_client, csv(*rows))
+    assert job["status"] == "Validated", job["report"]["errors"][:5]
+    assert job["report"]["summary"]["segments"] == 700 and job["report"]["summary"]["meaning_units"] == 2100
+    done = admin_client.post(f"/api/admin/imports/{job['id']}/commit").json()
+    assert done["status"] in ("ProcessingMedia", "Completed"), done  # audio is packaged by the worker afterwards
+    assert time.monotonic() - started < 120
+    assert db.query(Dialogue).count() == 50 and db.query(Segment).count() == 700 and db.query(MeaningUnit).count() == 2100
