@@ -109,6 +109,11 @@ def start_mock(db: Session, user: User, mock: MockTest) -> AttemptRef:
     return AttemptRef("mock", ma, list(ma.dialogue_attempts))
 
 
+def _manages(db: Session, staff: User, student_id: uuid.UUID) -> bool:
+    from .teachers import manages
+    return manages(staff, db.get(User, student_id))
+
+
 def resolve(db: Session, attempt_id: uuid.UUID, user: User, allow_admin: bool = False) -> AttemptRef:
     ref = None
     mock = db.get(MockTestAttempt, attempt_id)
@@ -118,7 +123,7 @@ def resolve(db: Session, attempt_id: uuid.UUID, user: User, allow_admin: bool = 
         da = db.get(DialogueAttempt, attempt_id)
         if da and da.mock_test_attempt_id is None:
             ref = AttemptRef("practice", None, [da])
-    if not ref or (ref.user_id != user.id and not (allow_admin and user.is_staff)):
+    if not ref or (ref.user_id != user.id and not (allow_admin and user.is_staff and _manages(db, user, ref.user_id))):
         raise HTTPException(404, "Attempt not found")
     return ref
 

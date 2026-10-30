@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { useUser } from "@/components/AppShell";
 import MessageStudents from "@/components/MessageStudents";
+import TeacherSelect, { useTeachers } from "@/components/TeacherSelect";
 import { Badge, Button, Card, ErrorNote, Field, inputClass, PageHeader, Spinner, SuccessNote } from "@/components/ui";
 import { subTone } from "@/lib/admin";
 import { api, fetchLanguages, fmtDate, fmtDateTime, type Language } from "@/lib/api";
@@ -14,7 +16,7 @@ import type { AttemptSummary } from "@/lib/student";
 type Student = {
   id: string; name: string; first_name: string; last_name: string; email: string; subscription_status: string;
   stripe_customer_id: string | null; access_expires_at: string | null; language: string | null; is_active: boolean;
-  enrolled_by: string | null; stripe_managed: boolean; access_is_manual: boolean;
+  enrolled_by: string | null; teacher: { id: string; name: string } | null; stripe_managed: boolean; access_is_manual: boolean;
   target_exam_date: string | null; created_at: string; last_login_at: string | null; flagged: boolean; lessons_completed: number;
   subscriptions: { plan: string | null; status: string; source: string; note: string; granted_by: string | null; created_at: string;
     stripe_subscription_id: string | null; current_period_end: string | null; cancel_at_period_end: boolean }[];
@@ -28,6 +30,8 @@ const MANUAL_LABEL: Record<string, string> = { active: "Active access granted", 
 
 export default function AdminStudent() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useUser();
+  const isAdmin = user.role === "admin";
   const [s, setS] = useState<Student | null>(null);
   const [error, setError] = useState("");
   const [emailing, setEmailing] = useState(false);
@@ -38,7 +42,7 @@ export default function AdminStudent() {
   if (!s) return <Spinner />;
   return (
     <>
-      <PageHeader title={s.name} subtitle={<>{s.email} · <Link href="/admin/students" className="text-brand-600 hover:underline">All students</Link></>}
+      <PageHeader title={s.name} subtitle={<>{s.email} · <Link href="/admin/students" className="text-brand-600 hover:underline">{isAdmin ? "All students" : "My students"}</Link></>}
         actions={<Button variant="secondary" onClick={() => setEmailing(true)} disabled={!s.is_active}><Mail className="size-4" /> Email student</Button>} />
       {notice && <div className="mb-4"><SuccessNote>{notice}</SuccessNote></div>}
       <MessageStudents open={emailing} recipients={[{ id: s.id, email: s.email }]} onClose={() => setEmailing(false)}
@@ -51,6 +55,7 @@ export default function AdminStudent() {
                 {s.access_expires_at && <span className="ml-2 text-slate-500">until {fmtDate(s.access_expires_at)}</span>}</span></div>
             {!s.is_active && <div className="flex justify-between"><span className="text-slate-500">Account</span><Badge>Deactivated</Badge></div>}
             {s.enrolled_by && <div className="flex justify-between"><span className="text-slate-500">Enrolled by</span><span>{s.enrolled_by}</span></div>}
+            {!isAdmin && <div className="flex justify-between"><span className="text-slate-500">Teacher</span><span>{s.teacher?.name ?? "–"}</span></div>}
             <div className="flex justify-between"><span className="text-slate-500">Joined</span><span>{fmtDate(s.created_at)}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">Last login</span><span>{s.last_login_at ? fmtDateTime(s.last_login_at) : "–"}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">Target exam</span><span>{s.target_exam_date ? fmtDate(s.target_exam_date) : "–"}</span></div>
@@ -58,6 +63,7 @@ export default function AdminStudent() {
             <div className="flex justify-between"><span className="text-slate-500">Stripe customer</span><span className="font-mono text-xs">{s.stripe_customer_id ?? "–"}</span></div>
             {s.flagged && <Badge tone="red">Flagged by content protection</Badge>}
           </Card>
+          {isAdmin && <TeacherCard key={`teacher-${s.id}`} s={s} onSaved={load} />}
           <AccessCard key={`access-${s.subscription_status}-${s.access_expires_at}`} s={s} onSaved={load} />
           <Card className="p-6">
             <h2 className="font-semibold">Access history and payments</h2>
@@ -243,6 +249,34 @@ function AccountCard({ s, onSaved }: { s: Student; onSaved: () => void }) {
               onClick={() => act("active", base, { method: "PATCH", json: { is_active: true } }, "Account reactivated.")}>Reactivate account</Button>}
       </div>
       <Note msg={msg} />
+    </Card>
+  );
+}
+
+function TeacherCard({ s, onSaved }: { s: Student; onSaved: () => void }) {
+  const teachers = useTeachers(true);
+  const [teacherId, setTeacherId] = useState(s.teacher?.id ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<Msg>(null);
+  const save = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api(`/admin/students/${s.id}`, { method: "PATCH", json: { teacher_id: teacherId || null } });
+      setMsg({ ok: true, text: "Teacher saved." });
+      onSaved();
+    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
+    setBusy(false);
+  };
+  return (
+    <Card className="space-y-3 p-6 text-sm">
+      <h2 className="font-semibold">Teacher</h2>
+      <p className="text-slate-500">The teacher sees and manages this student, and the student sees that teacher&apos;s courses.</p>
+      <TeacherSelect teachers={teachers} value={teacherId} onChange={setTeacherId} label="Teacher" />
+      {msg && (msg.ok ? <SuccessNote>{msg.text}</SuccessNote> : <ErrorNote>{msg.text}</ErrorNote>)}
+      <div className="flex justify-end">
+        <Button variant="secondary" onClick={save} loading={busy} disabled={teacherId === (s.teacher?.id ?? "")}>Save teacher</Button>
+      </div>
     </Card>
   );
 }

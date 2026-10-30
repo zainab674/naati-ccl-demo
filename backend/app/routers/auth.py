@@ -10,7 +10,7 @@ from ..db import get_db, utcnow
 from ..deps import CurrentUser, client_ip, current_user, effective_status, has_active_plan
 from ..models import PasswordResetToken, User, UserRole
 from ..security import COOKIE_NAME, hash_password, hash_token, issue_session_token, new_reset_token, verify_password
-from ..services import activity, languages, ratelimit
+from ..services import activity, languages, ratelimit, teachers
 from ..services.email import send_template
 from ..settings import get_settings
 
@@ -28,6 +28,7 @@ def user_dict(u: User) -> dict:
         "access_expires_at": u.access_expires_at.isoformat() if u.access_expires_at else None,
         "language": u.preferred_language.code if u.preferred_language else None,
         "target_exam_date": u.target_exam_date.isoformat() if u.target_exam_date else None,
+        "teacher": u.teacher.full_name if u.teacher else None,
     }
 
 
@@ -50,6 +51,7 @@ class SignupIn(BaseModel):
     target_exam_date: date | None = None
     language: str | None = None  # LOTE code
     accept_terms: bool
+    teacher_code: str | None = Field(default=None, max_length=20)  # from a teacher's join link
 
 
 @router.post("/auth/signup", status_code=201)
@@ -60,16 +62,21 @@ def signup(body: SignupIn, request: Request, response: Response, db: Session = D
     email = _norm_email(body.email)
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(409, "An account with this email already exists. Sign in or reset your password.")
+    teacher = teachers.by_join_code(db, body.teacher_code)
+    if body.teacher_code and not teacher:
+        raise HTTPException(400, "This class link is no longer valid. Ask your teacher for a new one.")
     lote = languages.lote_by_code(db, body.language) if body.language else None
     if body.language and not lote:
         raise HTTPException(400, f"Unknown language '{body.language}'")
     user = User(first_name=body.first_name.strip(), last_name=body.last_name.strip(), email=email,
                 password_hash=hash_password(body.password), role=UserRole.STUDENT,
                 preferred_language_id=lote.id if lote else None,
-                target_exam_date=body.target_exam_date, last_login_at=utcnow())
+                target_exam_date=body.target_exam_date, last_login_at=utcnow(),
+                teacher_id=teacher.id if teacher else None)
     db.add(user)
     db.flush()
-    activity.record(db, user, "signup", "Created an account")
+    activity.record(db, user, "signup", f"Created an account through {teacher.full_name}'s class link" if teacher
+                    else "Created an account")
     db.commit()
     _set_session(response, user)
     send_template(db, "welcome", user.email,
@@ -190,3 +197,38 @@ def change_password(body: PasswordIn, response: Response, cu: CurrentUser = Depe
     db.commit()
     _set_session(response, user)
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ teacher join links
+
+@router.get("/public/join/{code}")
+def join_info(code: str, request: Request, db: Session = Depends(get_db)):
+    """Who a join link belongs to, for the join page. Only the teacher's name is shown."""
+    ratelimit.enforce(f"join:{client_ip(request)}", 30)
+    teacher = teachers.by_join_code(db, code)
+    if not teacher:
+        raise HTTPException(404, "This class link is no longer valid")
+    return {"teacher": teacher.full_name}
+
+
+class JoinIn(BaseModel):
+    code: str = Field(max_length=20)
+
+
+@router.post("/me/join")
+def join_class(body: JoinIn, cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+    """A signed-in student joins a teacher's class. Moving from one teacher to another is done by an admin."""
+    teacher = teachers.by_join_code(db, body.code)
+    if not teacher:
+        raise HTTPException(404, "This class link is no longer valid")
+    u = cu.user
+    if u.role != UserRole.STUDENT:
+        raise HTTPException(400, "Only student accounts can join a class")
+    if u.teacher_id and u.teacher_id != teacher.id:
+        raise HTTPException(409, f"You are already in {u.teacher.full_name}'s class. Ask Benchmark to move you.")
+    if u.teacher_id != teacher.id:
+        u.teacher_id = teacher.id
+        activity.record(db, u, "joined_class", f"Joined {teacher.full_name}'s class")
+        db.commit()
+        db.refresh(u)
+    return user_dict(u)

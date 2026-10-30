@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { type ChangeEvent, type FormEvent, Suspense, useEffect, useState } from "react";
 
 import AuthLayout from "@/components/AuthLayout";
-import { Button, ErrorNote, Field, inputClass } from "@/components/ui";
+import { Button, ErrorNote, Field, inputClass, SuccessNote } from "@/components/ui";
 import { api, fetchLanguages, type Language, safeNext } from "@/lib/api";
 
 function SignupForm() {
@@ -14,6 +14,12 @@ function SignupForm() {
   const [f, setF] = useState({ first_name: "", last_name: "", email: "", password: "", target_exam_date: "", language: "" });
   const [languages, setLanguages] = useState<Language[]>([]);
   useEffect(() => { fetchLanguages().then(setLanguages).catch(() => {}); }, []);
+  // From a teacher's class link (/join/<code>): the new account joins that teacher's class.
+  const teacherCode = params.get("teacher");
+  const [teacher, setTeacher] = useState<string | null>(null);
+  useEffect(() => {
+    if (teacherCode) api<{ teacher: string }>(`/public/join/${encodeURIComponent(teacherCode)}`).then((r) => setTeacher(r.teacher)).catch(() => {});
+  }, [teacherCode]);
   const [accept, setAccept] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,7 +32,8 @@ function SignupForm() {
     try {
       await api("/auth/signup", {
         method: "POST",
-        json: { ...f, target_exam_date: f.target_exam_date || null, language: f.language || null, accept_terms: accept },
+        json: { ...f, target_exam_date: f.target_exam_date || null, language: f.language || null, accept_terms: accept,
+          teacher_code: teacherCode || null },
       });
       router.replace(safeNext(params.get("next"), "/dashboard"));
     } catch (err) {
@@ -37,6 +44,7 @@ function SignupForm() {
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      {teacher && <SuccessNote>You are joining {teacher}&apos;s class.</SuccessNote>}
       <div className="grid grid-cols-2 gap-3">
         <Field label="First name" required value={f.first_name} onChange={set("first_name")} autoComplete="given-name" />
         <Field label="Last name" value={f.last_name} onChange={set("last_name")} autoComplete="family-name" />

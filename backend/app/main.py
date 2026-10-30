@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 from .db import SessionLocal
 from .middleware import SecurityMiddleware
-from .routers import (admin, admin_content, admin_enrolment, admin_imports, admin_students, admin_team, announcements,
+from .routers import (admin, admin_content, admin_courses, admin_enrolment, admin_imports, admin_students, admin_team, announcements,
                       auth, billing, courses, jobs, media, public, resources, settings, student)
 from .settings import get_settings
 
@@ -25,6 +25,7 @@ app.include_router(public.router)
 app.include_router(admin.router)
 app.include_router(admin_imports.router)
 app.include_router(admin_content.router)
+app.include_router(admin_courses.router)
 app.include_router(admin_students.router)
 app.include_router(admin_enrolment.router)
 app.include_router(admin_team.router)

@@ -12,7 +12,7 @@ def enum_col(enum_cls: type[StrEnum]) -> SAEnum:
 
 class UserRole(StrEnum):
     STUDENT = "student"
-    TEACHER = "teacher"  # students, enrolment and attempt review only (no content, imports or settings)
+    TEACHER = "teacher"  # their own students, enrolment, attempt review and own courses (no other content or settings)
     ADMIN = "admin"
 
 

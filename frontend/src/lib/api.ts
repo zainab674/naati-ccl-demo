@@ -51,6 +51,7 @@ export type User = {
   id: string; email: string; first_name: string; last_name: string; name: string; role: "student" | "teacher" | "admin";
   subscription_status: "Active" | "Trial" | "Expired" | "Inactive"; has_active_plan: boolean;
   target_exam_date: string | null; access_expires_at: string | null; language: string | null;
+  teacher: string | null;  // the student's teacher, if they have one
 };
 
 /** A community language (LOTE); every one is paired with English. */

@@ -105,7 +105,7 @@ class NewStudent:
     password: str | None = None
 
 
-def create_student(db: Session, spec: NewStudent, by: User) -> User:
+def create_student(db: Session, spec: NewStudent, by: User, teacher: User | None = None) -> User:
     email = normalise_email(spec.email)
     if db.scalar(select(User.id).where(User.email == email)):
         raise EnrolmentError(f"An account with {email} already exists")
@@ -113,7 +113,8 @@ def create_student(db: Session, spec: NewStudent, by: User) -> User:
                 # Without a password the account cannot be signed in to until the invite link is used.
                 password_hash=hash_password(spec.password or secrets.token_urlsafe(32)),
                 preferred_language_id=spec.language.id if spec.language else None,
-                target_exam_date=spec.target_exam_date, enrolled_by_id=by.id)
+                target_exam_date=spec.target_exam_date, enrolled_by_id=by.id,
+                teacher_id=teacher.id if teacher else None)
     db.add(user)
     db.flush()
     if spec.access != "None" or spec.note:

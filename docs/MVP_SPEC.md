@@ -140,6 +140,11 @@ Admin > Settings, two tabs:
 - Teacher role: Admin / Teacher / Student. Teachers see the overview, students (incl. enrolment), the review queue and
   attempt review with overrides; not content, imports, announcements, settings or the team. Admins manage the team
   (add with an invite, change role, deactivate, remove) on Admin > Team.
+- Teachers' own students and courses (added 2026-10-30 at the user's request): a student belongs to at most one
+  teacher (enrolled by them, signed up or joined through the teacher's class link /join/<code>, or assigned by an
+  admin). A teacher sees and manages only their own students and their attempts; admins see everyone, filter by
+  teacher and move students between teachers. Teachers create and edit their own courses (chapters, lessons, PDFs),
+  shown only to their own students next to Benchmark's courses; admins edit every course.
 - Email one or many students from the student list or a student's page (plain text, {first_name}/{name}, sender's
   name appended). Account and course messages only; marketing campaigns stay a later phase.
 - Student activity log on the student's admin page: sign-ups, sign-ins, attempts started/submitted, lessons completed,

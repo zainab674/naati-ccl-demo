@@ -1,11 +1,11 @@
 "use client";
 
-import { Upload } from "lucide-react";
+import { Copy, RefreshCw, Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useUser } from "@/components/AppShell";
-import { Badge, Card, ErrorNote, LinkButton, PageHeader, Spinner } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, inputClass, LinkButton, PageHeader, Spinner } from "@/components/ui";
 import { api, fmtDateTime } from "@/lib/api";
 
 type Overview = {
@@ -26,12 +26,14 @@ export default function AdminOverview() {
   const stats = [
     { label: "Students", value: o.students, sub: `${o.active_students} with an active plan`, href: "/admin/students" },
     { label: "Dialogues", value: o.dialogues_published, sub: `${o.dialogues_total} in total`, href: "/admin/dialogues", adminOnly: true },
-    { label: "Dialogue attempts", value: o.attempts, sub: "all time", href: "/admin/students" },
+    { label: "Dialogue attempts", value: o.attempts, sub: teacher ? "by your students" : "all time", href: "/admin/students" },
     { label: "Segments to review", value: o.segments_needing_review, sub: "flagged by scoring", href: "/admin/review" },
+    ...(teacher ? [{ label: "Your courses", value: o.courses, sub: "shown to your students", href: "/admin/courses" }] : []),
   ].filter((s) => !(teacher && s.adminOnly));
   return (
     <>
-      <PageHeader title={teacher ? "Teacher" : "Admin"} subtitle={teacher ? "Students, enrolment and scoring review." : "Content, students and scoring review."} />
+      <PageHeader title={teacher ? "Teacher" : "Admin"} subtitle={teacher ? "Your students, their scoring review and your courses." : "Content, students and scoring review."} />
+      {teacher && <JoinLink />}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Link key={s.label} href={s.href}>
@@ -63,5 +65,47 @@ export default function AdminOverview() {
         )}
       </Card>}
     </>
+  );
+}
+
+type ClassLink = { code: string; url: string; students: number };
+
+/** A teacher's class link: students who sign up or join through it become the teacher's students. */
+function JoinLink() {
+  const [link, setLink] = useState<ClassLink | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { api<ClassLink>("/admin/join-link").then(setLink).catch((e) => setError(e.message)); }, []);
+
+  const copy = async () => {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { setError("Copy failed. Select the link and copy it yourself."); }
+  };
+  const regenerate = async () => {
+    if (!confirm("Make a new link? The current link will stop working. Students who already joined stay in your class.")) return;
+    setBusy(true);
+    try { setLink(await api<ClassLink>("/admin/join-link/regenerate", { method: "POST" })); }
+    catch (e) { setError((e as Error).message); }
+    setBusy(false);
+  };
+
+  return (
+    <Card className="mb-6 p-6">
+      <h2 className="font-semibold">Your class link</h2>
+      <p className="mt-1 text-sm text-slate-500">Share it with your students. Anyone who creates an account or joins through it
+        becomes your student{link ? ` (${link.students} so far)` : ""}. You can also add students on the Students page.</p>
+      {link && <div className="mt-4 flex flex-wrap gap-2">
+        <input readOnly value={link.url} onFocus={(e) => e.target.select()} aria-label="Class link"
+          className={`${inputClass} mt-0 min-w-0 flex-1 font-mono text-xs`} />
+        <Button variant="secondary" onClick={copy}><Copy className="size-4" /> {copied ? "Copied" : "Copy"}</Button>
+        <Button variant="ghost" onClick={regenerate} loading={busy}><RefreshCw className="size-4" /> New link</Button>
+      </div>}
+      {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
+    </Card>
   );
 }

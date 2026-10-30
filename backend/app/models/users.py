@@ -27,8 +27,13 @@ class User(IdMixin, Base):
     # Set by a manual (teacher) grant with an end date: paid access stops at this time. Cleared when Stripe takes over.
     access_expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
     enrolled_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)  # manual enrolment
+    # A student's teacher: set when a teacher enrols them, when they sign up through the teacher's join link, or by an
+    # admin. Teachers see and manage only their own students, and their own courses are shown only to them.
+    teacher_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    join_code: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)  # a teacher's join link
 
     preferred_language = relationship("Language")
+    teacher = relationship("User", remote_side="User.id", foreign_keys=[teacher_id])
 
     @property
     def full_name(self) -> str:
@@ -39,8 +44,12 @@ class User(IdMixin, Base):
         return self.role == UserRole.ADMIN
 
     @property
+    def is_teacher(self) -> bool:
+        return self.role == UserRole.TEACHER
+
+    @property
     def is_staff(self) -> bool:
-        """Admins and teachers: can open the staff area, every student's attempts and all content."""
+        """Admins and teachers: can open the staff area. Teachers only reach their own students (services/teachers)."""
         return self.role in (UserRole.ADMIN, UserRole.TEACHER)
 
 

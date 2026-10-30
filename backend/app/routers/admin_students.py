@@ -14,7 +14,7 @@ from ..models import (AccuracyCompletenessEvaluation, AccuracyResult, AIScoringR
                       LessonProgress, Payment, ScoringStatus, SegmentAttempt, Subscription,
                       SubscriptionStatus, User, UserRole)
 from ..services import attempts as svc
-from ..services import activity, enrolment, messages
+from ..services import activity, enrolment, messages, teachers
 from ..services.results import attempt_results, segment_result
 from ..services.scoring import records
 from ..services.scoring.pipeline import finalize, rescore_segment
@@ -37,8 +37,12 @@ def _status_clause(status: SubscriptionStatus):
 
 
 @router.get("/students")
-def students(q: str = "", status: str = "", db: Session = Depends(get_db)):
-    query = select(User).where(User.role == UserRole.STUDENT).order_by(User.created_at.desc())
+def students(q: str = "", status: str = "", teacher: str = "", cu: CurrentUser = Depends(require_staff),
+             db: Session = Depends(get_db)):
+    """A teacher gets their own students. An admin gets everyone, or one teacher's (teacher=<id>, "none" = no teacher)."""
+    query = teachers.scope_students(select(User).where(User.role == UserRole.STUDENT), cu.user).order_by(User.created_at.desc())
+    if teacher and cu.user.is_admin:
+        query = query.where(User.teacher_id.is_(None) if teacher == "none" else User.teacher_id == uuid.UUID(teacher))
     if q:
         like = f"%{q.lower()}%"
         query = query.where(or_(func.lower(User.email).like(like), func.lower(User.first_name).like(like),
@@ -58,10 +62,15 @@ def students(q: str = "", status: str = "", db: Session = Depends(get_db)):
                     "access_expires_at": u.access_expires_at.isoformat() if u.access_expires_at else None,
                     "language": u.preferred_language.name if u.preferred_language else None,
                     "is_active": u.is_active, "manually_enrolled": u.enrolled_by_id is not None,
+                    "teacher": _teacher(u),
                     "created_at": u.created_at.isoformat(), "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
                     "dialogue_attempts": n, "average_dialogue_score": round(float(avg), 1) if avg is not None else None,
                     "last_attempt_at": last.isoformat() if last else None, "flagged": u.flagged})
     return out
+
+
+def _teacher(u: User) -> dict | None:
+    return {"id": str(u.teacher.id), "name": u.teacher.full_name} if u.teacher else None
 
 
 def _name(db: Session, user_id) -> str | None:
@@ -70,10 +79,8 @@ def _name(db: Session, user_id) -> str | None:
 
 
 @router.get("/students/{user_id}")
-def student(user_id: uuid.UUID, db: Session = Depends(get_db)):
-    u = db.get(User, user_id)
-    if not u:
-        raise HTTPException(404, "Student not found")
+def student(user_id: uuid.UUID, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
+    u = teachers.ensure_manages(cu.user, db.get(User, user_id))
     subs = db.scalars(select(Subscription).where(Subscription.user_id == u.id).order_by(Subscription.created_at.desc())).all()
     payments = db.scalars(select(Payment).where(Payment.user_id == u.id).order_by(Payment.created_at.desc())).all()
     return {
@@ -82,7 +89,7 @@ def student(user_id: uuid.UUID, db: Session = Depends(get_db)):
         "access_expires_at": u.access_expires_at.isoformat() if u.access_expires_at else None,
         "language": u.preferred_language.code if u.preferred_language else None,
         "is_active": u.is_active, "first_name": u.first_name, "last_name": u.last_name,
-        "enrolled_by": _name(db, u.enrolled_by_id), "stripe_managed": enrolment.stripe_managed(db, u),
+        "enrolled_by": _name(db, u.enrolled_by_id), "teacher": _teacher(u), "stripe_managed": enrolment.stripe_managed(db, u),
         "access_is_manual": enrolment.access_is_manual(db, u),
         "target_exam_date": u.target_exam_date.isoformat() if u.target_exam_date else None,
         "created_at": u.created_at.isoformat(), "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
@@ -100,10 +107,9 @@ def student(user_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @router.get("/students/{user_id}/activity")
-def student_activity(user_id: uuid.UUID, db: Session = Depends(get_db)):
+def student_activity(user_id: uuid.UUID, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     """Sign-ups, sign-ins, attempts, lessons, resources, emails, payments and access changes, newest first."""
-    if not db.get(User, user_id):
-        raise HTTPException(404, "Student not found")
+    teachers.ensure_manages(cu.user, db.get(User, user_id))
     return activity.timeline(db, user_id)
 
 
@@ -116,8 +122,11 @@ class MessageIn(BaseModel):
 @router.post("/students/message")
 def message_students(body: MessageIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     """Email one or many students. {first_name} and {name} in the subject or message are filled in per student."""
+    ids = body.user_ids
+    if not cu.user.is_admin:  # a teacher emails only their own students; others count as skipped
+        ids = list(db.scalars(teachers.scope_students(select(User.id).where(User.id.in_(ids)), cu.user)))
     try:
-        queued = messages.queue_message(db, body.user_ids, body.subject, body.body, cu.user)
+        queued = messages.queue_message(db, ids, body.subject, body.body, cu.user)
     except messages.MessageError as e:
         raise HTTPException(400, str(e)) from e
     return {"queued": queued, "skipped": len(set(body.user_ids)) - queued}
@@ -131,10 +140,12 @@ def _attempt_id_for(sa: SegmentAttempt) -> uuid.UUID:
 
 
 @router.get("/review-queue")
-def review_queue(db: Session = Depends(get_db)):
-    rows = db.scalars(select(SegmentAttempt).where(
+def review_queue(cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
+    query = select(SegmentAttempt).join(DialogueAttempt, SegmentAttempt.dialogue_attempt_id == DialogueAttempt.id).where(
         or_(SegmentAttempt.needs_review, SegmentAttempt.scoring_status == ScoringStatus.FAILED),
-        ~SegmentAttempt.reviewed_by_admin).order_by(SegmentAttempt.submitted_at).limit(200)).all()
+        ~SegmentAttempt.reviewed_by_admin)
+    query = teachers.scope_by_student(query, cu.user, DialogueAttempt.user_id)
+    rows = db.scalars(query.order_by(SegmentAttempt.submitted_at).limit(200)).all()
     return [{"segment_attempt_id": str(sa.id), "attempt_id": str(_attempt_id_for(sa)),
              "student": sa.dialogue_attempt.user.full_name, "dialogue": sa.dialogue_attempt.dialogue.title,
              "segment_number": sa.segment_number, "scoring_status": sa.scoring_status.value,
@@ -156,7 +167,8 @@ def attempt_detail(attempt_id: uuid.UUID, cu: CurrentUser = Depends(require_staf
 
 
 @router.get("/segment-attempts/{sa_id}/runs")
-def runs(sa_id: uuid.UUID, db: Session = Depends(get_db)):
+def runs(sa_id: uuid.UUID, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
+    _segment_or_404(db, sa_id, cu)
     rows = db.scalars(select(AIScoringRun).where(AIScoringRun.segment_attempt_id == sa_id).order_by(AIScoringRun.created_at)).all()
     return [{"id": str(r.id), "kind": r.kind, "provider": r.provider, "model": r.model, "prompt_version": r.prompt_version,
              "status": r.status.value, "error_message": r.error_message, "request_data": r.request_data,
@@ -165,9 +177,9 @@ def runs(sa_id: uuid.UUID, db: Session = Depends(get_db)):
             for r in rows]
 
 
-def _segment_or_404(db: Session, sa_id: uuid.UUID) -> SegmentAttempt:
+def _segment_or_404(db: Session, sa_id: uuid.UUID, cu: CurrentUser) -> SegmentAttempt:
     sa = db.get(SegmentAttempt, sa_id)
-    if not sa:
+    if not sa or not teachers.manages(cu.user, sa.dialogue_attempt.user):
         raise HTTPException(404, "Segment attempt not found")
     return sa
 
@@ -184,7 +196,7 @@ class OverrideIn(BaseModel):
 
 @router.post("/segment-attempts/{sa_id}/override")
 def override(sa_id: uuid.UUID, body: OverrideIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
-    sa = _segment_or_404(db, sa_id)
+    sa = _segment_or_404(db, sa_id, cu)
     item = db.get(ITEM_MODELS[body.target_type], body.target_id)
     if not item or item.segment_attempt_id != sa.id:
         raise HTTPException(404, "Item not found in this segment")
@@ -206,7 +218,7 @@ class ManualItemIn(BaseModel):
 @router.post("/segment-attempts/{sa_id}/items")
 def add_item(sa_id: uuid.UUID, body: ManualItemIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     """A teacher adds an error the AI missed. Its deduction comes from config like any other item."""
-    sa = _segment_or_404(db, sa_id)
+    sa = _segment_or_404(db, sa_id, cu)
     try:
         if body.criterion == "insertion":
             row = AccuracyCompletenessEvaluation(segment_attempt_id=sa.id, evaluation_type=EvaluationType.INSERTION,
@@ -239,7 +251,7 @@ class ReviewedIn(BaseModel):
 
 @router.post("/segment-attempts/{sa_id}/reviewed")
 def mark_reviewed(sa_id: uuid.UUID, body: ReviewedIn, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
-    sa = _segment_or_404(db, sa_id)
+    sa = _segment_or_404(db, sa_id, cu)
     records.add_review(db, sa, cu.id, "segment", None, sa.total_deduction, sa.total_deduction, body.notes or "Reviewed")
     for e in sa.language_quality_errors:
         e.needs_review = False
@@ -260,8 +272,8 @@ def mark_reviewed(sa_id: uuid.UUID, body: ReviewedIn, cu: CurrentUser = Depends(
 
 
 @router.post("/segment-attempts/{sa_id}/rescore")
-def rescore(sa_id: uuid.UUID, db: Session = Depends(get_db)):
-    sa = _segment_or_404(db, sa_id)
+def rescore(sa_id: uuid.UUID, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
+    sa = _segment_or_404(db, sa_id, cu)
     if sa.dialogue_attempt.status.value == "In Progress":
         raise HTTPException(409, "The attempt has not been submitted")
     rescore_segment(db, sa)

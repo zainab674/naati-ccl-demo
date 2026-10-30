@@ -34,7 +34,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/review", label: "Review queue", icon: Flag },
   { href: "/admin/dialogues", label: "Dialogues", icon: BookOpen, adminOnly: true },
   { href: "/admin/mock-tests", label: "Mock tests", icon: ClipboardCheck, adminOnly: true },
-  { href: "/admin/courses", label: "Courses", icon: GraduationCap, adminOnly: true },
+  { href: "/admin/courses", label: "Courses", icon: GraduationCap },
   { href: "/admin/resources", label: "Learning hub", icon: Library, adminOnly: true },
   { href: "/admin/announcements", label: "Announcements", icon: Megaphone, adminOnly: true },
   { href: "/admin/imports", label: "CSV import", icon: Upload, adminOnly: true },
@@ -43,7 +43,7 @@ const ADMIN_NAV: NavItem[] = [
 ];
 
 // Pages under /admin a teacher may open (the API enforces the same split).
-const TEACHER_PATHS = ["/admin", "/admin/students", "/admin/review", "/admin/attempts"];
+const TEACHER_PATHS = ["/admin", "/admin/students", "/admin/review", "/admin/attempts", "/admin/courses"];
 const teacherMayOpen = (path: string) =>
   TEACHER_PATHS.some((p) => path === p || (p !== "/admin" && path.startsWith(p + "/")));
 

@@ -1,4 +1,4 @@
-"""Teacher role (client brief, module 11): teachers use the student, enrolment and review screens only."""
+"""Teacher role (client brief, module 11): teachers use the student, enrolment, review and course screens only."""
 import pytest
 from sqlalchemy import select
 
@@ -8,9 +8,11 @@ from app.security import hash_password
 from .conftest import login, signup
 from .test_security import admin_routes
 
-# Routes a teacher may use. Everything else under /api/admin is admins only.
+# Routes a teacher may use (each limited to their own students or courses). Everything else under /api/admin is
+# admins only.
 TEACHER_PREFIXES = ("/api/admin/overview", "/api/admin/students", "/api/admin/attempts", "/api/admin/review",
-                    "/api/admin/segment-attempts")
+                    "/api/admin/segment-attempts", "/api/admin/join-link", "/api/admin/courses", "/api/admin/lessons",
+                    "/api/admin/chapters", "/api/admin/sanitize-html")
 
 
 def make_teacher(db, email="teacher@example.com"):

@@ -21,8 +21,11 @@ class Course(IdMixin, Base):
     # None = for every language (e.g. the introduction); otherwise e.g. exam preparation for one language.
     language_pair_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("language_pairs.id"), nullable=True,
                                                                index=True)
+    # None = a Benchmark course for every student; otherwise the teacher who made it, shown only to their students.
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
 
     language_pair = relationship("LanguagePair", lazy="joined")
+    owner = relationship("User")
     lessons: Mapped[list["Lesson"]] = relationship(
         back_populates="course", order_by="Lesson.lesson_number", cascade="all, delete-orphan")
     chapters: Mapped[list["CourseChapter"]] = relationship(

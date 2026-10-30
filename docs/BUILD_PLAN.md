@@ -97,6 +97,8 @@ Milestones map to client payments. Keep the app runnable after every task.
 - [x] 7.7 Launch course shells (Introduction to CCL Test, Exam Preparation (Filipino to English)) as empty drafts.
 - [x] 7.8 PDF handout per lesson (editor upload, courses.csv pdf_url, protected serving).
 - [x] 7.9 Launch-size import check: 50 dialogues x 14 segments in one CSV.
+- [x] 7.10 Teachers' own students (enrolled, joined by class link, or admin-assigned) and own courses shown only to
+      their students.
 
 ## M8. Scoring validation (2026-10-30): prove the estimated score agrees with NAATI examiners
 - [x] 8.1 Read NAATI's published CCL test and marking information directly; differences from the Scoring Brief recorded.
@@ -146,8 +148,10 @@ Milestones map to client payments. Keep the app runnable after every task.
 - A play that fails to load still uses up the repeat. Keep (exam strictness) or refund the play?
 
 Scope additions (2026-10-20), questions for Nipun:
-- Teachers: BUILT 2026-10-30 as a separate role (students, enrolment, review; no content/settings), per the client's
-  document listing Admin, Student and Teacher. Confirm that split.
+- Teachers: BUILT 2026-10-30 as a separate role (students, enrolment, review, their own courses; no other content or
+  settings), per the client's document listing Admin, Student and Teacher. Each teacher sees only their own students.
+  Confirm that split. Should a student be able to move to another teacher's class by themselves (now: admin only)?
+  Should teachers' courses go through admin approval before students see them (now: teachers publish directly)?
 - Manual access: Trial and Active unlock the same content. Should a teacher-granted Trial be limited (e.g. a number of
   mock tests)? Should an end date be required for manual grants?
 - Bulk enrolment skips existing emails. Should a re-upload instead update their access (e.g. extend a whole class)?
@@ -234,3 +238,11 @@ Scoring validation (2026-10-30), for Benchmark (docs/validation/DATA_REQUEST.md)
 - 2026-10-23 Vercel deploy: naati-ccl-web.vercel.app (Next.js) + naati-ccl-api (FastAPI) on a Neon Postgres; files in Postgres (STORAGE_BACKEND=db), migrate+seed on start (AUTO_MIGRATE), queued jobs run via /api/jobs/tick from the site and a daily cron. AI keys not set yet, so transcription and scoring use the mock providers.
 - 2026-10-30 7.1-7.9 (gaps against the client's "CCL Project 2026" doc): 6 more languages (13 LOTEs) with draft guidance and Japanese kana filler matching; Teacher role (require_staff vs require_admin, Admin > Team with invites/roles/deactivate, trimmed staff nav); email one or many students (queued jobs, {first_name}, EmailLog); ActivityEvent log merged with emails/payments/access on the student page; dashboard last-5 averages + announcements carousel (Admin > Announcements); fluency -0.5 vs -0.2 noted; launch course drafts seeded; lesson PDF (upload, courses.csv pdf_url job, protected inline serving, Caddy route); 50-dialogue import test (~3 s). 3 migrations. 347 backend tests, lint and frontend build pass. Checked in the browser with dev QA accounts (since deactivated): announcement form + carousel (desktop and phone), Team page, email from a student page landing in the activity log, lesson PDF inline, teacher redirected from admin-only pages. Not clicked: bulk "Email selected", Team add/role change, courses.csv pdf_url against a real URL.
 - 2026-10-30 M8 scoring validation: NAATI pages read (no published point values; deductions by impact; indirect speech and English numerals policies noted); backend/validation/ (dataset, AI runs cached by prompt/model/config key, metrics with student-cluster bootstrap, report with examiner ceiling and rubric-fidelity split, many-facet Rasch + FACETS/TAM export, frozen by-student held-out split + ledger, gate + approve + check), Label Studio config + annotation guide, data request, MU-count adjustment (off) + simulation, per-language score gate (students: practice feedback only; staff unchanged; email/dashboard/library/attempts redacted). No real data: nothing measured, docs/SCORING_VALIDATION.md says so. 364 backend tests (validation harness on synthetic data, gate), lint and frontend build pass.
+- 2026-10-30 7.10 Teachers' classes: users.teacher_id + join_code, courses.owner_id (1 migration; existing teacher
+  enrolments backfilled); services/teachers.py scopes students, attempts, review queue, overview and messages to a
+  teacher's own students (404 for others); class link (/join/<code>, signup ?teacher=, join while signed in, regenerate);
+  admin teacher filter/column, teacher picker on add/bulk enrol, Teacher card on the student page; course routes moved
+  to admin_courses.py (require_staff + ownership), student course list/lesson/PDF limited to Benchmark + own teacher's.
+  6 new tests; full suite, lint and frontend build pass. Checked in the browser with dev QA accounts (since
+  deactivated): teacher overview + class link, signup through it, student sees the teacher's course, second teacher
+  sees neither, admin filter/column and moving a student.
