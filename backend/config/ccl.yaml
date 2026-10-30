@@ -3,6 +3,10 @@
 mock_test:
   dialogues_per_test: 2
 
+dashboard:
+  average_last_attempts: 5    # dashboard average = mean of the student's last N scored attempts (0 = all of them)
+  announcements_max: 6        # most announcements shown in the dashboard carousel
+
 segment:
   # As in the NAATI test: each press of Start is one attempt (hear the segment, speak after the chime, Finish
   # attempt). Pressing Start again repeats the segment; only the last attempt's recording is kept and scored.

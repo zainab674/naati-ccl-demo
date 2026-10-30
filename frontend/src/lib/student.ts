@@ -1,3 +1,5 @@
+import type { Announcement } from "@/components/AnnouncementCarousel";
+
 export type DialogueItem = {
   id: string; title: string; description: string; topic: string | null; difficulty: string; segments: number;
   estimated_duration: number | null; maximum_score: number; is_free: boolean; locked: boolean; language: string; language_name: string;
@@ -19,7 +21,9 @@ export type Dashboard = {
   user: { first_name: string; has_active_plan: boolean; target_exam_date: string | null; days_to_exam: number | null };
   average_mock_score: number | null; average_dialogue_score: number | null; mock_max: number; dialogue_max: number;
   dialogues_available: number; dialogues_total: number; mock_tests_available: number;
+  average_over: number | null; mock_scores_counted: number; dialogue_scores_counted: number;
   unfinished: AttemptSummary[]; recent: AttemptSummary[]; quick_start: DialogueItem | null;
+  announcements: Announcement[];
 };
 
 export function minutes(seconds: number | null) {

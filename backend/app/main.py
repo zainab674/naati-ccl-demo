@@ -5,8 +5,8 @@ from sqlalchemy import text
 
 from .db import SessionLocal
 from .middleware import SecurityMiddleware
-from .routers import (admin, admin_content, admin_enrolment, admin_imports, admin_students, admin_team, auth, billing,
-                      courses, jobs, media, public, resources, settings, student)
+from .routers import (admin, admin_content, admin_enrolment, admin_imports, admin_students, admin_team, announcements,
+                      auth, billing, courses, jobs, media, public, resources, settings, student)
 from .settings import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -28,6 +28,7 @@ app.include_router(admin_content.router)
 app.include_router(admin_students.router)
 app.include_router(admin_enrolment.router)
 app.include_router(admin_team.router)
+app.include_router(announcements.admin)
 app.include_router(student.router)
 app.include_router(media.router)
 app.include_router(courses.router)

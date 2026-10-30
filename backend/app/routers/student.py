@@ -15,6 +15,7 @@ from ..models import (AttemptStatus, ContentStatus, Dialogue, DialogueAttempt, L
                       RecordStatus, ScoringStatus, Topic)
 from ..services import attempts as svc
 from ..services import languages, protection, ratelimit
+from . import announcements
 from ..services.storage import get_storage
 from ..settings import ccl_config, get_settings, scoring_config
 
@@ -134,8 +135,10 @@ def mock_tests(language: str = "", cu: CurrentUser = Depends(current_user), db: 
 def dashboard(cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
     refs = _my_attempts(db, cu.id)
     summaries = [attempt_summary(db, r) for r in refs]
-    mock_scores = [s["total_score"] for s in summaries if s["kind"] == "mock" and s["total_score"] is not None]
-    dialogue_scores = [da.total_score for r in refs for da in r.dialogue_attempts if da.total_score is not None]
+    # refs are newest first, so the first N scores are the last N attempts (ccl.yaml dashboard.average_last_attempts).
+    last_n = int(ccl_config().get("dashboard", {}).get("average_last_attempts", 5)) or None
+    mock_scores = [s["total_score"] for s in summaries if s["kind"] == "mock" and s["total_score"] is not None][:last_n]
+    dialogue_scores = [da.total_score for r in refs for da in r.dialogue_attempts if da.total_score is not None][:last_n]
     unfinished = [s for s in summaries if s["status"] == AttemptStatus.IN_PROGRESS.value]
     library = dialogues("", "", "", cu, db)  # in the student's own language
     available = [d for d in library if not d["locked"]]
@@ -147,12 +150,14 @@ def dashboard(cu: CurrentUser = Depends(current_user), db: Session = Depends(get
                  "days_to_exam": (exam - date.today()).days if exam else None},
         "average_mock_score": round(sum(mock_scores) / len(mock_scores), 1) if mock_scores else None,
         "average_dialogue_score": round(sum(dialogue_scores) / len(dialogue_scores), 1) if dialogue_scores else None,
+        "average_over": last_n, "mock_scores_counted": len(mock_scores), "dialogue_scores_counted": len(dialogue_scores),
         "mock_max": scoring_config()["total_max"], "dialogue_max": scoring_config()["dialogue_max"],
         "dialogues_available": len(available), "dialogues_total": len(library),
         "mock_tests_available": sum(1 for m in mock_tests("", cu, db) if not m["locked"]),
         "unfinished": unfinished[:3],
         "recent": [s for s in summaries if s["status"] != AttemptStatus.IN_PROGRESS.value][:6],
         "quick_start": quick,
+        "announcements": announcements.for_student(db, cu.user),
         "upcoming_webinars": [],  # later phase
     }
 

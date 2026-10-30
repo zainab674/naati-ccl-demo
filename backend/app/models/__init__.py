@@ -3,6 +3,7 @@ from .attempts import DialogueAttempt, MockTestAttempt, RepeatEvent, SegmentAtte
 from .content import Dialogue, Language, LanguagePair, MeaningUnit, MockTest, MockTestDialogue, Segment, Topic  # noqa: F401
 from .enums import *  # noqa: F401,F403
 from .other import (  # noqa: F401
+                    Announcement,
                     Course,
                     CourseChapter,
                     EmailLog,

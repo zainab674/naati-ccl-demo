@@ -119,6 +119,27 @@ class StripeEvent(IdMixin, Base):
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
+# ------------------------------------------------------------------ dashboard announcements
+
+class Announcement(IdMixin, Base):
+    """A slide in the student dashboard carousel: a live group session, a 1-on-1 class, or news. Shown while
+    Published and inside its optional date window, to every language or one language."""
+    __tablename__ = "announcements"
+    kind: Mapped[str] = mapped_column(String(30), default="news")  # live_session | class | news
+    title: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text, default="")
+    event_at: Mapped[datetime | None] = mapped_column(nullable=True)  # when the session or class happens
+    link_url: Mapped[str] = mapped_column(String(1000), default="")
+    link_label: Mapped[str] = mapped_column(String(60), default="")
+    starts_at: Mapped[datetime | None] = mapped_column(nullable=True)  # show from (None = now)
+    ends_at: Mapped[datetime | None] = mapped_column(nullable=True)    # hide after (None = until unpublished)
+    language_pair_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("language_pairs.id"), nullable=True)
+    status: Mapped[ContentStatus] = mapped_column(enum_col(ContentStatus), default=ContentStatus.DRAFT)
+    sort_order: Mapped[int] = mapped_column(default=0)
+
+    language_pair = relationship("LanguagePair", lazy="joined")
+
+
 # ------------------------------------------------------------------ site, imports, email
 
 class SiteContent(IdMixin, Base):

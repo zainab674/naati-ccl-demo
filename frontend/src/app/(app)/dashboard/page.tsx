@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import AnnouncementCarousel from "@/components/AnnouncementCarousel";
 import AttemptRow from "@/components/AttemptRow";
 import { Button, Card, ErrorNote, LinkButton, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -28,9 +29,13 @@ export default function DashboardPage() {
 
   if (error) return <ErrorNote>{error}</ErrorNote>;
   if (!d) return <Spinner />;
+  // "last 5" when the student has at least that many scored attempts; otherwise just "out of".
+  const over = (counted: number) => (d.average_over && counted >= d.average_over ? `last ${d.average_over} · ` : "");
   const stats = [
-    { label: "Average mock test score", value: d.average_mock_score !== null ? `${d.average_mock_score}` : "–", sub: `out of ${d.mock_max}` },
-    { label: "Average dialogue score", value: d.average_dialogue_score !== null ? `${d.average_dialogue_score}` : "–", sub: `out of ${d.dialogue_max}` },
+    { label: "Average mock test score", value: d.average_mock_score !== null ? `${d.average_mock_score}` : "–",
+      sub: `${over(d.mock_scores_counted)}out of ${d.mock_max}` },
+    { label: "Average dialogue score", value: d.average_dialogue_score !== null ? `${d.average_dialogue_score}` : "–",
+      sub: `${over(d.dialogue_scores_counted)}out of ${d.dialogue_max}` },
     { label: "Dialogues available", value: `${d.dialogues_available}`, sub: `of ${d.dialogues_total} in the library` },
     { label: "Mock tests available", value: `${d.mock_tests_available}`, sub: "two dialogues each" },
   ];
@@ -41,6 +46,8 @@ export default function DashboardPage() {
         subtitle={d.user.days_to_exam !== null && d.user.days_to_exam >= 0
           ? <span className="inline-flex items-center gap-1"><CalendarDays className="size-4" /> {d.user.days_to_exam} days to your test</span>
           : "Your CCL practice dashboard."} />
+
+      <AnnouncementCarousel items={d.announcements} />
 
       {!d.user.has_active_plan && (
         <Card className="mb-6 flex flex-wrap items-center justify-between gap-4 bg-brand-50 p-5 ring-brand-100">
