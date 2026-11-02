@@ -17,8 +17,8 @@ const toolClass = "rounded p-1.5 text-slate-500 hover:bg-white hover:text-ink";
 
 /** HTML text field for the course and lesson editors: buttons wrap the selected text in tags, and the preview shows
  * exactly what the server will store after sanitising. */
-export default function HtmlEditor({ label, value, onChange, heightClass = "h-48", placeholder }:
-  { label: string; value: string; onChange: (html: string) => void; heightClass?: string; placeholder?: string }) {
+export default function HtmlEditor({ label, value, onChange, heightClass = "h-48", placeholder, previewClass }:
+  { label: string; value: string; onChange: (html: string) => void; heightClass?: string; placeholder?: string; previewClass?: string }) {
   const area = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(value);
 
@@ -55,7 +55,8 @@ export default function HtmlEditor({ label, value, onChange, heightClass = "h-48
         <textarea ref={area} className={cx(inputClass, "mt-0 rounded-t-none py-2 font-mono text-xs", heightClass)} value={value} placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)} /></label>
       <div><span className="text-sm font-medium text-slate-700">Preview (sanitised)</span>
-        <div className={cx("lesson-html mt-1 overflow-auto rounded-lg border border-slate-200 p-3 text-sm", heightClass)} dangerouslySetInnerHTML={{ __html: preview }} /></div>
+        <div className={cx("mt-1 overflow-auto rounded-lg border border-slate-200 p-3 text-sm", heightClass)}>
+          <div className={cx("lesson-html", previewClass)} dangerouslySetInnerHTML={{ __html: preview }} /></div></div>
     </div>
   );
 }

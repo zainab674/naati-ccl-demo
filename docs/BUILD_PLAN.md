@@ -216,8 +216,6 @@ Round 1 revision, questions for the meeting (2026-11-02):
 - The mockup says "Module"; the admin and CSV say "Chapter". The student pages keep "Chapter" until confirmed.
 - Should courses.csv and resources gain an image_url column?
 - Lesson Notes are shown to students under the lesson text. Were they meant for students, or private teacher notes?
-- Course at a Glance is free HTML per course, as the document asks, so the mockup's six icon boxes are not reproduced.
-  Is a bulleted list acceptable, or does Benchmark want the boxes (a fixed set of six title + text fields per course)?
 - Scoring right after each segment in practice mode: the brief allows it or the whole dialogue, and the whole dialogue
   is built. Per-segment would show the suggested answer while the student can still use a repeat on that segment, and
   needs extra rules for re-recording. Does Benchmark want it?

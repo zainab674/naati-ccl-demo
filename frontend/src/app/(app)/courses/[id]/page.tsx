@@ -44,7 +44,7 @@ export default function CourseOverview() {
         <Card className="mt-6 p-6">
           <h2 className="text-lg font-semibold">Course at a Glance</h2>
           {/* at_a_glance_html is sanitised by the server (allow-list) when it is saved */}
-          <div className="lesson-html mt-2 text-slate-700" dangerouslySetInnerHTML={{ __html: c.at_a_glance_html }} />
+          <div className="lesson-html glance-html mt-2 text-slate-700" dangerouslySetInnerHTML={{ __html: c.at_a_glance_html }} />
         </Card>
       )}
       <Card className="mt-6 overflow-hidden">

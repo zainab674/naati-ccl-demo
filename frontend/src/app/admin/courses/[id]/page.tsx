@@ -17,6 +17,17 @@ type Lesson = { id: string; lesson_number: number; title: string; video_url: str
 type Chapter = { id: string; number: number; title: string };
 type Course = { id: string; image_url: string | null; key: string; title: string; description: string; at_a_glance_html: string; status: string; is_free: boolean; sort_order: number; language: string | null; chapters: Chapter[]; lessons: Lesson[] };
 
+// The six boxes from the client's Round 1 mockup, as a starting point for staff to edit per course.
+const GLANCE_STARTER = `<ul>
+  <li><strong>Self-paced</strong> Learn on your schedule</li>
+  <li><strong>Structured lessons</strong> Step-by-step instruction</li>
+  <li><strong>Practical activities</strong> Apply interpreting techniques</li>
+  <li><strong>Exam focused</strong> Targeted preparation</li>
+  <li><strong>Track progress</strong> Pick up where you left off</li>
+  <li><strong>Skill development</strong> Build confidence</li>
+</ul>
+`;
+
 export default function CourseEditor() {
   const { id } = useParams<{ id: string }>();
   const [c, setC] = useState<Course | null>(null);
@@ -82,8 +93,14 @@ export default function CourseEditor() {
           </select></label>
         <label className="block sm:col-span-2"><span className="text-sm font-medium text-slate-700">Description</span>
           <textarea className={cx(inputClass, "h-20 py-2")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
-        <div className="sm:col-span-2"><HtmlEditor label="Course at a Glance (shown on the course overview page, hidden when empty)" value={form.at_a_glance_html}
-          onChange={(at_a_glance_html) => setForm((x) => ({ ...x, at_a_glance_html }))} /></div>
+        <div className="sm:col-span-2">
+          <HtmlEditor label="Course at a Glance (shown on the course overview page, hidden when empty)" value={form.at_a_glance_html} heightClass="h-72" previewClass="glance-html"
+            onChange={(at_a_glance_html) => setForm((x) => ({ ...x, at_a_glance_html }))} />
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <Button size="sm" variant="secondary" onClick={() => { if (!form.at_a_glance_html.trim() || confirm("Replace the current Course at a Glance text with the six-box starter?")) setForm((x) => ({ ...x, at_a_glance_html: GLANCE_STARTER })); }}>Use six-box starter</Button>
+            <p className="text-xs text-slate-500">Each item of a bulleted list becomes a box: the bold part is its title. Icons go by position. Edit the wording so it is true for this course.</p>
+          </div>
+        </div>
         <div className="sm:col-span-2"><ImageField<Course> label="Course image" url={c.image_url} apiPath={`/admin/courses/${id}/image`}
           hint="Shown on the course card and overview page. PNG, JPEG or WebP, up to 5 MB." onSaved={apply} /></div>
         <div className="sm:col-span-2 flex justify-end"><Button onClick={() => patchCourse({ ...form, language: form.language || null })}>Save course</Button></div>

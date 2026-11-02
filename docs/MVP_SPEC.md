@@ -200,7 +200,8 @@ Source: "Round 1 Revision" tab of the client document and benchmark_ccl_full_pla
 - Admin: Course Image and Resource Image fields (PNG, JPEG or WebP).
 
 ## 19. Learning Hub fields from the client document's mockups tab (2026-11-02)
-- Course: "Course at a Glance" HTML field, shown on Course Overview and hidden when empty.
+- Course: "Course at a Glance" HTML field, shown on Course Overview and hidden when empty. Each bulleted item shows as
+  a box like the Round 1 mockup (bold part = title; icons by position); the editor offers the mockup's six as a starter.
 - Lesson: YouTube link (ordinary watch links work), lesson text, Notes (HTML, shown under the text), length in minutes.
   Length is what staff enter, never estimated; lessons without one show nothing, and totals add up the ones entered.
 - Course Content sidebar: lesson search. Chapter and course totals on the overview page and course card.
