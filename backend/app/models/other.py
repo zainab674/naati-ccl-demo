@@ -23,6 +23,7 @@ class Course(IdMixin, Base):
                                                                index=True)
     # None = a Benchmark course for every student; otherwise the teacher who made it, shown only to their students.
     owner_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    image_key: Mapped[str] = mapped_column(String(400), default="")  # cover image; services/content_images.py
 
     language_pair = relationship("LanguagePair", lazy="joined")
     owner = relationship("User")

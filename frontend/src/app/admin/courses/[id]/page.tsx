@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import ImageField from "@/components/ImageField";
 import { Badge, Button, Card, cx, ErrorNote, Field, inputClass, PageHeader, Spinner, SuccessNote } from "@/components/ui";
 import { statusTone } from "@/lib/admin";
 import { api, fetchLanguages, type Language } from "@/lib/api";
@@ -13,7 +14,7 @@ import { fileSize } from "@/lib/resources";
 type Lesson = { id: string; lesson_number: number; title: string; video_url: string; html_content: string; is_free: boolean; status: string;
   chapter_id: string | null; number: string | null; pdf: { name: string; size: number; url: string } | null };
 type Chapter = { id: string; number: number; title: string };
-type Course = { id: string; key: string; title: string; description: string; status: string; is_free: boolean; sort_order: number; language: string | null; chapters: Chapter[]; lessons: Lesson[] };
+type Course = { id: string; image_url: string | null; key: string; title: string; description: string; status: string; is_free: boolean; sort_order: number; language: string | null; chapters: Chapter[]; lessons: Lesson[] };
 
 export default function CourseEditor() {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +81,8 @@ export default function CourseEditor() {
           </select></label>
         <label className="block sm:col-span-2"><span className="text-sm font-medium text-slate-700">Description</span>
           <textarea className={cx(inputClass, "h-20 py-2")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+        <div className="sm:col-span-2"><ImageField<Course> label="Course image" url={c.image_url} apiPath={`/admin/courses/${id}/image`}
+          hint="Shown on the course card and overview page. PNG, JPEG or WebP, up to 5 MB." onSaved={apply} /></div>
         <div className="sm:col-span-2 flex justify-end"><Button onClick={() => patchCourse({ ...form, language: form.language || null })}>Save course</Button></div>
       </Card>
 

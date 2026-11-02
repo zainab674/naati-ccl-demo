@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BookOpen, ClipboardCheck, Eye, Flag, GraduationCap, History, LayoutDashboard, Library, LogOut, Megaphone, Menu, Settings, Shield, Upload, UserCog, Users, X,
+  BookOpen, ChevronDown, ClipboardCheck, Eye, Flag, GraduationCap, LayoutDashboard, Library, LogOut, Megaphone, Menu, Settings, Shield, Sparkles, Target, Upload, UserCog, Users, UsersRound, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -18,14 +18,20 @@ const UserCtx = createContext<{ user: User; refresh: () => Promise<unknown> } | 
 export const useUser = () => useContext(UserCtx)!;
 
 type NavItem = { href: string; label: string; icon: typeof BookOpen; adminOnly?: boolean };
+type NavGroup = { label: string; icon: typeof BookOpen; items: (NavItem | { label: string; icon: typeof BookOpen; soon: true })[] };
 
-const STUDENT_NAV: NavItem[] = [
+// Student menu from the client's Round 1 mockup. My attempts is reached from the dashboard's Recent Attempts.
+const STUDENT_NAV: (NavItem | NavGroup)[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dialogues", label: "Practice dialogues", icon: BookOpen },
-  { href: "/mock-tests", label: "Mock tests", icon: ClipboardCheck },
-  { href: "/courses", label: "Courses", icon: GraduationCap },
-  { href: "/resources", label: "Learning hub", icon: Library },
-  { href: "/attempts", label: "My attempts", icon: History },
+  { label: "Learning Hub", icon: Library, items: [
+    { href: "/courses", label: "Courses", icon: GraduationCap },
+    { href: "/resources", label: "Resources", icon: BookOpen },
+    { label: "Classes and Coaching", icon: UsersRound, soon: true },
+  ] },
+  { label: "Practice Hub", icon: Target, items: [
+    { href: "/mock-tests", label: "Mock Test", icon: ClipboardCheck },
+    { label: "Skill Mastery", icon: Sparkles, soon: true },
+  ] },
 ];
 
 const ADMIN_NAV: NavItem[] = [
@@ -35,7 +41,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/dialogues", label: "Dialogues", icon: BookOpen, adminOnly: true },
   { href: "/admin/mock-tests", label: "Mock tests", icon: ClipboardCheck, adminOnly: true },
   { href: "/admin/courses", label: "Courses", icon: GraduationCap },
-  { href: "/admin/resources", label: "Learning hub", icon: Library, adminOnly: true },
+  { href: "/admin/resources", label: "Resources", icon: Library, adminOnly: true },
   { href: "/admin/announcements", label: "Announcements", icon: Megaphone, adminOnly: true },
   { href: "/admin/imports", label: "CSV import", icon: Upload, adminOnly: true },
   { href: "/admin/team", label: "Team", icon: UserCog, adminOnly: true },
@@ -50,6 +56,7 @@ const teacherMayOpen = (path: string) =>
 export default function AppShell({ children, admin }: { children: ReactNode; admin?: boolean }) {
   const [user, setUser] = useState<User | null>(null);
   const [open, setOpen] = useState(false);
+  const [foldedGroups, setFoldedGroups] = useState<Set<string>>(new Set());
   const pathname = usePathname();
   const router = useRouter();
 
@@ -62,7 +69,24 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
   useEffect(() => { load().catch(() => {}); }, [load]);
 
   if (!user || blocked) return <Spinner />;
-  const nav = admin ? ADMIN_NAV.filter((item) => user.role === "admin" || !item.adminOnly) : STUDENT_NAV;
+  const nav: (NavItem | NavGroup)[] = admin ? ADMIN_NAV.filter((item) => user.role === "admin" || !item.adminOnly) : STUDENT_NAV;
+  const isActive = (href: string) => pathname === href || (href !== "/admin" && pathname.startsWith(href + "/"));
+  const toggleGroup = (label: string) => setFoldedGroups((s) => {
+    const n = new Set(s);
+    if (n.has(label)) n.delete(label); else n.add(label);
+    return n;
+  });
+  const navLink = (item: NavItem, sub = false) => {
+    const Icon = item.icon;
+    return (
+      <Link key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={isActive(item.href) ? "page" : undefined}
+        className={cx("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors", sub && "pl-9",
+          isActive(item.href) ? "bg-white/10 font-medium text-white" : "text-brand-100/80 hover:bg-white/5 hover:text-white")}>
+        <Icon className="size-4 shrink-0" />
+        <span className="flex-1">{item.label}</span>
+      </Link>
+    );
+  };
 
   const logout = async () => {
     await api("/auth/logout", { method: "POST" });
@@ -74,24 +98,41 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
       <div className="px-2 pb-6"><Link href="/"><Logo light /></Link></div>
       <div className="flex-1 space-y-0.5">
         {nav.map((item) => {
-          const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
-          const Icon = item.icon;
+          if ("href" in item) return navLink(item);
+          const GroupIcon = item.icon;
+          const folded = foldedGroups.has(item.label);
           return (
-            <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
-              className={cx("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                active ? "bg-white/10 font-medium text-white" : "text-brand-100/80 hover:bg-white/5 hover:text-white")}>
-              <Icon className="size-4 shrink-0" />
-              <span className="flex-1">{item.label}</span>
-            </Link>
+            <div key={item.label} className="pt-1">
+              <button onClick={() => toggleGroup(item.label)} aria-expanded={!folded}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/5">
+                <GroupIcon className="size-4 shrink-0" />
+                <span className="flex-1">{item.label}</span>
+                <ChevronDown className={cx("size-4 shrink-0 text-brand-200 transition-transform", folded && "-rotate-90")} />
+              </button>
+              {!folded && <div className="mt-0.5 space-y-0.5">
+                {item.items.map((sub) => {
+                  if ("href" in sub) return navLink(sub, true);
+                  const SubIcon = sub.icon;
+                  return (
+                    <div key={sub.label} className="flex items-center gap-3 rounded-lg px-3 py-2 pl-9 text-sm text-brand-100/50">
+                      <SubIcon className="size-4 shrink-0" />
+                      <span className="flex-1">{sub.label}</span>
+                      <span className="rounded-full border border-white/20 px-1.5 py-0.5 text-[10px] leading-none text-brand-100/70">Soon</span>
+                    </div>
+                  );
+                })}
+              </div>}
+            </div>
           );
         })}
       </div>
-      <div className="border-t border-white/10 px-2 pt-4">
-        <div className="truncate text-sm font-medium text-white">{user.name}</div>
-        <div className="truncate text-xs text-brand-200/70">{user.email}</div>
-        <Link href="/account" className="mt-3 block text-xs text-brand-200 hover:text-white">Account and billing</Link>
-        <button onClick={logout} className="mt-2 flex items-center gap-2 text-xs text-brand-200 hover:text-white">
-          <LogOut className="size-3.5" /> Sign out
+      <div className="space-y-0.5 border-t border-white/10 pt-3">
+        <Link href="/account" onClick={() => setOpen(false)} className={cx("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+          isActive("/account") ? "bg-white/10 font-medium text-white" : "text-brand-100/80 hover:bg-white/5 hover:text-white")}>
+          <Settings className="size-4 shrink-0" /> Account and Billing
+        </Link>
+        <button onClick={logout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-brand-100/80 hover:bg-white/5 hover:text-white">
+          <LogOut className="size-4 shrink-0" /> Sign Out
         </button>
       </div>
     </nav>
@@ -123,7 +164,7 @@ export default function AppShell({ children, admin }: { children: ReactNode; adm
               </Link>
             )}
           </header>
-          <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8">{children}</main>
+          <main className="mx-auto max-w-[1500px] px-4 py-8 sm:px-8">{children}</main>
         </div>
       </div>
     </UserCtx.Provider>

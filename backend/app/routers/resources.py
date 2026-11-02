@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import CurrentUser, current_user, ensure_access, is_locked, require_admin
 from ..models import ContentStatus, Resource, ResourceType, Topic
-from ..services import activity, languages, ratelimit
+from ..services import activity, content_images, languages, ratelimit
 from ..services import resources as svc
 from ..services.html import sanitize
 from ..services.storage import get_storage
@@ -29,7 +29,8 @@ def summary(r: Resource, user=None) -> dict:
     out = {"id": str(r.id), "title": r.title, "description": r.description, "type": r.resource_type.value,
            "topic": r.topic.name if r.topic else None, "is_free": r.is_free, **_lang(r),
            "has_file": bool(r.file_key), "file_name": r.file_name, "file_size": r.file_size,
-           "content_type": r.content_type, "has_link": bool(r.external_url)}
+           "content_type": r.content_type, "has_link": bool(r.external_url),
+           "image_url": content_images.url(r, f"/api/resources/{r.id}/image")}
     if user is not None:
         out["locked"] = is_locked(user, r.is_free)
     return out
@@ -89,6 +90,18 @@ def resource_file(resource_id: uuid.UUID, cu: CurrentUser = Depends(current_user
     activity.record(db, cu.user, "resource_opened", f"Opened {r.title}", resource_id=r.id)
     db.commit()
     return Response(data, media_type=r.content_type, headers=_file_headers(r))
+
+
+@router.get("/resources/{resource_id}/image")
+def resource_image(resource_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+    """Also shown on locked resources; drafts only to admins (editor preview)."""
+    r = db.get(Resource, resource_id)
+    if not r or not (r.status == ContentStatus.PUBLISHED or cu.user.is_admin):
+        raise HTTPException(404, "Resource not found")
+    res = content_images.response(r)
+    if res is None:
+        raise HTTPException(404, "No image")
+    return res
 
 
 # ------------------------------------------------------------------ admin
@@ -204,6 +217,27 @@ def admin_remove_file(resource_id: uuid.UUID, db: Session = Depends(get_db)):
         if problems:
             raise HTTPException(400, "Hide the resource before removing its file: " + "; ".join(problems))
     svc.remove_file(r)
+    db.commit()
+    db.refresh(r)
+    return admin_dict(r)
+
+
+@admin.post("/resources/{resource_id}/image")
+async def admin_upload_image(resource_id: uuid.UUID, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    r = _get(db, resource_id)
+    try:
+        content_images.store(r, "resource-images", await file.read(get_settings().content_image_max_mb * 1024 * 1024 + 1))
+    except content_images.ImageError as e:
+        raise HTTPException(400, str(e)) from e
+    db.commit()
+    db.refresh(r)
+    return admin_dict(r)
+
+
+@admin.delete("/resources/{resource_id}/image")
+def admin_remove_image(resource_id: uuid.UUID, db: Session = Depends(get_db)):
+    r = _get(db, resource_id)
+    content_images.remove(r)
     db.commit()
     db.refresh(r)
     return admin_dict(r)

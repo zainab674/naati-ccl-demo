@@ -9,7 +9,7 @@ from ..db import get_db
 from ..deps import CurrentUser, current_user, ensure_access, is_locked
 from ..models import ContentStatus, Course, Lesson, LessonProgress
 from ..services import courses as outline_svc
-from ..services import activity, languages, lesson_pdf, teachers
+from ..services import activity, content_images, languages, lesson_pdf, teachers
 
 router = APIRouter(prefix="/api", tags=["courses"])
 
@@ -35,6 +35,15 @@ def _course_or_404(db: Session, course_id: uuid.UUID, cu: CurrentUser) -> Course
     return c
 
 
+def _image_url(c: Course) -> str | None:
+    return content_images.url(c, f"/api/courses/{c.id}/image")
+
+
+def _next_lesson(lessons: list[Lesson], done: set) -> Lesson | None:
+    """Where Start / Resume goes: the first lesson not finished, or the first one when all are finished."""
+    return next((x for x in lessons if x.id not in done), lessons[0] if lessons else None)
+
+
 @router.get("/courses")
 def courses(language: str = "", cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
     """Courses for every language plus those for the chosen one ("" = the student's own, "all" = every course)."""
@@ -50,7 +59,10 @@ def courses(language: str = "", cu: CurrentUser = Depends(current_user), db: Ses
         query = query.where(or_(Course.language_pair_id.is_(None), Course.language_pair_id == pair.id))
     for c in db.scalars(query):
         lessons = _visible_lessons(c)
+        nxt = _next_lesson(lessons, done)
         out.append({"id": str(c.id), "title": c.title, "description": c.description, "lessons": len(lessons),
+                    "image_url": _image_url(c),
+                    "next_lesson": {"id": str(nxt.id), "locked": is_locked(cu.user, _lesson_free(c, nxt))} if nxt else None,
                     "teacher": c.owner.full_name if c.owner else None,
                     "language_name": c.language_pair.lote.name if c.language_pair else None,
                     "completed": sum(1 for lesson in lessons if lesson.id in done),
@@ -71,11 +83,24 @@ def course(course_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Se
                 "completed": lesson.id in done, "has_video": bool(lesson.video_url)}
 
     groups = outline_svc.outline(c)
-    return {"id": str(c.id), "title": c.title, "description": c.description,
+    return {"id": str(c.id), "title": c.title, "description": c.description, "image_url": _image_url(c),
             "chapters": [{"id": str(g.chapter.id) if g.chapter else None, "number": g.chapter.number if g.chapter else None,
                           "title": g.chapter.title if g.chapter else None, "lessons": [item(x) for x in g.lessons]}
                          for g in groups],
             "lessons": [item(x) for g in groups for x in g.lessons]}
+
+
+@router.get("/courses/{course_id}/image")
+def course_image(course_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
+    """Also shown on locked courses. Drafts: only to whoever can edit the course (editor preview)."""
+    c = db.get(Course, course_id)
+    editor = c and (cu.user.is_admin or c.owner_id == cu.id)
+    if not c or not (editor or (c.status == ContentStatus.PUBLISHED and teachers.sees_course(cu.user, c))):
+        raise HTTPException(404, "Course not found")
+    res = content_images.response(c)
+    if res is None:
+        raise HTTPException(404, "No image")
+    return res
 
 
 @router.get("/lessons/{lesson_id}")

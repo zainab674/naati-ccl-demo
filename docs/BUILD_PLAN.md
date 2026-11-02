@@ -113,6 +113,11 @@ Milestones map to client payments. Keep the app runnable after every task.
       `make check` fails when a validated language's report no longer matches the prompt/scoring config.
 - [ ] 8.7 Run the study on real data: blocked on Benchmark (docs/validation/DATA_REQUEST.md).
 
+## M9. Round 1 revision from the client's teacher (2026-11-02)
+- [x] 9.1 Student sidebar groups, Mock Test page, course cards + overview + Start/Resume workflow, resource cards,
+      dashboard redesign, Course Image and Resource Image fields.
+- [ ] 9.2 CSV template changes: blocked on the meeting with Veine.
+
 ## Deferred (from the client brief "CCL Platform", parked 2026-10-20 at the user's request)
 - [x] PDF attachment per course lesson (done in 7.8).
 - [ ] Admin dashboard: new accounts and revenue (and "leads", once defined).
@@ -188,6 +193,20 @@ Scoring validation (2026-10-30), for Benchmark (docs/validation/DATA_REQUEST.md)
 - NAATI gaps to test on the development set: indirect speech (no error type yet), English numerals penalised in
   Hindi/Gujarati/Malayalam/Punjabi by NAATI's language policy but not in our draft guidance.
 
+Round 1 revision, questions for the meeting (2026-11-02):
+- The mockup's dashboard shows scores, but the score gate hides them from students until a language is validated. Tell
+  Benchmark, and decide whether the gate stays on for launch. Staff see the scores, labelled, so Veine can review it.
+- Topics: the mockup has 10 (Healthcare, Legal and Immigration, ...), the seed has 12 (Health, Legal, Immigration,
+  Community, ...). Which list is final? It also decides the CSV topic values. Not renamed yet.
+- A practice dialogue at 29 to 31 is labelled Pass (engine: 29 minimum) but listed under Failed / Conditional (mockup:
+  pass line 31.5). Which label should it have? What does Conditional mean to students?
+- The mockup has an Enrol button and "Enrolled course". Courses have no enrolment step now: open courses show Start
+  Course and locked ones Unlock. Is a separate enrol step wanted?
+- The mockup's "Approx. 3 hours" on course cards has no data behind it, so only the lesson count is shown. Add a field?
+- The mockup says "Module"; the admin and CSV say "Chapter". The student pages keep "Chapter" until confirmed.
+- Course at a Glance uses the mockup's six fixed claims for every course (e.g. "Practical activities"). Is that right?
+- Should courses.csv and resources gain an image_url column?
+
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
 - 2026-10-19 0.2: docker-compose.yml (postgres:17, minio, backend, worker, frontend) + root .env.example. Validated with `docker compose config`; could not run the stack here (Docker Desktop's WSL VM would not start), dev/tests used a local Postgres on :5433 instead.
@@ -246,3 +265,8 @@ Scoring validation (2026-10-30), for Benchmark (docs/validation/DATA_REQUEST.md)
   6 new tests; full suite, lint and frontend build pass. Checked in the browser with dev QA accounts (since
   deactivated): teacher overview + class link, signup through it, student sees the teacher's course, second teacher
   sees neither, admin filter/column and moving a student.
+- 2026-11-02 M9 Round 1 revision: sidebar groups, Mock Test page (/dialogues redirects to it), course cards + overview +
+  Start/Resume to the next lesson, resource cards, dashboard performance summary (services/performance.py), cover images
+  (services/content_images.py, 1 migration, admin fields). Average window now 3 attempts, per the mockup. Tests, lint and
+  build pass. Checked in the browser with dev QA data (removed): all five pages at 1440 px, dashboard and Mock Test at
+  phone width, gated student dashboard, image upload and removal on a course. Resource image: API test only.

@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = ""
     media_download_max_mb: int = 50
     resource_max_mb: int = 50  # learning hub file uploads (ebooks, audio); see deploy/Caddyfile
+    content_image_max_mb: int = 5  # course and resource cover images
     scratch_dir: Path = BASE_DIR / "data" / "tmp"
 
     stt_provider: str = "auto"  # groq | mock | auto

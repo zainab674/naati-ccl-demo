@@ -14,13 +14,13 @@ export default function ResourcePage() {
   const [r, setR] = useState<ResourceDetail | null>(null);
   const [error, setError] = useState("");
   useEffect(() => { api<ResourceDetail>(`/resources/${id}`).then(setR).catch((e) => setError(e.message)); }, [id]);
-  if (error) return <ErrorNote>{error} <Link href="/resources" className="underline">Back to the learning hub</Link></ErrorNote>;
+  if (error) return <ErrorNote>{error} <Link href="/resources" className="underline">Back to Resources</Link></ErrorNote>;
   if (!r) return <Spinner />;
 
   const ct = r.content_type;
   return (
     <>
-      <PageHeader title={r.title} subtitle={<Link href="/resources" className="text-brand-600 hover:underline">Learning hub</Link>} />
+      <PageHeader title={r.title} subtitle={<Link href="/resources" className="text-brand-600 hover:underline">Resources</Link>} />
       <div className="mb-4 flex flex-wrap gap-1.5">
         <Badge>{r.type}</Badge>
         {r.language_name && <Badge tone="violet">{r.language_name}</Badge>}

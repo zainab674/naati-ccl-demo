@@ -3,6 +3,7 @@
 import { Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import ImageField from "@/components/ImageField";
 import { Badge, Button, Card, cx, ErrorNote, Field, inputClass, Modal, PageHeader, Spinner } from "@/components/ui";
 import { statusTone } from "@/lib/admin";
 import { api, fetchLanguages, fmtDate, type Language } from "@/lib/api";
@@ -82,7 +83,7 @@ export default function AdminResources() {
 
   return (
     <>
-      <PageHeader title="Learning hub" subtitle="Ebooks, glossaries, worksheets, audio, video, articles and links for students."
+      <PageHeader title="Resources" subtitle="Ebooks, glossaries, worksheets, audio, video, articles and links for students."
         actions={<Button onClick={() => open()}>New resource</Button>} />
       {error && !form && <ErrorNote>{error}</ErrorNote>}
       {!rows ? <Spinner /> : (
@@ -155,6 +156,9 @@ export default function AdminResources() {
               </div>
             )}
             {!current && form.type !== "Article" && form.type !== "Link" && <p className="text-xs text-slate-500">Save first, then upload the file.</p>}
+            {current ? <ImageField<AdminResource> label="Resource image" url={current.image_url} apiPath={`/admin/resources/${current.id}/image`}
+              hint="Shown on the resource card. PNG, JPEG or WebP, up to 5 MB." onSaved={(r) => { setCurrent(r); load(); }} />
+              : <p className="text-xs text-slate-500">Save first, then add a resource image.</p>}
             {current && current.problems.length > 0 && <p className="text-xs text-amber-700">Before publishing: {current.problems.join("; ")}</p>}
             {error && <ErrorNote>{error}</ErrorNote>}
             <div className="flex flex-wrap items-center justify-between gap-2">

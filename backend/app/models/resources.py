@@ -15,6 +15,7 @@ class Resource(IdMixin, Base):
     key: Mapped[str] = mapped_column(String(120), unique=True, index=True)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
+    image_key: Mapped[str] = mapped_column(String(400), default="")  # cover image; services/content_images.py
     resource_type: Mapped[ResourceType] = mapped_column(enum_col(ResourceType))
     # None = for every language.
     language_pair_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("language_pairs.id"), nullable=True, index=True)

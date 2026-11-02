@@ -16,10 +16,12 @@ export type CourseOutlineData = { id: string; title: string; description: string
 
 export const lessonHref = (courseId: string, l: OutlineLesson) => (l.locked ? "/pricing" : `/courses/${courseId}/lessons/${l.id}`);
 
-export default function CourseOutline({ course, currentId, compact }: { course: CourseOutlineData; currentId?: string; compact?: boolean }) {
+export default function CourseOutline({ course, currentId, compact, firstOpenOnly }:
+  { course: CourseOutlineData; currentId?: string; compact?: boolean; firstOpenOnly?: boolean }) {
   const chaptered = course.chapters.some((g) => g.id);
-  // Chapters start open; the reader can fold any of them.
-  const [closed, setClosed] = useState<Set<string>>(new Set());
+  // Chapters start open (on the overview page, only the first); the reader can fold any of them.
+  const [closed, setClosed] = useState<Set<string>>(
+    new Set(firstOpenOnly ? course.chapters.slice(1).map((g) => g.id ?? "loose") : []));
   const toggle = (key: string) => setClosed((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
 
   return (

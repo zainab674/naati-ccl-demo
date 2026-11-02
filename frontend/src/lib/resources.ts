@@ -14,7 +14,7 @@ export const TYPE_ICON: Record<ResourceType, LucideIcon> = {
 export type ResourceItem = {
   id: string; title: string; description: string; type: ResourceType; topic: string | null; is_free: boolean;
   language: string | null; language_name: string | null; has_file: boolean; file_name: string; file_size: number;
-  content_type: string; has_link: boolean; locked?: boolean;
+  content_type: string; has_link: boolean; locked?: boolean; image_url: string | null;
 };
 
 export type ResourceDetail = ResourceItem & { html_content: string; external_url: string; file_url: string | null };

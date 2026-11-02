@@ -2,6 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "db",
+      "runtimeExecutable": "C:/Program Files/PostgreSQL/18/bin/postgres.exe",
+      "runtimeArgs": ["-D", "backend/data/pgdev", "-p", "5433"],
+      "port": 5433,
+      "autoPort": false
+    },
+    {
       "name": "api",
       "runtimeExecutable": "backend/.venv/Scripts/python.exe",
       "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--app-dir", "backend", "--port", "8000", "--reload", "--reload-dir", "backend/app"],

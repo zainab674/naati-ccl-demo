@@ -14,9 +14,10 @@ from ..deps import CurrentUser, current_user, ensure_access, has_active_plan, is
 from ..models import (AttemptStatus, ContentStatus, Dialogue, DialogueAttempt, LanguagePair, MockTest, MockTestAttempt,
                       RecordStatus, ScoringStatus, Topic)
 from ..services import attempts as svc
-from ..services import languages, protection, ratelimit
+from ..services import languages, performance, protection, ratelimit
 from ..services import score_visibility as gate
 from . import announcements
+from .courses import courses as course_list
 from ..services.storage import get_storage
 from ..settings import ccl_config, get_settings, scoring_config
 
@@ -31,8 +32,11 @@ def _dialogue_progress(db: Session, user_id) -> dict:
     rows = db.scalars(select(DialogueAttempt).where(DialogueAttempt.user_id == user_id)).all()
     for da in rows:
         p = out.setdefault(da.dialogue_id, {"status": "not_started", "best_score": None, "in_progress_id": None,
-                                             "attempts": 0})
+                                             "attempts": 0, "last_attempt_id": None, "_last": None})
         p["attempts"] += 1
+        if da.status == AttemptStatus.COMPLETED and (p["_last"] is None or (da.started_at or utcnow()) > p["_last"]):
+            p["_last"] = da.started_at or utcnow()  # for Review Performance: the latest finished attempt
+            p["last_attempt_id"] = str(da.mock_test_attempt_id or da.id)
         if da.status == AttemptStatus.IN_PROGRESS:
             p["status"] = "in_progress"
             if da.mock_test_attempt_id is None:
@@ -43,6 +47,8 @@ def _dialogue_progress(db: Session, user_id) -> dict:
             continue  # scores for this language are not validated: no best score shown
         if da.total_score is not None and (p["best_score"] is None or da.total_score > p["best_score"]):
             p["best_score"] = da.total_score
+    for p in out.values():
+        del p["_last"]
     return out
 
 
@@ -104,7 +110,8 @@ def dialogues(topic: str = "", difficulty: str = "", language: str = "", cu: Cur
     progress = _dialogue_progress(db, cu.id)
     out = []
     for d in db.scalars(query):
-        p = progress.get(d.id, {"status": "not_started", "best_score": None, "in_progress_id": None, "attempts": 0})
+        p = progress.get(d.id, {"status": "not_started", "best_score": None, "in_progress_id": None, "attempts": 0,
+                                "last_attempt_id": None})
         out.append({"id": str(d.id), "title": d.title, "description": d.description,
                     "topic": d.topic.name if d.topic else None, "difficulty": d.difficulty.value,
                     "language": d.language_pair.lote.code, "language_name": d.language_pair.lote.name,
@@ -125,6 +132,7 @@ def mock_tests(language: str = "", cu: CurrentUser = Depends(current_user), db: 
                                                             MockTestAttempt.mock_test_id == m.id)
                               .order_by(MockTestAttempt.started_at.desc())).all()
         in_progress = next((a for a in attempts if a.status == AttemptStatus.IN_PROGRESS), None)
+        finished = next((a for a in attempts if a.status == AttemptStatus.COMPLETED), None)  # newest first
         lote = db.get(LanguagePair, m.language_pair_id).lote
         best = None
         if gate.is_validated(lote.code):
@@ -134,6 +142,8 @@ def mock_tests(language: str = "", cu: CurrentUser = Depends(current_user), db: 
                     "dialogues": [{"title": md.dialogue.title, "topic": md.dialogue.topic.name if md.dialogue.topic else None,
                                    "difficulty": md.dialogue.difficulty.value} for md in m.dialogues],
                     "attempts": len(attempts), "best_score": best,
+                    "status": "in_progress" if in_progress else "completed" if finished else "not_started",
+                    "last_attempt_id": str(finished.id) if finished else None,
                     "in_progress_id": str(in_progress.id) if in_progress else None})
     return out
 
@@ -143,17 +153,26 @@ def mock_tests(language: str = "", cu: CurrentUser = Depends(current_user), db: 
 @router.get("/dashboard")
 def dashboard(cu: CurrentUser = Depends(current_user), db: Session = Depends(get_db)):
     refs = _my_attempts(db, cu.id)
-    summaries = [attempt_summary(db, r) for r in refs]
+    # Staff in the student view see scores whether or not the language is validated, labelled (as on results pages).
+    staff = cu.user.is_staff
+    summaries = [attempt_summary(db, r, staff=staff) for r in refs]
+    for s in summaries:
+        s["outcome"] = performance.outcome(s)
     # refs are newest first, so the first N scores are the last N attempts (ccl.yaml dashboard.average_last_attempts).
-    last_n = int(ccl_config().get("dashboard", {}).get("average_last_attempts", 5)) or None
+    last_n = int(ccl_config().get("dashboard", {}).get("average_last_attempts", 3)) or None
     mock_scores = [s["total_score"] for s in summaries if s["kind"] == "mock" and s["total_score"] is not None][:last_n]
     dialogue_scores = [da.total_score for r in refs for da in r.dialogue_attempts if da.total_score is not None
-                       and gate.is_validated(gate.pair_code(da.dialogue.language_pair))][:last_n]
+                       and (staff or gate.is_validated(gate.pair_code(da.dialogue.language_pair)))][:last_n]
     unfinished = [s for s in summaries if s["status"] == AttemptStatus.IN_PROGRESS.value]
     library = dialogues("", "", "", cu, db)  # in the student's own language
     available = [d for d in library if not d["locked"]]
     quick = next((d for d in available if d["status"] == "not_started"), available[0] if available else None)
     exam = cu.user.target_exam_date
+    validated = (gate.is_validated(cu.user.preferred_language.code) if cu.user.preferred_language
+                 else bool(gate.validated_languages()))
+    offered = course_list("", cu, db)
+    course = next((c for c in offered if 0 < c["completed"] < c["lessons"]),
+                  next((c for c in offered if c["lessons"] and c["completed"] < c["lessons"]), None))
     return {
         "user": {"first_name": cu.user.first_name, "has_active_plan": has_active_plan(cu.user),
                  "target_exam_date": exam.isoformat() if exam else None,
@@ -161,14 +180,15 @@ def dashboard(cu: CurrentUser = Depends(current_user), db: Session = Depends(get
         "average_mock_score": round(sum(mock_scores) / len(mock_scores), 1) if mock_scores else None,
         "average_dialogue_score": round(sum(dialogue_scores) / len(dialogue_scores), 1) if dialogue_scores else None,
         # False: averages stay empty because the student's language is not validated yet (score gate).
-        "scores_shown": gate.is_validated(cu.user.preferred_language.code) if cu.user.preferred_language
-        else bool(gate.validated_languages()),
+        "scores_shown": staff or validated, "scores_validated": validated,
+        "performance": performance.summary(db, refs, staff, last_n),
+        "recommended_course": course,
         "average_over": last_n, "mock_scores_counted": len(mock_scores), "dialogue_scores_counted": len(dialogue_scores),
         "mock_max": scoring_config()["total_max"], "dialogue_max": scoring_config()["dialogue_max"],
         "dialogues_available": len(available), "dialogues_total": len(library),
         "mock_tests_available": sum(1 for m in mock_tests("", cu, db) if not m["locked"]),
         "unfinished": unfinished[:3],
-        "recent": [s for s in summaries if s["status"] != AttemptStatus.IN_PROGRESS.value][:6],
+        "recent": [s for s in summaries if s["status"] != AttemptStatus.IN_PROGRESS.value][:12],
         "quick_start": quick,
         "announcements": announcements.for_student(db, cu.user),
         "upcoming_webinars": [],  # later phase

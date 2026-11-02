@@ -4,7 +4,9 @@ mock_test:
   dialogues_per_test: 2
 
 dashboard:
-  average_last_attempts: 5    # dashboard average = mean of the student's last N scored attempts (0 = all of them)
+  average_last_attempts: 3    # dashboard averages = mean of the student's last N scored attempts (0 = all of them)
+  # Lines on the dashboard's per-topic chart, out of 45 (client's Round 1 mockup). They do not affect any score.
+  score_markers: {conditional: 29, pass: 31.5, safe: 35}
   announcements_max: 6        # most announcements shown in the dashboard carousel
 
 segment:

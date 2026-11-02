@@ -1,4 +1,4 @@
-"""Dashboard: average of the last 5 attempts and the announcements carousel (MVP scope, module 4)."""
+"""Dashboard: average of the last 3 attempts and the announcements carousel (MVP scope, module 4)."""
 from datetime import timedelta
 
 from app.db import utcnow
@@ -17,7 +17,7 @@ def _post(admin, **kw):
     return r.json()
 
 
-def test_dashboard_average_uses_the_last_5_scored_attempts(client, db):
+def test_dashboard_average_uses_the_last_3_scored_attempts(client, db):
     d = make_dialogue(db, key="free-1", is_free=True)
     me = signup(client)
     for i, score in enumerate([10, 20, 30, 40, 50, 90]):  # 90 is the oldest
@@ -25,7 +25,7 @@ def test_dashboard_average_uses_the_last_5_scored_attempts(client, db):
                                started_at=NOW - timedelta(days=10 - i if score != 90 else 30), total_score=score))
     db.commit()
     dash = client.get("/api/dashboard").json()
-    assert dash["average_dialogue_score"] == 30 and dash["dialogue_scores_counted"] == 5 and dash["average_over"] == 5
+    assert dash["average_dialogue_score"] == 40 and dash["dialogue_scores_counted"] == 3 and dash["average_over"] == 3
 
 
 def test_carousel_shows_published_current_announcements_for_the_students_language(client, db):

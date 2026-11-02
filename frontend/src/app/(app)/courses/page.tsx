@@ -1,14 +1,13 @@
 "use client";
 
-import { GraduationCap, Lock } from "lucide-react";
-import Link from "next/link";
+import { Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import CoverImage from "@/components/CoverImage";
 import LanguagePicker from "@/components/LanguagePicker";
-import { Badge, Card, ErrorNote, PageHeader, Spinner } from "@/components/ui";
+import { Badge, Card, ErrorNote, LinkButton, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
-
-type CourseRow = { id: string; title: string; description: string; lessons: number; completed: number; free_lessons: number; locked: boolean };
+import { courseAction, courseState, type CourseRow } from "@/lib/student";
 
 export default function CoursesPage() {
   const [rows, setRows] = useState<CourseRow[] | null>(null);
@@ -23,26 +22,36 @@ export default function CoursesPage() {
   if (!rows) return <Spinner />;
   return (
     <>
-      <PageHeader title="Courses" subtitle="Video lessons and notes to prepare for the CCL test." actions={<LanguagePicker value={language} onChange={setLanguage} />} />
+      <PageHeader title="Courses" subtitle="Continue your learning or explore courses to prepare for the NAATI CCL test."
+        actions={<LanguagePicker value={language} onChange={setLanguage} />} />
       {rows.length === 0 ? <Card className="p-6 text-sm text-slate-500">No courses are available yet.</Card> : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {rows.map((c) => (
-            <Link key={c.id} href={`/courses/${c.id}`}>
-              <Card className="h-full p-6 transition-shadow hover:shadow-md">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="flex items-center gap-2 text-lg font-semibold"><GraduationCap className="size-5 text-brand-600" />{c.title}</h2>
-                  {c.locked ? <Lock className="size-4 text-slate-400" /> : c.free_lessons === c.lessons ? <Badge tone="brand">Free</Badge> : null}
-                </div>
-                {c.description && <p className="mt-2 text-sm text-slate-600">{c.description}</p>}
-                <div className="mt-5">
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full bg-brand-500" style={{ width: c.lessons ? `${(100 * c.completed) / c.lessons}%` : "0%" }} />
+        <div className="grid gap-6 xl:grid-cols-2">
+          {rows.map((c) => {
+            const action = courseAction(c);
+            const percent = c.lessons ? Math.round((100 * c.completed) / c.lessons) : 0;
+            return (
+              <Card key={c.id} className="grid overflow-hidden sm:grid-cols-[34%_1fr]">
+                <div className="h-44 sm:h-auto sm:min-h-72"><CoverImage src={c.image_url} title={c.title} seed={c.id} /></div>
+                <div className="flex min-w-0 flex-col gap-2.5 p-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wide text-brand-600">{c.teacher ? `From ${c.teacher}` : courseState(c)}</span>
+                    {c.locked ? <Lock className="size-4 text-slate-400" /> : c.lessons > 0 && c.free_lessons === c.lessons ? <Badge tone="brand">Free</Badge> : null}
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">{c.completed} of {c.lessons} lessons completed{c.free_lessons > 0 && c.free_lessons < c.lessons ? ` · ${c.free_lessons} free` : ""}</div>
+                  <h2 className="text-lg font-semibold">{c.title}</h2>
+                  {c.description && <p className="line-clamp-3 text-sm text-slate-600">{c.description}</p>}
+                  <div className="text-xs text-slate-500">{c.lessons} lesson{c.lessons === 1 ? "" : "s"}
+                    {c.free_lessons > 0 && c.free_lessons < c.lessons ? ` · ${c.free_lessons} free` : ""}</div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-brand-500" style={{ width: `${percent}%` }} /></div>
+                  <div className="text-xs text-slate-500">{percent}% completed</div>
+                  {/* See Overview and Start/Resume sit side by side, level across the cards. */}
+                  <div className="mt-auto grid grid-cols-2 gap-2.5 pt-2">
+                    <LinkButton href={`/courses/${c.id}`} variant="secondary">See Overview</LinkButton>
+                    {action ? <LinkButton href={action.href}>{action.label}</LinkButton> : <span />}
+                  </div>
                 </div>
               </Card>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

@@ -149,7 +149,7 @@ Admin > Settings, two tabs:
   name appended). Account and course messages only; marketing campaigns stay a later phase.
 - Student activity log on the student's admin page: sign-ups, sign-ins, attempts started/submitted, lessons completed,
   hub files opened, emails, payments and access changes.
-- Dashboard: averages over the last 5 scored attempts (ccl.yaml dashboard.average_last_attempts) and an announcements
+- Dashboard: averages over the last 3 scored attempts, per the Round 1 mockup (ccl.yaml dashboard.average_last_attempts) and an announcements
   carousel (live sessions, 1-on-1 classes, news; optional time, link, show/hide window, language), managed on
   Admin > Announcements.
 - Lesson PDF: each lesson can hold a PDF handout (upload in the course editor or courses.csv pdf_url), served with the
@@ -184,3 +184,16 @@ Webinars; 1-on-1 coaching booking + Zoom; email marketing campaigns; coupons; sa
 lote_language, chapter_no, chapter_title, pdf_url` (pdf_url: a PDF downloaded into the lesson on commit)
 
 Provide downloadable template CSVs and a sample with 1 dialogue in the admin import page.
+
+## 18. Round 1 revision from the client's teacher (2026-11-02)
+Source: "Round 1 Revision" tab of the client document and benchmark_ccl_full_platform_prototype.html.
+- Student sidebar: Dashboard; Learning Hub (Courses, Resources, Classes and Coaching "Soon"); Practice Hub (Mock Test,
+  Skill Mastery "Soon"); Account and Billing; Sign Out.
+- Mock Test page: Step 1 choose Practice Dialogue or Full Mock Test; Step 2 filter by topic and difficulty, with status
+  and Start / Continue / Review Performance. It replaces the separate dialogue library.
+- Courses: card with a cover image; See Overview and Start / Resume side by side. See Overview goes to Course Overview;
+  Start / Resume goes to the course content (next lesson). Resources: card with a cover image.
+- Dashboard: Performance Summary (last 3 mock tests, easy and difficult dialogues), per-category chart with markers at
+  29, 31.5 and 35 (ccl.yaml, display only), focus topics, next steps, Recent Attempts split into Passed and Failed /
+  Conditional. Under the score gate students see none of these numbers; staff do, labelled.
+- Admin: Course Image and Resource Image fields (PNG, JPEG or WebP).

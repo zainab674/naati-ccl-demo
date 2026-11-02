@@ -11,7 +11,7 @@ from ..db import get_db
 from ..deps import CurrentUser, require_staff
 from ..models import ContentStatus, Course, CourseChapter, Lesson
 from ..services import courses as outline_svc
-from ..services import lesson_pdf, teachers
+from ..services import content_images, lesson_pdf, teachers
 from ..services.html import sanitize
 from ..settings import get_settings
 from .admin_content import _lang, _pair
@@ -30,6 +30,7 @@ def course_dict(c: Course, lessons: bool = False) -> dict:
     out = {"id": str(c.id), "key": c.key, "title": c.title, "description": c.description, "status": c.status.value,
            "is_free": c.is_free, "sort_order": c.sort_order, **_lang(c.language_pair),
            "owner": {"id": str(c.owner.id), "name": c.owner.full_name} if c.owner else None,
+           "image_url": content_images.url(c, f"/api/courses/{c.id}/image"),
            "lesson_count": sum(1 for lesson in c.lessons if lesson.status != ContentStatus.ARCHIVED)}
     if lessons:
         numbers = outline_svc.display_numbers(c, published_only=False)
@@ -115,6 +116,26 @@ def update_course(course_id: uuid.UUID, body: CourseIn, cu: CurrentUser = Depend
         setattr(c, field, getattr(body, field))
     db.commit()
     db.refresh(c)
+    return course_dict(c, lessons=True)
+
+
+@router.post("/courses/{course_id}/image")
+async def upload_course_image(course_id: uuid.UUID, file: UploadFile = File(...),
+                              cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
+    c = _course(db, course_id, cu)
+    try:
+        content_images.store(c, "course-images", await file.read(get_settings().content_image_max_mb * 1024 * 1024 + 1))
+    except content_images.ImageError as e:
+        raise HTTPException(400, str(e)) from e
+    db.commit()
+    return course_dict(c, lessons=True)
+
+
+@router.delete("/courses/{course_id}/image")
+def remove_course_image(course_id: uuid.UUID, cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
+    c = _course(db, course_id, cu)
+    content_images.remove(c)
+    db.commit()
     return course_dict(c, lessons=True)
 
 
