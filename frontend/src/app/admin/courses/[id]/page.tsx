@@ -5,21 +5,22 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import HtmlEditor from "@/components/HtmlEditor";
 import ImageField from "@/components/ImageField";
 import { Badge, Button, Card, cx, ErrorNote, Field, inputClass, PageHeader, Spinner, SuccessNote } from "@/components/ui";
 import { statusTone } from "@/lib/admin";
 import { api, fetchLanguages, type Language } from "@/lib/api";
 import { fileSize } from "@/lib/resources";
 
-type Lesson = { id: string; lesson_number: number; title: string; video_url: string; html_content: string; is_free: boolean; status: string;
+type Lesson = { id: string; lesson_number: number; title: string; video_url: string; html_content: string; notes_html: string; duration_minutes: number | null; is_free: boolean; status: string;
   chapter_id: string | null; number: string | null; pdf: { name: string; size: number; url: string } | null };
 type Chapter = { id: string; number: number; title: string };
-type Course = { id: string; image_url: string | null; key: string; title: string; description: string; status: string; is_free: boolean; sort_order: number; language: string | null; chapters: Chapter[]; lessons: Lesson[] };
+type Course = { id: string; image_url: string | null; key: string; title: string; description: string; at_a_glance_html: string; status: string; is_free: boolean; sort_order: number; language: string | null; chapters: Chapter[]; lessons: Lesson[] };
 
 export default function CourseEditor() {
   const { id } = useParams<{ id: string }>();
   const [c, setC] = useState<Course | null>(null);
-  const [form, setForm] = useState({ title: "", description: "", sort_order: 0, language: "" });
+  const [form, setForm] = useState({ title: "", description: "", at_a_glance_html: "", sort_order: 0, language: "" });
   const [languages, setLanguages] = useState<Language[]>([]);
   useEffect(() => { fetchLanguages().then(setLanguages).catch(() => {}); }, []);
   const [selected, setSelected] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export default function CourseEditor() {
 
   const apply = useCallback((x: Course) => {
     setC(x);
-    setForm({ title: x.title, description: x.description, sort_order: x.sort_order, language: x.language ?? "" });
+    setForm({ title: x.title, description: x.description, at_a_glance_html: x.at_a_glance_html, sort_order: x.sort_order, language: x.language ?? "" });
   }, []);
   const load = useCallback(() => api<Course>(`/admin/courses/${id}`).then(apply), [id, apply]);
   useEffect(() => {
@@ -81,6 +82,8 @@ export default function CourseEditor() {
           </select></label>
         <label className="block sm:col-span-2"><span className="text-sm font-medium text-slate-700">Description</span>
           <textarea className={cx(inputClass, "h-20 py-2")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+        <div className="sm:col-span-2"><HtmlEditor label="Course at a Glance (shown on the course overview page, hidden when empty)" value={form.at_a_glance_html}
+          onChange={(at_a_glance_html) => setForm((x) => ({ ...x, at_a_glance_html }))} /></div>
         <div className="sm:col-span-2"><ImageField<Course> label="Course image" url={c.image_url} apiPath={`/admin/courses/${id}/image`}
           hint="Shown on the course card and overview page. PNG, JPEG or WebP, up to 5 MB." onSaved={apply} /></div>
         <div className="sm:col-span-2 flex justify-end"><Button onClick={() => patchCourse({ ...form, language: form.language || null })}>Save course</Button></div>
@@ -170,17 +173,8 @@ function LessonPdf({ lesson, onSaved }: { lesson: Lesson; onSaved: () => void })
 
 function LessonEditor({ lesson, chapters, onSaved }: { lesson: Lesson; chapters: Chapter[]; onSaved: () => void }) {
   const [f, setF] = useState(lesson);
-  const [preview, setPreview] = useState(lesson.html_content);
   const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
   const [busy, setBusy] = useState(false);
-
-  // Preview shows exactly what the server will store after sanitising.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      api<{ html: string }>("/admin/sanitize-html", { method: "POST", json: { html: f.html_content } }).then((r) => setPreview(r.html)).catch(() => {});
-    }, 400);
-    return () => clearTimeout(t);
-  }, [f.html_content]);
 
   const save = async () => {
     setBusy(true);
@@ -205,13 +199,13 @@ function LessonEditor({ lesson, chapters, onSaved }: { lesson: Lesson; chapters:
           <option value="">Not in a chapter</option>
           {chapters.map((ch) => <option key={ch.id} value={ch.id}>Chapter {ch.number}: {ch.title}</option>)}
         </select></label>
-      <Field label="Video URL (embed link)" value={f.video_url} onChange={(e) => setF({ ...f, video_url: e.target.value })} placeholder="https://www.youtube.com/embed/..." />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <label className="block"><span className="text-sm font-medium text-slate-700">Lesson text (HTML)</span>
-          <textarea className={cx(inputClass, "h-72 py-2 font-mono text-xs")} value={f.html_content} onChange={(e) => setF({ ...f, html_content: e.target.value })} /></label>
-        <div><span className="text-sm font-medium text-slate-700">Preview (sanitised)</span>
-          <div className="lesson-html mt-1 h-72 overflow-auto rounded-lg border border-slate-200 p-3 text-sm" dangerouslySetInnerHTML={{ __html: preview }} /></div>
+      <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+        <Field label="YouTube link or video URL" value={f.video_url} onChange={(e) => setF({ ...f, video_url: e.target.value })} placeholder="https://www.youtube.com/watch?v=..." />
+        <Field label="Length (minutes)" type="number" min={1} max={6000} value={f.duration_minutes ?? ""}
+          onChange={(e) => setF({ ...f, duration_minutes: e.target.value ? Number(e.target.value) : null })} />
       </div>
+      <HtmlEditor label="Lesson text (HTML)" value={f.html_content} onChange={(html_content) => setF((x) => ({ ...x, html_content }))} heightClass="h-72" />
+      <HtmlEditor label="Notes (shown to students under the lesson text)" value={f.notes_html} onChange={(notes_html) => setF((x) => ({ ...x, notes_html }))} />
       <LessonPdf lesson={lesson} onSaved={onSaved} />
       <div className="flex flex-wrap items-center gap-6 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" checked={f.is_free} onChange={(e) => setF({ ...f, is_free: e.target.checked })} className="accent-brand-600" /> Free lesson</label>

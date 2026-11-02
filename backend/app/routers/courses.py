@@ -39,6 +39,12 @@ def _image_url(c: Course) -> str | None:
     return content_images.url(c, f"/api/courses/{c.id}/image")
 
 
+def _duration(lessons: list[Lesson]) -> int | None:
+    """Total of the durations entered for these lessons; None when none has one."""
+    known = [x.duration_minutes for x in lessons if x.duration_minutes]
+    return sum(known) if known else None
+
+
 def _next_lesson(lessons: list[Lesson], done: set) -> Lesson | None:
     """Where Start / Resume goes: the first lesson not finished, or the first one when all are finished."""
     return next((x for x in lessons if x.id not in done), lessons[0] if lessons else None)
@@ -61,7 +67,7 @@ def courses(language: str = "", cu: CurrentUser = Depends(current_user), db: Ses
         lessons = _visible_lessons(c)
         nxt = _next_lesson(lessons, done)
         out.append({"id": str(c.id), "title": c.title, "description": c.description, "lessons": len(lessons),
-                    "image_url": _image_url(c),
+                    "duration_minutes": _duration(lessons), "image_url": _image_url(c),
                     "next_lesson": {"id": str(nxt.id), "locked": is_locked(cu.user, _lesson_free(c, nxt))} if nxt else None,
                     "teacher": c.owner.full_name if c.owner else None,
                     "language_name": c.language_pair.lote.name if c.language_pair else None,
@@ -80,12 +86,16 @@ def course(course_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Se
     def item(lesson: Lesson) -> dict:
         return {"id": str(lesson.id), "lesson_number": lesson.lesson_number, "number": numbers[lesson.id],
                 "title": lesson.title, "is_free": _lesson_free(c, lesson), "locked": is_locked(cu.user, _lesson_free(c, lesson)),
-                "completed": lesson.id in done, "has_video": bool(lesson.video_url)}
+                "completed": lesson.id in done, "has_video": bool(lesson.video_url),
+                "duration_minutes": lesson.duration_minutes}
 
     groups = outline_svc.outline(c)
     return {"id": str(c.id), "title": c.title, "description": c.description, "image_url": _image_url(c),
+            "at_a_glance_html": c.at_a_glance_html,  # sanitised on write
+            "duration_minutes": _duration([x for g in groups for x in g.lessons]),
             "chapters": [{"id": str(g.chapter.id) if g.chapter else None, "number": g.chapter.number if g.chapter else None,
-                          "title": g.chapter.title if g.chapter else None, "lessons": [item(x) for x in g.lessons]}
+                          "title": g.chapter.title if g.chapter else None, "duration_minutes": _duration(g.lessons),
+                          "lessons": [item(x) for x in g.lessons]}
                          for g in groups],
             "lessons": [item(x) for g in groups for x in g.lessons]}
 
@@ -118,6 +128,7 @@ def lesson(lesson_id: uuid.UUID, cu: CurrentUser = Depends(current_user), db: Se
             "number": outline_svc.display_numbers(c)[les.id],
             "chapter": {"number": les.chapter.number, "title": les.chapter.title} if les.chapter else None,
             "title": les.title, "video_url": les.video_url, "html_content": les.html_content,  # sanitised on write
+            "notes_html": les.notes_html, "duration_minutes": les.duration_minutes,
             "pdf": lesson_pdf.as_dict(les, f"/api/lessons/{les.id}/pdf"),
             "completed": les.id in _done(db, cu.id),
             "next": {"id": str(nxt.id), "title": nxt.title, "locked": is_locked(cu.user, _lesson_free(c, nxt))} if nxt else None,

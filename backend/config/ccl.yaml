@@ -8,6 +8,7 @@ dashboard:
   # Lines on the dashboard's per-topic chart, out of 45 (client's Round 1 mockup). They do not affect any score.
   score_markers: {conditional: 29, pass: 31.5, safe: 35}
   announcements_max: 6        # most announcements shown in the dashboard carousel
+  new_accounts_days: 30       # the New accounts figure on the admin overview counts sign-ups in this many days
 
 segment:
   # As in the NAATI test: each press of Start is one attempt (hear the segment, speak after the chime, Finish

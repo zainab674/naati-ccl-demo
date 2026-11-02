@@ -30,7 +30,23 @@ export type Performance = {
 export type CourseRow = {
   id: string; title: string; description: string; lessons: number; completed: number; free_lessons: number; locked: boolean;
   image_url: string | null; next_lesson: { id: string; locked: boolean } | null; teacher?: string | null;
+  duration_minutes?: number | null;
 };
+
+/** "45 min", "3 hours", "1 hr 30 min". */
+export function formatDuration(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!hours) return `${rest} min`;
+  if (!rest) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  return `${hours} hr ${rest} min`;
+}
+
+/** YouTube's watch, short and Shorts links refuse to load in a frame: turn them into its embed link. */
+export function videoEmbedUrl(url: string) {
+  const match = /^https?:\/\/(?:www\.|m\.)?(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:[^#]*&)?v=|shorts\/|live\/))([\w-]{6,})/i.exec(url.trim());
+  return match ? `https://www.youtube.com/embed/${match[1]}` : url;
+}
 
 export type Dashboard = {
   user: { first_name: string; has_active_plan: boolean; target_exam_date: string | null; days_to_exam: number | null };

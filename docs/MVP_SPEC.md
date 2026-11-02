@@ -181,7 +181,8 @@ Webinars; 1-on-1 coaching booking + Zoom; email marketing campaigns; coupons; sa
 
 ### courses.csv (one row per lesson)
 `course_key, course_title, course_description, lesson_no, lesson_title, video_url, html_content, is_free,
-lote_language, chapter_no, chapter_title, pdf_url` (pdf_url: a PDF downloaded into the lesson on commit)
+lote_language, chapter_no, chapter_title, pdf_url, course_at_a_glance, lesson_notes, duration_minutes` (pdf_url: a PDF
+downloaded into the lesson on commit; the last three are optional, and blank leaves what staff entered)
 
 Provide downloadable template CSVs and a sample with 1 dialogue in the admin import page.
 
@@ -197,3 +198,10 @@ Source: "Round 1 Revision" tab of the client document and benchmark_ccl_full_pla
   29, 31.5 and 35 (ccl.yaml, display only), focus topics, next steps, Recent Attempts split into Passed and Failed /
   Conditional. Under the score gate students see none of these numbers; staff do, labelled.
 - Admin: Course Image and Resource Image fields (PNG, JPEG or WebP).
+
+## 19. Learning Hub fields from the client document's mockups tab (2026-11-02)
+- Course: "Course at a Glance" HTML field, shown on Course Overview and hidden when empty.
+- Lesson: YouTube link (ordinary watch links work), lesson text, Notes (HTML, shown under the text), length in minutes.
+  Length is what staff enter, never estimated; lessons without one show nothing, and totals add up the ones entered.
+- Course Content sidebar: lesson search. Chapter and course totals on the overview page and course card.
+- Admin overview: New accounts in the last 30 days (ccl.yaml), a teacher's count being their own students.

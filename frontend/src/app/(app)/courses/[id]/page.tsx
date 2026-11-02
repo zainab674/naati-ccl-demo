@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BookOpen, CheckCircle2, Clock, PenLine, Sparkles, Target } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,23 +8,16 @@ import { useEffect, useState } from "react";
 import CourseOutline, { type CourseOutlineData } from "@/components/CourseOutline";
 import { Card, ErrorNote, LinkButton, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
-import { courseAction } from "@/lib/student";
+import { courseAction, formatDuration } from "@/lib/student";
 
-const GLANCE = [
-  { icon: Clock, title: "Self-paced", text: "Learn on your schedule" },
-  { icon: BookOpen, title: "Structured lessons", text: "Step-by-step instruction" },
-  { icon: PenLine, title: "Practical activities", text: "Apply interpreting techniques" },
-  { icon: Target, title: "Exam focused", text: "Targeted preparation" },
-  { icon: CheckCircle2, title: "Track progress", text: "Pick up where you left off" },
-  { icon: Sparkles, title: "Skill development", text: "Build confidence" },
-];
+type Overview = CourseOutlineData & { image_url: string | null; at_a_glance_html: string };
 
 /** Course Overview: reached from See Overview. Start / Resume goes to the course content (the lesson pages). */
 export default function CourseOverview() {
   const { id } = useParams<{ id: string }>();
-  const [c, setC] = useState<(CourseOutlineData & { image_url: string | null }) | null>(null);
+  const [c, setC] = useState<Overview | null>(null);
   const [error, setError] = useState("");
-  useEffect(() => { api<CourseOutlineData & { image_url: string | null }>(`/courses/${id}`).then(setC).catch((e) => setError(e.message)); }, [id]);
+  useEffect(() => { api<Overview>(`/courses/${id}`).then(setC).catch((e) => setError(e.message)); }, [id]);
   if (error) return <ErrorNote>{error}</ErrorNote>;
   if (!c) return <Spinner />;
   const completed = c.lessons.filter((l) => l.completed).length;
@@ -42,26 +35,18 @@ export default function CourseOverview() {
           <h1 className="max-w-3xl text-3xl font-bold sm:text-4xl">{c.title}</h1>
           {c.description && <p className="max-w-3xl text-base opacity-90">{c.description}</p>}
           <div className="mt-auto flex flex-wrap items-center gap-5 pt-3">
-            <span className="text-sm">{percent}% completed</span>
+            <span className="text-sm">{percent}% completed{c.duration_minutes ? ` · ${formatDuration(c.duration_minutes)}` : ""}</span>
             {action && <LinkButton href={action.href} variant="secondary">{action.label}</LinkButton>}
           </div>
         </div>
       </div>
-      <Card className="mt-6 p-6">
-        <h2 className="text-lg font-semibold">Course at a Glance</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {GLANCE.map((g) => {
-            const Icon = g.icon;
-            return (
-              <div key={g.title} className="grid gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-5">
-                <Icon className="size-6 text-brand-600" />
-                <strong className="text-sm">{g.title}</strong>
-                <small className="text-slate-500">{g.text}</small>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
+      {c.at_a_glance_html && (
+        <Card className="mt-6 p-6">
+          <h2 className="text-lg font-semibold">Course at a Glance</h2>
+          {/* at_a_glance_html is sanitised by the server (allow-list) when it is saved */}
+          <div className="lesson-html mt-2 text-slate-700" dangerouslySetInnerHTML={{ __html: c.at_a_glance_html }} />
+        </Card>
+      )}
       <Card className="mt-6 overflow-hidden">
         <div className="p-6 pb-3">
           <h2 className="text-lg font-semibold">Here&apos;s What You&apos;ll Learn</h2>

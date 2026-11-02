@@ -16,7 +16,7 @@ from .common import Report, parse_bool, read_csv, valid_url
 
 REQUIRED = ["course_key", "course_title", "lesson_no", "lesson_title"]
 OPTIONAL = ["course_description", "video_url", "html_content", "is_free", "lote_language", "chapter_no", "chapter_title",
-            "pdf_url"]
+            "pdf_url", "course_at_a_glance", "lesson_notes", "duration_minutes"]
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,118}$")
 
 
@@ -29,6 +29,8 @@ class L:
     is_free: bool
     chapter: int | None = None
     pdf_url: str = ""  # fetched into the lesson by a job on commit; empty leaves an uploaded PDF in place
+    notes: str = ""  # empty leaves what the admin entered in place, like duration and the course's at a glance
+    duration: int | None = None
 
 
 @dataclass
@@ -37,6 +39,7 @@ class C:
     title: str
     description: str
     lote: str = ""  # language code; empty = course for every language
+    at_a_glance: str = ""
     lessons: dict[int, L] = field(default_factory=OrderedDict)
     chapters: dict[int, str] = field(default_factory=dict)  # chapter number -> title
 
@@ -97,14 +100,26 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
         elif row.get("chapter_title"):
             report.error(r, "chapter_no", "Give a chapter number with the chapter title")
             continue
-        html = sanitize(row.get("html_content", ""))
-        if row.get("html_content") and len(html) < len(row["html_content"]) * 0.9:
-            report.warn(r, "html_content", "Unsafe or unsupported HTML was removed")
+        duration = None
+        if row.get("duration_minutes"):
+            try:
+                duration = int(row["duration_minutes"])
+                if not 1 <= duration <= 6000:
+                    raise ValueError
+            except ValueError:
+                report.error(r, "duration_minutes", "Must be a whole number of minutes from 1 to 6000")
+                continue
+        cleaned = {}
+        for col in ("html_content", "lesson_notes", "course_at_a_glance"):
+            cleaned[col] = sanitize(row.get(col, ""))
+            if row.get(col) and len(cleaned[col]) < len(row[col]) * 0.9:
+                report.warn(r, col, "Unsafe or unsupported HTML was removed")
         if key not in courses:
-            courses[key] = C(key=key, title=row["course_title"], description=row.get("course_description", ""), lote=lote)
+            courses[key] = C(key=key, title=row["course_title"], description=row.get("course_description", ""), lote=lote,
+                             at_a_glance=cleaned["course_at_a_glance"])
             first_row[key] = row
         else:
-            for col in ("course_title", "course_description", "lote_language"):
+            for col in ("course_title", "course_description", "lote_language", "course_at_a_glance"):
                 if row.get(col) and row.get(col) != first_row[key].get(col):
                     report.error(r, col, f"Differs from row {first_row[key]['_row']} for the same course_key")
         if (key, number) in seen:
@@ -122,8 +137,9 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
             elif title and title != known:
                 report.error(r, "chapter_title", f"Chapter {chapter} is already called '{known}'")
                 continue
-        courses[key].lessons[number] = L(number=number, title=row["lesson_title"], video_url=video, html=html,
-                                         is_free=is_free, chapter=chapter, pdf_url=pdf_url)
+        courses[key].lessons[number] = L(number=number, title=row["lesson_title"], video_url=video,
+                                         html=cleaned["html_content"], is_free=is_free, chapter=chapter, pdf_url=pdf_url,
+                                         notes=cleaned["lesson_notes"], duration=duration)
     existing = set(db.scalars(select(Course.key).where(Course.key.in_(list(courses)))))
     report.summary = {"rows": len(rows), "courses": len(courses),
                       "new_courses": len([k for k in courses if k not in existing]),
@@ -149,6 +165,8 @@ def commit(db: Session, courses: list[C], created_by=None) -> dict:
         elif (course.title, course.description) != (c.title, c.description):
             course.title, course.description = c.title, c.description
             counts["courses_updated"] += 1
+        if c.at_a_glance:
+            course.at_a_glance_html = c.at_a_glance
         course.language_pair_id = pair_id
         course.is_free = all(lesson.is_free for lesson in c.lessons.values())
         chapter_ids = {}
@@ -176,6 +194,10 @@ def commit(db: Session, courses: list[C], created_by=None) -> dict:
                       "is_free": item.is_free, "status": ContentStatus.PUBLISHED}
             if c.chapters:  # files without chapter columns leave chapters as the admin set them
                 values["chapter_id"] = chapter_ids.get(item.chapter)
+            if item.notes:
+                values["notes_html"] = item.notes
+            if item.duration:
+                values["duration_minutes"] = item.duration
             if not lesson:
                 lesson = Lesson(course_id=course.id, lesson_number=item.number, **values)
                 db.add(lesson)

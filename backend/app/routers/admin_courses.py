@@ -21,14 +21,16 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(re
 
 def lesson_dict(lesson: Lesson, number: str | None = None) -> dict:
     return {"id": str(lesson.id), "lesson_number": lesson.lesson_number, "title": lesson.title,
-            "video_url": lesson.video_url, "html_content": lesson.html_content, "is_free": lesson.is_free,
-            "status": lesson.status.value, "chapter_id": str(lesson.chapter_id) if lesson.chapter_id else None,
+            "video_url": lesson.video_url, "html_content": lesson.html_content, "notes_html": lesson.notes_html,
+            "duration_minutes": lesson.duration_minutes, "is_free": lesson.is_free, "status": lesson.status.value,
+            "chapter_id": str(lesson.chapter_id) if lesson.chapter_id else None,
             "number": number, "pdf": lesson_pdf.as_dict(lesson, f"/api/admin/lessons/{lesson.id}/pdf")}
 
 
 def course_dict(c: Course, lessons: bool = False) -> dict:
-    out = {"id": str(c.id), "key": c.key, "title": c.title, "description": c.description, "status": c.status.value,
-           "is_free": c.is_free, "sort_order": c.sort_order, **_lang(c.language_pair),
+    out = {"id": str(c.id), "key": c.key, "title": c.title, "description": c.description,
+           "at_a_glance_html": c.at_a_glance_html, "status": c.status.value, "is_free": c.is_free,
+           "sort_order": c.sort_order, **_lang(c.language_pair),
            "owner": {"id": str(c.owner.id), "name": c.owner.full_name} if c.owner else None,
            "image_url": content_images.url(c, f"/api/courses/{c.id}/image"),
            "lesson_count": sum(1 for lesson in c.lessons if lesson.status != ContentStatus.ARCHIVED)}
@@ -80,6 +82,7 @@ class CourseIn(BaseModel):
     key: str | None = Field(default=None, pattern=r"^[a-z0-9][a-z0-9_-]{1,118}$")
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
+    at_a_glance_html: str | None = None
     status: ContentStatus | None = None
     is_free: bool | None = None
     sort_order: int | None = None
@@ -99,7 +102,8 @@ def create_course(body: CourseIn, cu: CurrentUser = Depends(require_staff), db: 
     if db.scalar(select(Course).where(Course.key == body.key)):
         raise HTTPException(409, "A course with this key already exists")
     c = Course(key=body.key, title=body.title, description=body.description or "",
-               status=body.status or ContentStatus.DRAFT, is_free=bool(body.is_free), sort_order=body.sort_order or 0,
+               at_a_glance_html=sanitize(body.at_a_glance_html or ""), status=body.status or ContentStatus.DRAFT,
+               is_free=bool(body.is_free), sort_order=body.sort_order or 0,
                owner_id=cu.id if cu.user.is_teacher else None)
     _apply_course_language(db, c, body)
     db.add(c)
@@ -113,7 +117,8 @@ def update_course(course_id: uuid.UUID, body: CourseIn, cu: CurrentUser = Depend
     c = _course(db, course_id, cu)
     _apply_course_language(db, c, body)
     for field in body.model_fields_set - {"language"}:
-        setattr(c, field, getattr(body, field))
+        value = getattr(body, field)
+        setattr(c, field, sanitize(value or "") if field == "at_a_glance_html" else value)
     db.commit()
     db.refresh(c)
     return course_dict(c, lessons=True)
@@ -145,6 +150,8 @@ class LessonIn(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     video_url: str | None = Field(default=None, max_length=1000)
     html_content: str | None = None
+    notes_html: str | None = None
+    duration_minutes: int | None = Field(default=None, ge=1, le=6000)
     is_free: bool | None = None
     status: ContentStatus | None = None
 
@@ -163,7 +170,7 @@ def _apply_lesson(db: Session, lesson: Lesson, body: LessonIn) -> None:
             raise HTTPException(400, "That chapter belongs to another course")
     for field in body.model_fields_set:
         value = getattr(body, field)
-        setattr(lesson, field, sanitize(value) if field == "html_content" else value)
+        setattr(lesson, field, sanitize(value or "") if field in ("html_content", "notes_html") else value)
 
 
 @router.post("/courses/{course_id}/lessons", status_code=201)

@@ -9,7 +9,7 @@ import { Badge, Button, Card, ErrorNote, inputClass, LinkButton, PageHeader, Spi
 import { api, fmtDateTime } from "@/lib/api";
 
 type Overview = {
-  students: number; active_students: number; dialogues_published: number; dialogues_total: number; courses: number;
+  students: number; new_accounts: number; new_accounts_days: number; active_students: number; dialogues_published: number; dialogues_total: number; courses: number;
   attempts: number; segments_needing_review: number; emails_failed: number;
   recent_imports: { id: string; type: string; file_name: string; status: string; created_at: string }[];
 };
@@ -25,6 +25,7 @@ export default function AdminOverview() {
 
   const stats = [
     { label: "Students", value: o.students, sub: `${o.active_students} with an active plan`, href: "/admin/students" },
+    { label: "New accounts", value: o.new_accounts, sub: `students in the last ${o.new_accounts_days} days`, href: "/admin/students" },
     { label: "Dialogues", value: o.dialogues_published, sub: `${o.dialogues_total} in total`, href: "/admin/dialogues", adminOnly: true },
     { label: "Dialogue attempts", value: o.attempts, sub: teacher ? "by your students" : "all time", href: "/admin/students" },
     { label: "Segments to review", value: o.segments_needing_review, sub: "flagged by scoring", href: "/admin/review" },

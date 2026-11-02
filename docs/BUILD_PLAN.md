@@ -118,11 +118,21 @@ Milestones map to client payments. Keep the app runnable after every task.
       dashboard redesign, Course Image and Resource Image fields.
 - [ ] 9.2 CSV template changes: blocked on the meeting with Veine.
 
+## M10. Gaps from the full check of the client document (2026-11-02)
+- [x] 10.1 Course at a Glance HTML editor per course (replaces the six fixed claims; the section is hidden when empty).
+- [x] 10.2 Lesson Notes (HTML, shown to students under the lesson text, same access as the lesson).
+- [x] 10.3 Course Content: lesson search; lesson length as entered by staff, totalled per chapter and course.
+- [x] 10.4 Formatting buttons on the HTML fields; ordinary YouTube links play in the lesson page.
+- [x] 10.5 courses.csv: optional course_at_a_glance, lesson_notes, duration_minutes (blank leaves what staff entered).
+- [x] 10.6 New accounts on the admin overview (ccl.yaml dashboard.new_accounts_days).
+
 ## Deferred (from the client brief "CCL Platform", parked 2026-10-20 at the user's request)
 - [x] PDF attachment per course lesson (done in 7.8).
-- [ ] Admin dashboard: new accounts and revenue (and "leads", once defined).
-- [ ] Score each segment as soon as it is answered in practice mode (brief: after one segment or the whole dialogue).
-- [ ] Show courses (and later webinars) inside the learning hub.
+- [x] Admin dashboard: new accounts (done in 10.6). Revenue is the spec's later-phase sales/revenue dashboard.
+- [ ] Admin dashboard: "leads", once Benchmark defines it.
+- [ ] Score each segment as soon as it is answered in practice mode (brief: after one segment or the whole dialogue;
+      the whole-dialogue option is what's built). Decision needed: see Open questions.
+- [x] Show courses inside the learning hub (done in 9.1). Webinars are a later phase.
 
 ## Open questions (write here when blocked, then continue)
 - Number of courses at launch (spec assumes 2).
@@ -204,8 +214,13 @@ Round 1 revision, questions for the meeting (2026-11-02):
   Course and locked ones Unlock. Is a separate enrol step wanted?
 - The mockup's "Approx. 3 hours" on course cards has no data behind it, so only the lesson count is shown. Add a field?
 - The mockup says "Module"; the admin and CSV say "Chapter". The student pages keep "Chapter" until confirmed.
-- Course at a Glance uses the mockup's six fixed claims for every course (e.g. "Practical activities"). Is that right?
 - Should courses.csv and resources gain an image_url column?
+- Lesson Notes are shown to students under the lesson text. Were they meant for students, or private teacher notes?
+- Course at a Glance is free HTML per course, as the document asks, so the mockup's six icon boxes are not reproduced.
+  Is a bulleted list acceptable, or does Benchmark want the boxes (a fixed set of six title + text fields per course)?
+- Scoring right after each segment in practice mode: the brief allows it or the whole dialogue, and the whole dialogue
+  is built. Per-segment would show the suggested answer while the student can still use a repeat on that segment, and
+  needs extra rules for re-recording. Does Benchmark want it?
 
 ## Progress log
 - 2026-10-19 0.1: read the demo, wrote docs/DEMO_REUSE.md (keep auth/HLS protection/STT/player; replace models, config, storage, worker; delete Hindi/TTS/Vercel).
@@ -270,3 +285,4 @@ Round 1 revision, questions for the meeting (2026-11-02):
   (services/content_images.py, 1 migration, admin fields). Average window now 3 attempts, per the mockup. Tests, lint and
   build pass. Checked in the browser with dev QA data (removed): all five pages at 1440 px, dashboard and Mock Test at
   phone width, gated student dashboard, image upload and removal on a course. Resource image: API test only.
+- 2026-11-02 M10 document gaps: Course at a Glance editor, lesson Notes and length (1 migration), lesson search, chapter and course totals, formatting buttons on HTML fields, YouTube watch links, 3 optional courses.csv columns, New accounts on the overview. Webinars, booking, campaigns, coupons and revenue stay later phases per this spec.

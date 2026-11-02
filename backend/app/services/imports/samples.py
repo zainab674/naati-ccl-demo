@@ -28,7 +28,7 @@ DIALOGUES_SAMPLE = DIALOGUES_HEADER + "\n" + "\n".join([
 ]) + "\n"
 
 COURSES_HEADER = ("course_key,course_title,course_description,lesson_no,lesson_title,video_url,html_content,is_free,"
-                  "lote_language,chapter_no,chapter_title,pdf_url")
+                  "lote_language,chapter_no,chapter_title,pdf_url,course_at_a_glance,lesson_notes,duration_minutes")
 COURSES_TEMPLATE = COURSES_HEADER + "\n"
 COURSES_SAMPLE = COURSES_HEADER + "\n" + "\n".join([
     'intro-to-ccl,Introduction to CCL Test (format example; replace),What the CCL test is and how it is marked.,1,'

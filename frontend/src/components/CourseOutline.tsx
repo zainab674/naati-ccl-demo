@@ -2,17 +2,19 @@
 
 /** Course outline: chapters with their lessons (numbered 1.1, 1.2, 2.1...), each lesson's done / current / locked
  * state. Used as the lesson-page sidebar ("Course Content") and on the course overview page. */
-import { CheckCircle2, ChevronDown, FileText, Folder, Lock, PlayCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, FileText, Folder, Lock, PlayCircle, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import { cx } from "./ui";
+import { formatDuration } from "@/lib/student";
+import { cx, inputClass } from "./ui";
 
 export type OutlineLesson = {
   id: string; lesson_number: number; number: string; title: string; is_free: boolean; locked: boolean; completed: boolean; has_video: boolean;
+  duration_minutes: number | null;
 };
-export type OutlineChapter = { id: string | null; number: number | null; title: string | null; lessons: OutlineLesson[] };
-export type CourseOutlineData = { id: string; title: string; description: string; chapters: OutlineChapter[]; lessons: OutlineLesson[] };
+export type OutlineChapter = { id: string | null; number: number | null; title: string | null; duration_minutes: number | null; lessons: OutlineLesson[] };
+export type CourseOutlineData = { id: string; title: string; description: string; duration_minutes: number | null; chapters: OutlineChapter[]; lessons: OutlineLesson[] };
 
 export const lessonHref = (courseId: string, l: OutlineLesson) => (l.locked ? "/pricing" : `/courses/${courseId}/lessons/${l.id}`);
 
@@ -23,12 +25,24 @@ export default function CourseOutline({ course, currentId, compact, firstOpenOnl
   const [closed, setClosed] = useState<Set<string>>(
     new Set(firstOpenOnly ? course.chapters.slice(1).map((g) => g.id ?? "loose") : []));
   const toggle = (key: string) => setClosed((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const matches = (l: OutlineLesson) => `lesson ${l.number}: ${l.title}`.toLowerCase().includes(q);
+  const shown = course.chapters.map((g) => ({ ...g, lessons: q ? g.lessons.filter(matches) : g.lessons })).filter((g) => !q || g.lessons.length);
 
   return (
     <div className={cx(!compact && "divide-y divide-slate-100")}>
-      {course.chapters.map((g) => {
+      {compact && course.lessons.length > 0 && (
+        <div className="relative mb-1 px-1 pt-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search lessons" aria-label="Search lessons"
+            className={cx(inputClass, "mt-0 h-9 pl-9 text-sm")} />
+        </div>
+      )}
+      {q && !shown.length && <p className="px-3 py-4 text-sm text-slate-500">No lessons match your search.</p>}
+      {shown.map((g) => {
         const key = g.id ?? "loose";
-        const open = !closed.has(key) || g.lessons.some((l) => l.id === currentId);
+        const open = Boolean(q) || !closed.has(key) || g.lessons.some((l) => l.id === currentId);
         const done = g.lessons.filter((l) => l.completed).length;
         const heading = g.id ? `Chapter ${g.number}: ${g.title}` : chaptered ? "More lessons" : null;
         return (
@@ -38,7 +52,7 @@ export default function CourseOutline({ course, currentId, compact, firstOpenOnl
                 className={cx("flex w-full items-center gap-2.5 text-left hover:bg-slate-50", compact ? "rounded-lg px-3 py-2.5" : "px-5 py-3.5")}>
                 <Folder className="size-4 shrink-0 text-brand-600" />
                 <span className={cx("flex-1 font-semibold text-ink", compact ? "text-sm" : "")}>{heading}</span>
-                {!compact && <span className="text-xs tabular-nums text-slate-400">{done}/{g.lessons.length}</span>}
+                {!compact && <span className="text-xs tabular-nums text-slate-400">{g.duration_minutes ? `${formatDuration(g.duration_minutes)} · ` : ""}{done}/{g.lessons.length}</span>}
                 <ChevronDown className={cx("size-4 shrink-0 text-slate-400 transition-transform", !open && "-rotate-90")} />
               </button>
             )}
@@ -58,7 +72,8 @@ export default function CourseOutline({ course, currentId, compact, firstOpenOnl
                         {l.completed ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
                           : l.locked ? <Lock className="mt-0.5 size-4 shrink-0 text-slate-400" />
                           : <FileText className={cx("mt-0.5 size-4 shrink-0", current ? "text-brand-600" : "text-slate-400")} />}
-                        <span className="flex-1">Lesson {l.number}: {l.title}</span>
+                        <span className="flex-1">Lesson {l.number}: {l.title}
+                          {l.duration_minutes ? <span className="block text-xs font-normal text-slate-400">{formatDuration(l.duration_minutes)}</span> : null}</span>
                         {!compact && l.has_video && <PlayCircle className="mt-0.5 size-4 shrink-0 text-slate-300" />}
                         {!compact && l.is_free && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">Free</span>}
                       </Link>

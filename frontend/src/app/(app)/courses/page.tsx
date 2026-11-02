@@ -7,7 +7,7 @@ import CoverImage from "@/components/CoverImage";
 import LanguagePicker from "@/components/LanguagePicker";
 import { Badge, Card, ErrorNote, LinkButton, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
-import { courseAction, courseState, type CourseRow } from "@/lib/student";
+import { courseAction, courseState, formatDuration, type CourseRow } from "@/lib/student";
 
 export default function CoursesPage() {
   const [rows, setRows] = useState<CourseRow[] | null>(null);
@@ -40,7 +40,8 @@ export default function CoursesPage() {
                   <h2 className="text-lg font-semibold">{c.title}</h2>
                   {c.description && <p className="line-clamp-3 text-sm text-slate-600">{c.description}</p>}
                   <div className="text-xs text-slate-500">{c.lessons} lesson{c.lessons === 1 ? "" : "s"}
-                    {c.free_lessons > 0 && c.free_lessons < c.lessons ? ` · ${c.free_lessons} free` : ""}</div>
+                    {c.free_lessons > 0 && c.free_lessons < c.lessons ? ` · ${c.free_lessons} free` : ""}
+                    {c.duration_minutes ? ` · ${formatDuration(c.duration_minutes)}` : ""}</div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-brand-500" style={{ width: `${percent}%` }} /></div>
                   <div className="text-xs text-slate-500">{percent}% completed</div>
                   {/* See Overview and Start/Resume sit side by side, level across the cards. */}

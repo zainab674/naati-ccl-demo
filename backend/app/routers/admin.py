@@ -1,15 +1,17 @@
 """Admin overview and teacher class links (admins and teachers). Content, import and settings routers require_admin;
 the student, enrolment, review and course routers require_staff and limit teachers to their own (services/teachers)."""
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..db import get_db
+from ..db import get_db, utcnow
 from ..deps import ACTIVE_PLAN_STATUSES, CurrentUser, require_admin, require_staff
 from ..models import (ContentStatus, Course, Dialogue, DialogueAttempt, EmailLog, ImportJob, SegmentAttempt, User,
                       UserRole)
 from ..services import teachers
-from ..settings import get_settings
+from ..settings import ccl_config, get_settings
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_staff)])
 
@@ -26,8 +28,11 @@ def overview(cu: CurrentUser = Depends(require_staff), db: Session = Depends(get
         .where(SegmentAttempt.needs_review, ~SegmentAttempt.reviewed_by_admin), me, DialogueAttempt.user_id)
     courses = select(Course.id) if me.is_admin else select(Course.id).where(Course.owner_id == me.id)
     imports = db.scalars(select(ImportJob).order_by(ImportJob.created_at.desc()).limit(5)).all() if me.is_admin else []
+    new_days = ccl_config()["dashboard"]["new_accounts_days"]
     return {
         "students": count(students),
+        "new_accounts": count(students.where(User.created_at >= utcnow() - timedelta(days=new_days))),
+        "new_accounts_days": new_days,
         "active_students": count(students.where(User.subscription_status.in_(ACTIVE_PLAN_STATUSES))),
         "dialogues_published": count(select(Dialogue.id).where(Dialogue.status == ContentStatus.PUBLISHED)),
         "dialogues_total": count(select(Dialogue.id)),

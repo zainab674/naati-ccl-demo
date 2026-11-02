@@ -24,6 +24,7 @@ class Course(IdMixin, Base):
     # None = a Benchmark course for every student; otherwise the teacher who made it, shown only to their students.
     owner_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     image_key: Mapped[str] = mapped_column(String(400), default="")  # cover image; services/content_images.py
+    at_a_glance_html: Mapped[str] = mapped_column(Text, default="")  # Course Overview section; sanitised on write
 
     language_pair = relationship("LanguagePair", lazy="joined")
     owner = relationship("User")
@@ -52,6 +53,8 @@ class Lesson(IdMixin, Base):
     title: Mapped[str] = mapped_column(String(200))
     video_url: Mapped[str] = mapped_column(String(1000), default="")
     html_content: Mapped[str] = mapped_column(Text, default="")  # sanitised on write
+    notes_html: Mapped[str] = mapped_column(Text, default="")  # shown under the lesson text; sanitised on write
+    duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)  # as entered; never estimated
     # Optional PDF handout, stored privately and served only through /api/lessons/{id}/pdf (same access as the lesson).
     pdf_key: Mapped[str] = mapped_column(String(400), default="")
     pdf_name: Mapped[str] = mapped_column(String(255), default="")

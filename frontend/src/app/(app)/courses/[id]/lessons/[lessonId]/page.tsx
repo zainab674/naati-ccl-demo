@@ -9,10 +9,11 @@ import CourseOutline, { type CourseOutlineData } from "@/components/CourseOutlin
 import { Button, Card, cx, ErrorNote, Spinner } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { fileSize } from "@/lib/resources";
+import { formatDuration, videoEmbedUrl } from "@/lib/student";
 
 type Lesson = {
   id: string; course_id: string; course_title: string; lesson_number: number; number: string; title: string;
-  chapter: { number: number; title: string } | null; video_url: string; html_content: string; completed: boolean;
+  chapter: { number: number; title: string } | null; video_url: string; html_content: string; notes_html: string; duration_minutes: number | null; completed: boolean;
   pdf: { name: string; size: number; url: string } | null;
   next: { id: string; title: string; locked: boolean } | null; previous: { id: string; title: string } | null;
 };
@@ -24,7 +25,7 @@ function Video({ url }: { url: string }) {
     return <video src={url} controls className="aspect-video w-full bg-black" />;
   }
   return (
-    <iframe src={url} title="Lesson video" className="aspect-video w-full bg-black" allowFullScreen
+    <iframe src={videoEmbedUrl(url)} title="Lesson video" className="aspect-video w-full bg-black" allowFullScreen
       allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
       sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" referrerPolicy="strict-origin-when-cross-origin" />
   );
@@ -114,8 +115,15 @@ export default function LessonPage() {
         <Card className="p-6">
           {l.chapter && <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">Chapter {l.chapter.number}: {l.chapter.title}</div>}
           <h1 className="mt-1 text-xl font-semibold tracking-tight">Lesson {l.number}: {l.title}</h1>
-          {/* html_content is sanitised by the server (allow-list) when it is saved */}
+          {l.duration_minutes && <div className="mt-1 text-xs text-slate-500">{formatDuration(l.duration_minutes)}</div>}
+          {/* html_content and notes_html are sanitised by the server (allow-list) when they are saved */}
           {l.html_content && <div className="lesson-html mt-4 text-slate-700" dangerouslySetInnerHTML={{ __html: l.html_content }} />}
+          {l.notes_html && (
+            <div className="mt-6 rounded-xl bg-slate-50 p-5 ring-1 ring-slate-200">
+              <h2 className="font-semibold">Notes</h2>
+              <div className="lesson-html mt-1 text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: l.notes_html }} />
+            </div>
+          )}
           {l.pdf && (
             <div className="mt-6 overflow-hidden rounded-xl ring-1 ring-slate-200">
               <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-4 py-2.5 text-sm">
