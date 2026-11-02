@@ -14,7 +14,7 @@ from ..models import (ContentStatus, Dialogue, Difficulty, LanguagePair, Meaning
                       MockTestDialogue, Segment, Topic)
 from ..services import languages, media_ingest
 from ..services.storage import get_storage
-from ..settings import ccl_config
+from ..settings import ccl_config, scoring_config
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -162,6 +162,9 @@ def replace_meaning_units(segment_id: uuid.UUID, body: list[MeaningUnitIn], db: 
     numbers = [m.meaning_unit_number for m in body]
     if len(numbers) != len(set(numbers)):
         raise HTTPException(400, "Meaning unit numbers must be unique")
+    max_weight = float(scoring_config()["max_meaning_unit_weight"])
+    if any(not m.weight <= max_weight for m in body):
+        raise HTTPException(400, f"A Meaning Unit weight cannot be above {max_weight:g}")
     existing = {m.id: m for m in s.meaning_units}
     original = {m.id: m.meaning_unit_number for m in s.meaning_units}
     unclaimed_by_number = {m.meaning_unit_number: m for m in s.meaning_units

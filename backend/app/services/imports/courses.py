@@ -12,24 +12,27 @@ from ...models import ContentStatus, Course, CourseChapter, Lesson
 from .. import lesson_pdf
 from ..html import sanitize
 from ..languages import english, get_or_create_pair, lotes_by_code
-from .common import Report, parse_bool, read_csv, valid_url
+from .common import MAX_NUMBER, Report, check_lengths, parse_bool, read_csv, valid_url
 
 REQUIRED = ["course_key", "course_title", "lesson_no", "lesson_title"]
 OPTIONAL = ["course_description", "video_url", "html_content", "is_free", "lote_language", "chapter_no", "chapter_title",
             "pdf_url", "course_at_a_glance", "lesson_notes", "duration_minutes"]
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,118}$")
+LENGTHS = {"course_title": Course.__table__.c.title.type.length, "lesson_title": Lesson.__table__.c.title.type.length,
+           "chapter_title": CourseChapter.__table__.c.title.type.length,
+           "video_url": Lesson.__table__.c.video_url.type.length}
 
 
 @dataclass
 class L:
     number: int
     title: str
-    video_url: str
+    video_url: str  # empty leaves what staff entered, like html, is_free, notes and duration
     html: str
-    is_free: bool
+    is_free: bool | None
     chapter: int | None = None
     pdf_url: str = ""  # fetched into the lesson by a job on commit; empty leaves an uploaded PDF in place
-    notes: str = ""  # empty leaves what the admin entered in place, like duration and the course's at a glance
+    notes: str = ""
     duration: int | None = None
 
 
@@ -58,7 +61,7 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
         missing = [c for c in REQUIRED if not row.get(c)]
         for col in missing:
             report.error(r, col, "Required value is missing")
-        if missing:
+        if missing or not check_lengths(report, row, LENGTHS):
             continue
         key = row["course_key"].lower()
         if not KEY_RE.match(key):
@@ -66,13 +69,13 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
             continue
         try:
             number = int(row["lesson_no"])
-            if number < 1:
+            if not 1 <= number <= MAX_NUMBER:
                 raise ValueError
         except ValueError:
-            report.error(r, "lesson_no", "Must be a whole number from 1")
+            report.error(r, "lesson_no", f"Must be a whole number from 1 to {MAX_NUMBER}")
             continue
         try:
-            is_free = bool(parse_bool(row.get("is_free", "")))
+            is_free = parse_bool(row.get("is_free", ""))
         except ValueError:
             report.error(r, "is_free", "Use true/false")
             continue
@@ -92,10 +95,10 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
         if row.get("chapter_no"):
             try:
                 chapter = int(row["chapter_no"])
-                if chapter < 1:
+                if not 1 <= chapter <= MAX_NUMBER:
                     raise ValueError
             except ValueError:
-                report.error(r, "chapter_no", "Must be a whole number from 1")
+                report.error(r, "chapter_no", f"Must be a whole number from 1 to {MAX_NUMBER}")
                 continue
         elif row.get("chapter_title"):
             report.error(r, "chapter_no", "Give a chapter number with the chapter title")
@@ -140,6 +143,12 @@ def parse(db: Session, data: bytes) -> tuple[Report, list[C]]:
         courses[key].lessons[number] = L(number=number, title=row["lesson_title"], video_url=video,
                                          html=cleaned["html_content"], is_free=is_free, chapter=chapter, pdf_url=pdf_url,
                                          notes=cleaned["lesson_notes"], duration=duration)
+    for key, course in courses.items():
+        archived = db.scalars(select(Lesson.lesson_number).join(Course).where(
+            Course.key == key, Lesson.status == ContentStatus.ARCHIVED, Lesson.lesson_number.in_(list(course.lessons))))
+        for number in archived:
+            report.warn(None, "lesson_no", f"{key}: lesson {number} is archived and stays hidden; publish it in the "
+                                           "course editor to show it again")
     existing = set(db.scalars(select(Course.key).where(Course.key.in_(list(courses)))))
     report.summary = {"rows": len(rows), "courses": len(courses),
                       "new_courses": len([k for k in courses if k not in existing]),
@@ -168,7 +177,6 @@ def commit(db: Session, courses: list[C], created_by=None) -> dict:
         if c.at_a_glance:
             course.at_a_glance_html = c.at_a_glance
         course.language_pair_id = pair_id
-        course.is_free = all(lesson.is_free for lesson in c.lessons.values())
         chapter_ids = {}
         if c.chapters:
             by_number = {ch.number: ch for ch in course.chapters}
@@ -190,8 +198,15 @@ def commit(db: Session, courses: list[C], created_by=None) -> dict:
         existing = {lesson.lesson_number: lesson for lesson in course.lessons}
         for item in c.lessons.values():
             lesson = existing.get(item.number)
-            values = {"title": item.title, "video_url": item.video_url, "html_content": item.html,
-                      "is_free": item.is_free, "status": ContentStatus.PUBLISHED}
+            values = {"title": item.title}
+            if item.video_url or not lesson:
+                values["video_url"] = item.video_url
+            if item.html or not lesson:
+                values["html_content"] = item.html
+            if item.is_free is not None or not lesson:
+                values["is_free"] = bool(item.is_free)
+            if not lesson:
+                values["status"] = ContentStatus.PUBLISHED
             if c.chapters:  # files without chapter columns leave chapters as the admin set them
                 values["chapter_id"] = chapter_ids.get(item.chapter)
             if item.notes:
@@ -213,6 +228,8 @@ def commit(db: Session, courses: list[C], created_by=None) -> dict:
             if number not in c.lessons and lesson.status != ContentStatus.ARCHIVED:
                 lesson.status = ContentStatus.ARCHIVED
                 counts["lessons_archived"] += 1
+        shown = [lesson for lesson in course.lessons if lesson.status != ContentStatus.ARCHIVED]
+        course.is_free = bool(shown) and all(lesson.is_free for lesson in shown)
     db.flush()
     for lesson, url in fetch:  # a re-import with the same pdf_url does not download it again
         lesson_pdf.enqueue_fetch(db, lesson, url)

@@ -2,6 +2,7 @@
 
 Rule values that the client may change (penalties, thresholds, pass marks) live in config/*.yaml, never in code.
 """
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -50,7 +51,7 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = ""
     media_download_max_mb: int = 50
     resource_max_mb: int = 50  # learning hub file uploads (ebooks, audio); see deploy/Caddyfile
-    content_image_max_mb: int = 5  # course and resource cover images
+    content_image_max_mb: int = 4  # course and resource cover images
     scratch_dir: Path = BASE_DIR / "data" / "tmp"
 
     stt_provider: str = "auto"  # groq | mock | auto
@@ -110,6 +111,24 @@ class Settings(BaseSettings):
         return "mock"
 
 
+# Vercel: the code folder is read-only (only /tmp is writable) and a request body cannot exceed 4.5 MB.
+SERVERLESS_SCRATCH_DIR = Path("/tmp/ccl-scratch")
+SERVERLESS_MAX_UPLOAD_MB = 4
+
+
+def apply_serverless_defaults(s: Settings, env: dict | None = None) -> None:
+    """Values the operator set explicitly (env vars) always win."""
+    env = os.environ if env is None else env
+    if not env.get("VERCEL"):
+        return
+    if "scratch_dir" not in s.model_fields_set:
+        s.scratch_dir = SERVERLESS_SCRATCH_DIR
+    if "resource_max_mb" not in s.model_fields_set:
+        s.resource_max_mb = min(s.resource_max_mb, SERVERLESS_MAX_UPLOAD_MB)
+    if "content_image_max_mb" not in s.model_fields_set:
+        s.content_image_max_mb = min(s.content_image_max_mb, SERVERLESS_MAX_UPLOAD_MB)
+
+
 def _normalise_db_url(url: str) -> str:
     for prefix in ("postgres://", "postgresql://", "postgresql+psycopg2://"):
         if url.startswith(prefix):
@@ -120,6 +139,7 @@ def _normalise_db_url(url: str) -> str:
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
+    apply_serverless_defaults(s)
     s.database_url = _normalise_db_url(s.database_url)
     s.test_database_url = _normalise_db_url(s.test_database_url)
     if s.is_production:

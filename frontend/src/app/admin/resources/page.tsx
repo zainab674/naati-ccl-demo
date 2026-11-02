@@ -157,7 +157,7 @@ export default function AdminResources() {
             )}
             {!current && form.type !== "Article" && form.type !== "Link" && <p className="text-xs text-slate-500">Save first, then upload the file.</p>}
             {current ? <ImageField<AdminResource> label="Resource image" url={current.image_url} apiPath={`/admin/resources/${current.id}/image`}
-              hint="Shown on the resource card. PNG, JPEG or WebP, up to 5 MB." onSaved={(r) => { setCurrent(r); load(); }} />
+              hint="Shown on the resource card. PNG, JPEG or WebP, up to 4 MB." onSaved={(r) => { setCurrent(r); load(); }} />
               : <p className="text-xs text-slate-500">Save first, then add a resource image.</p>}
             {current && current.problems.length > 0 && <p className="text-xs text-amber-700">Before publishing: {current.problems.join("; ")}</p>}
             {error && <ErrorNote>{error}</ErrorNote>}

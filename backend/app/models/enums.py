@@ -119,6 +119,7 @@ class ImportStatus(StrEnum):
     COMMITTING = "Committing"
     PROCESSING_MEDIA = "ProcessingMedia"
     COMPLETED = "Completed"
+    COMPLETED_WITH_ERRORS = "CompletedWithErrors"  # records saved, but some audio could not be processed
     FAILED = "Failed"
 
 

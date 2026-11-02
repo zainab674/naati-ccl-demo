@@ -8,6 +8,8 @@ from urllib.parse import urlparse
 import httpx
 
 MAX_CSV_BYTES = 5 * 1024 * 1024
+MAX_NUMBER = 9999  # segment, Meaning Unit, lesson and chapter numbers
+csv.field_size_limit(MAX_CSV_BYTES)  # the module default (128 KB) is smaller than a long lesson's HTML
 
 
 class CsvError(ValueError):
@@ -44,26 +46,41 @@ def read_csv(data: bytes, required: list[str], optional: list[str]) -> list[dict
         text = data.decode("utf-8-sig")  # Excel adds a BOM
     except UnicodeDecodeError as e:
         raise CsvError("File is not UTF-8. In Excel use 'Save as > CSV UTF-8'.") from e
+    if "\x00" in text:
+        raise CsvError("File contains an invalid character (NUL). Save it again as CSV UTF-8.")
     reader = csv.DictReader(io.StringIO(text))
-    if not reader.fieldnames:
-        raise CsvError("File is empty")
-    headers = [h.strip().lower() for h in reader.fieldnames]
-    missing = [c for c in required if c not in headers]
-    if missing:
-        raise CsvError(f"Missing column(s): {', '.join(missing)}")
-    unknown = [h for h in headers if h and h not in required + optional]
-    rows = []
-    for i, raw in enumerate(reader, start=2):
-        row = {h: (v or "").strip() for h, v in zip(headers, [raw.get(k) for k in reader.fieldnames], strict=True)}
-        if not any(row.values()):
-            continue  # blank line
-        row["_row"] = i
-        rows.append(row)
+    try:
+        if not reader.fieldnames:
+            raise CsvError("File is empty")
+        headers = [h.strip().lower() for h in reader.fieldnames]
+        missing = [c for c in required if c not in headers]
+        if missing:
+            raise CsvError(f"Missing column(s): {', '.join(missing)}")
+        unknown = [h for h in headers if h and h not in required + optional]
+        rows = []
+        for i, raw in enumerate(reader, start=2):
+            row = {h: (v or "").strip() for h, v in zip(headers, [raw.get(k) for k in reader.fieldnames], strict=True)}
+            if not any(row.values()):
+                continue  # blank line
+            row["_row"] = i
+            rows.append(row)
+    except csv.Error as e:
+        raise CsvError(f"The file could not be read as CSV: {e}") from e
     if not rows:
         raise CsvError("File has a header row but no data rows")
     if unknown:
         rows[0]["_unknown_columns"] = unknown
     return rows
+
+
+def check_lengths(report: Report, row: dict, limits: dict[str, int]) -> bool:
+    """Reports values too long for their database column. Returns True when all fit."""
+    ok = True
+    for col, limit in limits.items():
+        if len(row.get(col) or "") > limit:
+            report.error(row["_row"], col, f"Too long ({len(row[col])} characters; the limit is {limit})")
+            ok = False
+    return ok
 
 
 def parse_bool(value: str) -> bool | None:

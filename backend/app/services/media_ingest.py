@@ -65,9 +65,10 @@ def _report(import_job_id: str | None, ok: bool, segment_label: str = "", error:
             p["failures"] = [*p.get("failures", []), {"segment": segment_label, "error": error[:300]}][:100]
         job.progress = p
         if p.get("media_done", 0) + p.get("media_failed", 0) >= p.get("media_total", 0):
-            job.status = ImportStatus.COMPLETED
+            job.status = ImportStatus.COMPLETED_WITH_ERRORS if p.get("media_failed") else ImportStatus.COMPLETED
             if p.get("media_failed"):
-                job.error = f"{p['media_failed']} segment(s) failed audio processing; fix the URL(s) and re-import."
+                job.error = (f"{p['media_failed']} segment(s) failed audio processing; see the reasons below. Those "
+                             "dialogues cannot be published until their audio is processed.")
         db.commit()
 
 

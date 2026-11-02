@@ -20,7 +20,10 @@ export type ImportJob = {
 const label = (k: string) => k.replace(/_/g, " ");
 
 export const statusTone = (s: string) =>
-  s === "Completed" || s === "Validated" ? "green" : s === "Invalid" || s === "Failed" ? "red" : "amber";
+  s === "Completed" || s === "Validated" ? "green" : s === "Invalid" || s === "Failed" || s === "CompletedWithErrors" ? "red" : "amber";
+
+/** Status as staff read it. */
+export const statusLabel = (s: string) => (s === "CompletedWithErrors" ? "Completed with errors" : s === "ProcessingMedia" ? "Processing audio" : s);
 
 export default function ImportReport({ job }: { job: ImportJob }) {
   const r = job.report;
@@ -32,7 +35,7 @@ export default function ImportReport({ job }: { job: ImportJob }) {
             {r.ok ? <CheckCircle2 className="size-5 text-emerald-600" /> : <XCircle className="size-5 text-rose-600" />}
             {job.file_name}
           </div>
-          <Badge tone={statusTone(job.status)}>{job.status}</Badge>
+          <Badge tone={statusTone(job.status)}>{statusLabel(job.status)}</Badge>
         </div>
         {r.summary && Object.keys(r.summary).length > 0 && (
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">

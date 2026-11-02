@@ -39,7 +39,7 @@ export default function ImageField<T>({ label, url, apiPath, hint, onSaved }:
         </label>
         {url && <Button variant="ghost" disabled={busy} onClick={() => send({ method: "DELETE" })}><Trash2 className="size-4" /> Remove</Button>}
       </div>
-      <p className="mt-1 text-xs text-slate-500">{hint ?? "PNG, JPEG or WebP, up to 5 MB."}</p>
+      <p className="mt-1 text-xs text-slate-500">{hint ?? "PNG, JPEG or WebP, up to 4 MB."}</p>
       {error && <div className="mt-2"><ErrorNote>{error}</ErrorNote></div>}
     </div>
   );

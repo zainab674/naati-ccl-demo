@@ -4,6 +4,7 @@ validate() builds the dry-run report. commit() upserts by dialogue_key / segment
 updates in place and never duplicates. Segments or Meaning Units missing from a re-import are deactivated, not
 deleted, because past attempts reference them.
 """
+import math
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -15,7 +16,7 @@ from ...models import (ContentStatus, Dialogue, Difficulty, Direction, MeaningUn
                        Topic)
 from ...settings import scoring_config
 from ..languages import english, get_or_create_pair, lotes_by_code
-from .common import Report, check_urls, parse_bool, read_csv, valid_url
+from .common import MAX_NUMBER, Report, check_lengths, check_urls, parse_bool, read_csv, valid_url
 
 REQUIRED = ["dialogue_key", "dialogue_title", "topic", "difficulty", "lote_language", "segment_no", "direction",
             "audio_url", "transcript", "mu_no", "meaning"]
@@ -24,6 +25,11 @@ OPTIONAL = ["description", "instructions", "speaker_label", "speaker_role", "wav
 DIALOGUE_FIELDS = ["dialogue_title", "topic", "difficulty", "lote_language", "description", "instructions", "is_free"]
 SEGMENT_FIELDS = ["direction", "speaker_label", "speaker_role", "audio_url", "waveform_url", "transcript"]
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,118}$")
+LENGTHS = {"dialogue_title": Dialogue.__table__.c.title.type.length, "topic": Topic.__table__.c.name.type.length,
+           "speaker_label": Segment.__table__.c.speaker_label.type.length,
+           "speaker_role": Segment.__table__.c.speaker_role.type.length,
+           "audio_url": Segment.__table__.c.source_audio_url.type.length,
+           "waveform_url": Segment.__table__.c.waveform_source_url.type.length}
 
 
 @dataclass
@@ -64,7 +70,7 @@ def _int(value: str) -> int | None:
         n = int(value)
     except ValueError:
         return None
-    return n if n > 0 else None
+    return n if 0 < n <= MAX_NUMBER else None
 
 
 def parse(db: Session, data: bytes, check_remote: bool = True) -> tuple[Report, list[Dlg]]:
@@ -77,6 +83,7 @@ def parse(db: Session, data: bytes, check_remote: bool = True) -> tuple[Report, 
     topics = {t.name.lower() for t in db.scalars(select(Topic))}
     difficulties = {d.value.lower(): d for d in Difficulty}
     directions = {d.value: d for d in Direction}
+    max_weight = float(scoring_config()["max_meaning_unit_weight"])
 
     dialogues: dict[str, Dlg] = OrderedDict()
     first_dialogue_row: dict[str, dict] = {}
@@ -91,7 +98,7 @@ def parse(db: Session, data: bytes, check_remote: bool = True) -> tuple[Report, 
             if not row.get(col):
                 report.error(r, col, "Required value is missing")
                 bad = True
-        if bad:
+        if bad or not check_lengths(report, row, LENGTHS):
             continue
         key = row["dialogue_key"].lower()
         if not KEY_RE.match(key):
@@ -109,17 +116,17 @@ def parse(db: Session, data: bytes, check_remote: bool = True) -> tuple[Report, 
             report.error(r, "direction", f"'{row['direction']}' must be EN>LOTE or LOTE>EN")
         seg_no, mu_no = _int(row["segment_no"]), _int(row["mu_no"])
         if seg_no is None:
-            report.error(r, "segment_no", "Must be a whole number from 1")
+            report.error(r, "segment_no", f"Must be a whole number from 1 to {MAX_NUMBER}")
         if mu_no is None:
-            report.error(r, "mu_no", "Must be a whole number from 1")
+            report.error(r, "mu_no", f"Must be a whole number from 1 to {MAX_NUMBER}")
         weight = 1.0
         if row.get("mu_weight"):
             try:
                 weight = float(row["mu_weight"])
-                if weight <= 0:
+                if not math.isfinite(weight) or not 0 < weight <= max_weight:
                     raise ValueError
             except ValueError:
-                report.error(r, "mu_weight", "Must be a positive number")
+                report.error(r, "mu_weight", f"Must be a number above 0, up to {max_weight:g}")
         is_free = None
         if row.get("is_free"):
             try:

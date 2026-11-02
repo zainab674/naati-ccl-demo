@@ -28,6 +28,7 @@ GRANT_STATUS = {SubscriptionStatus.ACTIVE: "active", SubscriptionStatus.TRIAL: "
 
 BULK_COLUMNS = ["first_name", "email"]
 BULK_OPTIONAL = ["last_name", "language", "access", "access_until", "target_exam_date", "note"]
+BULK_LENGTHS = {"first_name": 100, "last_name": 100, "note": 2000}
 
 
 class EnrolmentError(ValueError):
@@ -166,6 +167,8 @@ def parse_bulk(db: Session, data: bytes) -> tuple[list[NewStudent], Report]:
             continue
         if not row["first_name"]:
             errs.append(("first_name", "Required"))
+        errs += [(col, f"Too long (the limit is {limit} characters)") for col, limit in BULK_LENGTHS.items()
+                 if len(row.get(col) or "") > limit]
         code = row.get("language", "").lower()
         lang = lotes.get(code) if code else None
         if code and not lang:

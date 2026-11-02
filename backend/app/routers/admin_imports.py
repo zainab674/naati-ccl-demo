@@ -1,4 +1,5 @@
 """CSV bulk import: upload -> dry-run validation report -> commit. Every upload is an ImportJob."""
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -14,6 +15,7 @@ from ..services.imports import samples
 from ..services.imports.common import MAX_CSV_BYTES, CsvError
 from ..services.storage import get_storage
 
+log = logging.getLogger("imports")
 router = APIRouter(prefix="/api/admin/imports", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
@@ -100,11 +102,13 @@ def commit(job_id: uuid.UUID, cu: CurrentUser = Depends(require_admin), db: Sess
             return job_dict(job)
         counts = module.commit(db, parsed, created_by=cu.id)
     except Exception as e:
+        log.exception("import %s failed on commit", job_id)
         db.rollback()
         job = db.get(ImportJob, job_id)
-        job.status, job.error = ImportStatus.FAILED, f"{type(e).__name__}: {e}"[:2000]
+        job.status = ImportStatus.FAILED
+        job.error = f"The import could not be saved, so nothing was changed ({type(e).__name__})."
         db.commit()
-        raise HTTPException(500, f"Import failed: {job.error}") from e
+        raise HTTPException(500, job.error) from e
     media_ids = counts.pop("media_segment_ids", [])
     job = db.get(ImportJob, job_id)
     job.counts, job.committed_at = counts, utcnow()

@@ -139,6 +139,13 @@ def _attempt_id_for(sa: SegmentAttempt) -> uuid.UUID:
     return da.mock_test_attempt_id or da.id
 
 
+def _review_reason(sa: SegmentAttempt) -> str:
+    """Technical failures read plainly here; the exact error stays on the attempt page."""
+    if sa.scoring_status == ScoringStatus.FAILED:
+        return "Scoring failed with a technical error. Open the attempt to re-score it or score it by hand."
+    return sa.scoring_error
+
+
 @router.get("/review-queue")
 def review_queue(cu: CurrentUser = Depends(require_staff), db: Session = Depends(get_db)):
     query = select(SegmentAttempt).join(DialogueAttempt, SegmentAttempt.dialogue_attempt_id == DialogueAttempt.id).where(
@@ -149,7 +156,7 @@ def review_queue(cu: CurrentUser = Depends(require_staff), db: Session = Depends
     return [{"segment_attempt_id": str(sa.id), "attempt_id": str(_attempt_id_for(sa)),
              "student": sa.dialogue_attempt.user.full_name, "dialogue": sa.dialogue_attempt.dialogue.title,
              "segment_number": sa.segment_number, "scoring_status": sa.scoring_status.value,
-             "reason": sa.scoring_error or ("Pronunciation flagged" if any(e.needs_review for e in sa.language_quality_errors)
+             "reason": _review_reason(sa) or ("Pronunciation flagged" if any(e.needs_review for e in sa.language_quality_errors)
                                             else "Needs review"),
              "submitted_at": sa.submitted_at.isoformat() if sa.submitted_at else None} for sa in rows]
 

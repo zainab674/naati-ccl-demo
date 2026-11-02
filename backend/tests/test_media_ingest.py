@@ -73,7 +73,7 @@ def test_ingest_failure_is_reported(admin_client, db, fake_downloads):
     done = import_file(admin_client, csv_rows("https://cdn.example.com/ok/1.mp3", "https://cdn.example.com/gone/2.mp3"))
     jobs.run_until_empty(include_delayed=True)
     job = db.get(ImportJob, uuid.UUID(done["id"]))
-    assert job.status.value == "Completed"
+    assert job.status.value == "CompletedWithErrors"
     assert job.progress["media_done"] == 1 and job.progress["media_failed"] == 1
     assert "m1 segment 2" in job.progress["failures"][0]["segment"] and "404" in job.progress["failures"][0]["error"]
     seg2 = db.scalar(select(Dialogue).where(Dialogue.key == "m1")).segments[1]

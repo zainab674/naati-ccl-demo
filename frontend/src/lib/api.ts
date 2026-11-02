@@ -29,7 +29,8 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
     body: json !== undefined ? JSON.stringify(json) : rest.body,
   });
   if (!res.ok) {
-    let msg = res.statusText;
+    // The host rejects oversized requests itself, with a plain-text body and often no status text.
+    let msg = res.status === 413 ? "That file is too large for this server. Please use a smaller file." : res.statusText;
     try {
       const data = await res.json();
       msg = errorMessage(data.detail, msg);

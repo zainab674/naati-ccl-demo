@@ -182,7 +182,8 @@ Webinars; 1-on-1 coaching booking + Zoom; email marketing campaigns; coupons; sa
 ### courses.csv (one row per lesson)
 `course_key, course_title, course_description, lesson_no, lesson_title, video_url, html_content, is_free,
 lote_language, chapter_no, chapter_title, pdf_url, course_at_a_glance, lesson_notes, duration_minutes` (pdf_url: a PDF
-downloaded into the lesson on commit; the last three are optional, and blank leaves what staff entered)
+downloaded into the lesson on commit; the last three are optional. On a re-import, blank video_url, html_content,
+is_free, lesson_notes or duration_minutes leave what staff entered, and an archived lesson stays archived)
 
 Provide downloadable template CSVs and a sample with 1 dialogue in the admin import page.
 

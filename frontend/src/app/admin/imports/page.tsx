@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
 import CsvFormatButtons from "@/components/CsvFormatButtons";
-import ImportReport, { type ImportJob, statusTone } from "@/components/ImportReport";
+import ImportReport, { type ImportJob, statusLabel, statusTone } from "@/components/ImportReport";
 import { Badge, Button, Card, cx, ErrorNote, PageHeader } from "@/components/ui";
 import { api, fmtDateTime } from "@/lib/api";
 
@@ -113,7 +113,7 @@ export default function ImportsPage() {
               <tr key={j.id} onClick={() => router.push(`/admin/imports/${j.id}`)} className="cursor-pointer border-t border-slate-100 hover:bg-slate-50">
                 <td className="px-6 py-2"><Link href={`/admin/imports/${j.id}`} className="hover:underline">{j.file_name}</Link></td>
                 <td className="px-2 py-2 capitalize text-slate-500">{j.type}</td>
-                <td className="px-2 py-2"><Badge tone={statusTone(j.status)}>{j.status}</Badge></td>
+                <td className="px-2 py-2"><Badge tone={statusTone(j.status)}>{statusLabel(j.status)}</Badge></td>
                 <td className="px-6 py-2 text-right text-xs text-slate-400">{fmtDateTime(j.created_at)}</td>
               </tr>
             ))}

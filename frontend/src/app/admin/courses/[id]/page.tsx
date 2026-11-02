@@ -102,7 +102,7 @@ export default function CourseEditor() {
           </div>
         </div>
         <div className="sm:col-span-2"><ImageField<Course> label="Course image" url={c.image_url} apiPath={`/admin/courses/${id}/image`}
-          hint="Shown on the course card and overview page. PNG, JPEG or WebP, up to 5 MB." onSaved={apply} /></div>
+          hint="Shown on the course card and overview page. PNG, JPEG or WebP, up to 4 MB." onSaved={apply} /></div>
         <div className="sm:col-span-2 flex justify-end"><Button onClick={() => patchCourse({ ...form, language: form.language || null })}>Save course</Button></div>
       </Card>
 
